@@ -121,7 +121,7 @@ const PhoneMockup = () => {
                 className="w-full h-full flex flex-col"
               >
                 <div className="bg-[#25D366] px-3 py-2 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
                     <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
                   </div>
                   <div>
@@ -391,7 +391,7 @@ export default function PaypertapHero() {
         className="relative z-30 flex items-center justify-between px-6 md:px-12 py-5"
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 overflow-hidden shadow-lg shadow-black/20 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-xl bg-white/10 border border-white/10 overflow-hidden shadow-lg shadow-black/20 flex items-center justify-center">
             <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight" style={{ fontFamily: "Sora" }}>
