@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import Logo from "./assets/Logo.png";
 
 const WHATSAPP_NUMBER = "918602555840";
 const EARLY_ACCESS_MESSAGE =
@@ -113,10 +112,17 @@ const PhoneMockup = () => {
         <div className="absolute inset-[6px] rounded-[2.2rem] overflow-hidden bg-white">
           <AnimatePresence mode="wait">
             {screen === 0 && (
-              <motion.div key="catalog" initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }} transition={{ duration: 0.4 }} className="w-full h-full flex flex-col">
+              <motion.div
+                key="catalog"
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -60, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full flex flex-col"
+              >
                 <div className="bg-[#25D366] px-3 py-2 flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
-                    <img src={Logo} alt="Pay Per Tap" className="w-full h-full object-contain" />
+                    <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
                   </div>
                   <div>
                     <div className="text-white text-[8px] font-bold leading-none">Jiya Fashions</div>
@@ -129,12 +135,16 @@ const PhoneMockup = () => {
                     {demoProducts.map((item, i) => (
                       <div key={i} className="rounded-lg overflow-hidden bg-white shadow-sm border border-gray-100">
                         <div className="bg-white h-14 flex items-center justify-center">
-                          <div className="w-9 h-9 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-[7px] font-bold text-gray-500">IMG</div>
+                          <div className="w-9 h-9 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-[7px] font-bold text-gray-500">
+                            IMG
+                          </div>
                         </div>
                         <div className="p-1">
                           <div className="text-[6px] font-semibold text-gray-800 leading-tight">{item.name}</div>
                           <div className="text-[6px] text-[#25D366] font-bold">{item.price}</div>
-                          <div className="mt-1 bg-[#25D366] rounded text-white text-[5px] text-center py-0.5 font-bold">BUY</div>
+                          <div className="mt-1 bg-[#25D366] rounded text-white text-[5px] text-center py-0.5 font-bold">
+                            BUY
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -144,13 +154,22 @@ const PhoneMockup = () => {
             )}
 
             {screen === 1 && (
-              <motion.div key="checkout" initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }} transition={{ duration: 0.4 }} className="w-full h-full flex flex-col">
+              <motion.div
+                key="checkout"
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -60, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full flex flex-col"
+              >
                 <div className="bg-[#25D366] px-3 py-2">
                   <div className="text-white text-[8px] font-bold">Complete Order</div>
                 </div>
                 <div className="flex-1 bg-white p-3 space-y-2">
                   <div className="bg-[#f0fdf4] rounded-lg p-2 flex gap-2 items-center">
-                    <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-[7px] font-bold text-gray-500">IMG</div>
+                    <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-[7px] font-bold text-gray-500">
+                      IMG
+                    </div>
                     <div>
                       <div className="text-[7px] font-bold">Minimal Shirt · Size M</div>
                       <div className="text-[7px] text-[#25D366] font-bold">₹599</div>
@@ -171,7 +190,14 @@ const PhoneMockup = () => {
             )}
 
             {screen === 2 && (
-              <motion.div key="whatsapp" initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -60, opacity: 0 }} transition={{ duration: 0.4 }} className="w-full h-full flex flex-col">
+              <motion.div
+                key="whatsapp"
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -60, opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full flex flex-col"
+              >
                 <div className="bg-[#075E54] px-3 py-2 flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
                     <WhatsAppIcon size={10} className="text-white" />
@@ -213,7 +239,9 @@ const PhoneMockup = () => {
                     </div>
                   </div>
                   <div className="text-center">
-                    <span className="text-[5px] bg-[#25D366]/20 text-[#075E54] px-2 py-0.5 rounded-full font-bold">Sale done — no 2% cut</span>
+                    <span className="text-[5px] bg-[#25D366]/20 text-[#075E54] px-2 py-0.5 rounded-full font-bold">
+                      Sale done — no 2% cut
+                    </span>
                   </div>
                 </div>
               </motion.div>
@@ -224,7 +252,12 @@ const PhoneMockup = () => {
 
       <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
         {screens.map((_, i) => (
-          <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${screen === i ? "bg-[#25D366] w-3.5" : "bg-white/30"}`} />
+          <div
+            key={i}
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              screen === i ? "bg-[#25D366] w-3.5" : "bg-white/30"
+            }`}
+          />
         ))}
       </div>
     </div>
@@ -259,7 +292,10 @@ const PrimaryWhatsAppButton = ({ className = "", children }) => (
 );
 
 const SecondaryWhatsAppButton = ({ className = "" }) => (
-  <a href={WHATSAPP_URL} className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/8 px-5 py-3 text-sm font-semibold text-white hover:bg-white/12 transition-colors ${className}`}>
+  <a
+    href={WHATSAPP_URL}
+    className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/8 px-5 py-3 text-sm font-semibold text-white hover:bg-white/12 transition-colors ${className}`}
+  >
     <MessageIcon size={16} />
     Join Waitlist
   </a>
@@ -292,15 +328,30 @@ export default function PaypertapHero() {
   ];
 
   const flowCards = [
-    { title: "Browse", desc: "A clean catalog with templates, product images, variants, and pricing.", icon: <CatalogIcon size={18} /> },
-    { title: "Checkout", desc: "Buyer fills details, taps complete purchase, and opens WhatsApp with context.", icon: <MessageIcon size={18} /> },
-    { title: "Retarget", desc: "Mark outcomes in the dashboard, score conversations, and run follow-ups later.", icon: <TargetIcon size={18} /> },
+    {
+      title: "Browse",
+      desc: "A clean catalog with templates, product images, variants, and pricing.",
+      icon: <CatalogIcon size={18} />,
+    },
+    {
+      title: "Checkout",
+      desc: "Buyer fills details, taps complete purchase, and opens WhatsApp with context.",
+      icon: <MessageIcon size={18} />,
+    },
+    {
+      title: "Retarget",
+      desc: "Mark outcomes in the dashboard, score conversations, and run follow-ups later.",
+      icon: <TargetIcon size={18} />,
+    },
   ];
 
   return (
     <div
       className="relative min-h-screen w-full overflow-hidden flex flex-col"
-      style={{ background: "linear-gradient(135deg, #0a0f0a 0%, #0d1a10 40%, #071209 100%)", fontFamily: "'DM Sans', 'Sora', system-ui, sans-serif" }}
+      style={{
+        background: "linear-gradient(135deg, #0a0f0a 0%, #0d1a10 40%, #071209 100%)",
+        fontFamily: "'DM Sans', 'Sora', system-ui, sans-serif",
+      }}
       onMouseMove={handleMouseMove}
     >
       <style>{`
@@ -324,12 +375,24 @@ export default function PaypertapHero() {
       <GlowOrb className="w-[400px] h-[400px] bg-[#25D366]/5 bottom-0 -left-20" />
       <GlowOrb className="w-[300px] h-[300px] bg-emerald-900/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
 
-      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(37,211,102,1) 1px, transparent 1px), linear-gradient(90deg, rgba(37,211,102,1) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(37,211,102,1) 1px, transparent 1px), linear-gradient(90deg, rgba(37,211,102,1) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
 
-      <motion.nav initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-30 flex items-center justify-between px-6 md:px-12 py-5">
+      <motion.nav
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-30 flex items-center justify-between px-6 md:px-12 py-5"
+      >
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 overflow-hidden shadow-lg shadow-black/20 flex items-center justify-center">
-            <img src={Logo} alt="Pay Per Tap" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight" style={{ fontFamily: "Sora" }}>
             payper<span className="text-[#25D366]">tap</span>
@@ -350,7 +413,12 @@ export default function PaypertapHero() {
 
       <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-10 px-6 md:px-12 py-8 lg:py-0 max-w-7xl mx-auto w-full">
         <div className="flex-1 flex flex-col items-start max-w-xl">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1, duration: 0.5 }} className="flex items-center gap-2 mb-5">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="flex items-center gap-2 mb-5"
+          >
             <span className="w-2 h-2 rounded-full bg-[#25D366]" />
             <span className="text-white/50 text-xs font-medium">For Instagram & WhatsApp sellers</span>
             <span className="w-1 h-1 rounded-full bg-white/20" />
@@ -359,7 +427,13 @@ export default function PaypertapHero() {
 
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold leading-[1.08] tracking-tight mb-3" style={{ fontFamily: "Sora" }}>
             {headlineWords.map((word, wi) => (
-              <motion.span key={wi} initial={{ opacity: 0, y: 30, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ delay: 0.2 + wi * 0.1, duration: 0.6 }} className="block">
+              <motion.span
+                key={wi}
+                initial={{ opacity: 0, y: 30, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ delay: 0.2 + wi * 0.1, duration: 0.6 }}
+                className="block"
+              >
                 {wi === 0 || wi === 2 ? (
                   <span className={wi === 0 ? "shimmer-text" : "text-white/30"}>{word}</span>
                 ) : (
@@ -369,11 +443,21 @@ export default function PaypertapHero() {
             ))}
           </h1>
 
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }} className="text-white/55 text-base leading-relaxed mb-7 max-w-lg">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55, duration: 0.5 }}
+            className="text-white/55 text-base leading-relaxed mb-7 max-w-lg"
+          >
             {subText}
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6 w-full"
+          >
             {perks.map((perk, i) => (
               <div key={i} className="flex items-start gap-2">
                 <div className="w-4 h-4 rounded-full bg-[#25D366]/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -394,9 +478,15 @@ export default function PaypertapHero() {
             <PrimaryWhatsAppButton>Get Early Access</PrimaryWhatsAppButton>
             <SecondaryWhatsAppButton className="sm:hidden" />
           </div>
+
           <p className="text-white/28 text-[11px] mt-2 pl-1">Early access users get 50% off for month 1.</p>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.15, duration: 0.5 }} className="flex items-center gap-3 mt-5 flex-wrap">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.15, duration: 0.5 }}
+            className="flex items-center gap-3 mt-5 flex-wrap"
+          >
             <div className="flex">
               {["✓", "✓", "✓", "✓", "✓"].map((e, i) => (
                 <div key={i} className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1a2e1e] to-[#0d1a10] border-2 border-[#0a0f0a] flex items-center justify-center text-[10px] font-bold text-[#25D366] -ml-1 first:ml-0">
@@ -406,7 +496,9 @@ export default function PaypertapHero() {
             </div>
             <div>
               <div className="flex items-center gap-0.5">
-                {[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} className="text-amber-400" />)}
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <StarIcon key={i} className="text-amber-400" />
+                ))}
               </div>
               <span className="text-white/30 text-[10px]">Built for sellers who want control</span>
             </div>
@@ -418,7 +510,13 @@ export default function PaypertapHero() {
           </motion.div>
         </div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.7, type: "spring" }} style={{ x: springX, y: springY }} className="relative flex items-center justify-center w-full lg:w-auto lg:flex-1 max-w-sm lg:max-w-none">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.7, type: "spring" }}
+          style={{ x: springX, y: springY }}
+          className="relative flex items-center justify-center w-full lg:w-auto lg:flex-1 max-w-sm lg:max-w-none"
+        >
           <div className="absolute w-64 h-64 rounded-full bg-[#25D366]/10 blur-2xl" />
           <div className="absolute w-48 h-48 rounded-full border border-[#25D366]/10 animate-ping" style={{ animationDuration: "3s" }} />
 
@@ -462,7 +560,12 @@ export default function PaypertapHero() {
       </div>
 
       <div className="relative z-20 px-6 md:px-12 pb-10 pt-2 max-w-7xl mx-auto w-full">
-        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05, duration: 0.5 }} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.05, duration: 0.5 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-3"
+        >
           {flowCards.map((card, i) => (
             <div key={card.title} className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-4 shadow-2xl shadow-black/10">
               <div className="flex items-center justify-between mb-3">
