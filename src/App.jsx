@@ -9,7 +9,6 @@ const EARLY_ACCESS_MESSAGE =
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(EARLY_ACCESS_MESSAGE)}`;
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
-
 const easeOut = [0.22, 1, 0.36, 1];
 
 const WhatsAppIcon = ({ size = 24, className = "" }) => (
@@ -85,8 +84,8 @@ const Dot = ({ active = false }) => (
   />
 );
 
-const Section = ({ children, className = "" }) => (
-  <section className={cn("px-4 sm:px-6", className)}>
+const Section = ({ children, className = "", id }) => (
+  <section id={id} className={cn("px-4 sm:px-6", className)}>
     <div className="mx-auto w-full max-w-7xl">{children}</div>
   </section>
 );
@@ -110,7 +109,7 @@ const SectionHeading = ({ eyebrow, title, subtitle, align = "left" }) => (
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.5 }}
       transition={{ duration: 0.5, ease: easeOut }}
-      className="text-3xl font-black tracking-tight text-black sm:text-4xl lg:text-5xl"
+      className="text-2xl font-black tracking-tight text-black sm:text-4xl lg:text-5xl"
     >
       {title}
     </motion.h2>
@@ -120,7 +119,7 @@ const SectionHeading = ({ eyebrow, title, subtitle, align = "left" }) => (
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.5 }}
         transition={{ duration: 0.5, delay: 0.05, ease: easeOut }}
-        className="mt-4 text-base leading-8 text-black/65 sm:text-lg"
+        className="mt-4 text-sm leading-7 text-black/65 sm:text-lg sm:leading-8"
       >
         {subtitle}
       </motion.p>
@@ -170,6 +169,7 @@ const Pill = ({ icon, title, text, color = "bg-white" }) => (
 const PricingToggle = ({ billing, setBilling }) => (
   <div className="inline-flex rounded-full border-2 border-black bg-white p-1 shadow-[4px_4px_0px_#111]">
     <button
+      type="button"
       onClick={() => setBilling("monthly")}
       className={cn(
         "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
@@ -179,6 +179,7 @@ const PricingToggle = ({ billing, setBilling }) => (
       Monthly
     </button>
     <button
+      type="button"
       onClick={() => setBilling("yearly")}
       className={cn(
         "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
@@ -255,6 +256,149 @@ const MiniFlowCard = ({ step, title, desc, color }) => (
   </motion.div>
 );
 
+const useIsMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < breakpoint);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [breakpoint]);
+
+  return isMobile;
+};
+
+const MobileSubheadlineRotator = () => {
+  const lines = [
+    "A catalog storefront that closes sales on WhatsApp.",
+    "India's #1 WhatsApp catalog commerce platform.",
+    "Smart catalogs. Total control. Still closed on WhatsApp.",
+  ];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((current) => (current + 1) % lines.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [lines.length]);
+
+  return (
+    <div className="mt-4 min-h-[4.75rem] max-w-[18ch] text-[1.05rem] font-black leading-tight tracking-tight text-[#0f8f67] sm:max-w-none sm:text-lg lg:hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={lines[index]}
+          initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
+          transition={{ duration: 0.45, ease: easeOut }}
+          className="max-w-[16ch]"
+        >
+          {lines[index]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const HeroCopy = () => {
+  const isMobile = useIsMobile(768);
+  const [expanded, setExpanded] = useState(false);
+
+  const fullCopy =
+    "Pay Per Tap is for Instagram and WhatsApp sellers who want a branded catalog without the cost and complexity of a full website. Customers browse, submit details, and finish the order on WhatsApp while you stay in control.";
+
+  if (isMobile) {
+    return (
+      <>
+        <div className="mt-5 inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-200 px-4 py-2 text-[11px] font-black tracking-[0.18em] uppercase shadow-[3px_3px_0px_#111] sm:text-xs">
+          <SparkIcon size={12} />
+          whatsapp-first commerce
+        </div>
+
+        <h1 className="mt-5 max-w-[11ch] text-[clamp(2.8rem,11vw,4.4rem)] font-black tracking-tight leading-[0.93] sm:max-w-none sm:text-5xl">
+          Turn{" "}
+          <span className="inline-block rounded-2xl border-2 border-black bg-[#25D366] px-2 py-1 shadow-[4px_4px_0px_#111]">
+            &quot;Price?&quot;
+          </span>{" "}
+          into{" "}
+          <span className="inline-block rounded-2xl border-2 border-black bg-[#25D366] px-2 py-1 shadow-[4px_4px_0px_#111]">
+            &quot;Paid&quot;
+          </span>
+        </h1>
+
+        <MobileSubheadlineRotator />
+
+        <div className="mt-4 text-sm leading-7 text-black/65 sm:text-base">
+          <div
+            className={cn(
+              "relative overflow-hidden transition-all duration-300",
+              expanded ? "max-h-[20rem]" : "max-h-[5.5rem]"
+            )}
+          >
+            <p className="pr-1">{fullCopy}</p>
+            {!expanded ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#faf7f2] to-transparent" />
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="mt-2 inline-flex items-center gap-2 rounded-full border-2 border-black bg-white px-3 py-1.5 text-xs font-black shadow-[3px_3px_0px_#111] transition hover:bg-black/5"
+            aria-expanded={expanded}
+          >
+            {expanded ? "Show less" : "Read more"}
+            <span>{expanded ? "▲" : "▾"}</span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: easeOut }}
+        className="mb-5 inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-200 px-4 py-2 text-xs font-black tracking-[0.2em] uppercase soft-shadow-sm"
+      >
+        <SparkIcon size={12} />
+        whatsapp-first commerce
+      </motion.div>
+
+      <h1 className="max-w-2xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl" style={{ lineHeight: 1.02 }}>
+        {[
+          'Turn "Price?" into "Paid" in a single tap.',
+          "Smart catalogs. Total control. Still closed on WhatsApp.",
+        ].map((line, i) => (
+          <motion.span
+            key={line}
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.55, delay: 0.08 + i * 0.08, ease: easeOut }}
+            className="block"
+          >
+            {i === 1 ? <span className="text-[#0f8f67]">{line}</span> : line}
+          </motion.span>
+        ))}
+      </h1>
+
+      <motion.p
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.16, duration: 0.5, ease: easeOut }}
+        className="mt-6 max-w-xl text-base leading-8 text-black/65 sm:text-lg"
+      >
+        {fullCopy}
+      </motion.p>
+    </>
+  );
+};
+
 const PhoneMockup = () => {
   const [screen, setScreen] = useState(0);
   const screens = ["catalog", "checkout", "whatsapp"];
@@ -303,14 +447,17 @@ const PhoneMockup = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                     {products.map((product) => (
-                      <div key={product.name} className="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[2px_2px_0px_#111] sm:shadow-[3px_3px_0px_#111]">
+                      <div
+                        key={product.name}
+                        className="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[2px_2px_0px_#111] sm:shadow-[3px_3px_0px_#111]"
+                      >
                         <div className="flex h-18 items-center justify-center bg-gradient-to-br from-emerald-50 to-yellow-50 sm:h-24">
                           <div className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-black bg-white text-[10px] font-black text-black/45 sm:h-12 sm:w-12 sm:text-[11px]">
                             IMG
                           </div>
                         </div>
                         <div className="p-1.5 sm:p-2">
-                          <div className="text-[10px] font-bold text-black leading-tight sm:text-[11px]">{product.name}</div>
+                          <div className="text-[10px] font-bold leading-tight text-black sm:text-[11px]">{product.name}</div>
                           <div className="mt-1 text-[10px] font-black text-[#0f8f67] sm:text-[11px]">{product.price}</div>
                           <div className="mt-2 rounded-full border-2 border-black bg-[#ffe36e] px-2 py-0.5 text-center text-[9px] font-black shadow-[2px_2px_0px_#111] sm:py-1 sm:text-[10px]">
                             BUY
@@ -343,7 +490,7 @@ const PhoneMockup = () => {
                         IMG
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[11px] font-black text-black leading-tight sm:text-sm">Printed Shirt · M</div>
+                        <div className="text-[11px] font-black leading-tight text-black sm:text-sm">Printed Shirt · M</div>
                         <div className="text-[11px] font-black text-[#0f8f67] sm:text-sm">₹599</div>
                       </div>
                     </div>
@@ -390,7 +537,7 @@ const PhoneMockup = () => {
 
                 <div
                   className="flex-1 bg-[#efe6dd] p-2.5 sm:p-3"
-                  style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
+                  style={{ backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
                 >
                   <div className="rounded-2xl border-2 border-black bg-white p-2.5 shadow-[2px_2px_0px_#111] sm:p-3 sm:shadow-[3px_3px_0px_#111]">
                     <div className="text-[9px] font-semibold leading-4 text-black/85 sm:text-[11px] sm:leading-5">
@@ -423,26 +570,10 @@ const PhoneMockup = () => {
         </div>
       </div>
 
-      <div className="absolute -bottom-8 left-1/2 flex -translate-x-1/2 gap-1.5 sm:-bottom-9">
-        {screens.map((_, index) => (
-          <Dot key={index} active={screen === index} />
-        ))}
-      </div>
+    
     </div>
   );
 };
-
-const FloatingBadge = ({ children, className = "", delay = 0 }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.85, y: 14 }}
-    whileInView={{ opacity: 1, scale: 1, y: 0 }}
-    viewport={{ once: true, amount: 0.4 }}
-    transition={{ delay, duration: 0.5, type: "spring", bounce: 0.34 }}
-    className={cn("absolute z-20", className)}
-  >
-    {children}
-  </motion.div>
-);
 
 const Stat = ({ value, label, icon, color = "bg-white" }) => (
   <motion.div
@@ -514,29 +645,6 @@ export default function PaypertapHero() {
     [isYearly]
   );
 
-  const cards = [
-    {
-      icon: <CatalogIcon size={18} />,
-      title: "Choose a template",
-      text: "Pick a colorful storefront style that matches your brand.",
-      color: "bg-sky-100",
-    },
-    {
-      icon: <MessageIcon size={18} />,
-      title: "Buyer taps buy",
-      text: "Collect phone, address, and order details before WhatsApp opens.",
-      color: "bg-amber-100",
-    },
-    {
-      icon: <TargetIcon size={18} />,
-      title: "Retarget later",
-      text: "Bring back previous buyers when a new drop goes live.",
-      color: "bg-pink-100",
-    },
-  ];
-
-  const headline = ['Turn "Price?" into "Paid" in a single tap.', "Smart catalogs. Total control. Still closed on WhatsApp."];
-
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -545,6 +653,9 @@ export default function PaypertapHero() {
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        html {
+          scroll-behavior: smooth;
+        }
         * { box-sizing: border-box; }
         .noise {
           background-image:
@@ -562,7 +673,7 @@ export default function PaypertapHero() {
       <div className="pointer-events-none absolute bottom-[-120px] right-[10%] h-[300px] w-[300px] rounded-full bg-[#ffe36e]/15 blur-3xl" />
 
       <header className="relative z-30">
-        <Section className="pt-6">
+        <Section className="pt-6" id="top">
           <motion.div
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
@@ -581,7 +692,7 @@ export default function PaypertapHero() {
               </div>
             </div>
 
-            <nav className="hidden items-center gap-6 text-sm font-semibold text-black/70 md:flex">
+            <nav className="hidden items-center gap-8 text-sm font-semibold text-black/70 md:flex">
               <a href="#how-it-works" className="transition hover:text-black">
                 How it works
               </a>
@@ -602,46 +713,15 @@ export default function PaypertapHero() {
 
       <main className="relative z-10">
         <Section className="pt-8 sm:pt-12 lg:pt-16">
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-10">
+          <div className="grid items-start gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12">
             <div>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: easeOut }}
-                className="mb-5 inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-200 px-4 py-2 text-xs font-black tracking-[0.2em] uppercase soft-shadow-sm"
-              >
-                <SparkIcon size={12} />
-                whatsapp-first commerce
-              </motion.div>
-
-              <h1 className="max-w-2xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl" style={{ lineHeight: 1.02 }}>
-                {headline.map((line, i) => (
-                  <motion.span
-                    key={line}
-                    initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{ duration: 0.55, delay: 0.08 + i * 0.08, ease: easeOut }}
-                    className="block"
-                  >
-                    {i === 1 ? <span className="text-[#0f8f67]">{line}</span> : line}
-                  </motion.span>
-                ))}
-              </h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.16, duration: 0.5, ease: easeOut }}
-                className="mt-6 max-w-xl text-base leading-8 text-black/65 sm:text-lg"
-              >
-                Pay Per Tap is for Instagram and WhatsApp sellers who want a branded catalog without the cost and complexity of a full website. Customers browse, submit details, and finish the order on WhatsApp while you stay in control.
-              </motion.p>
+              <HeroCopy />
 
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.24, duration: 0.5, ease: easeOut }}
-                className="mt-8 flex flex-wrap gap-3"
+                className="mt-7 flex flex-wrap gap-3"
               >
                 <HoverButton href={WHATSAPP_URL} variant="primary">
                   Get early access <ArrowRightIcon size={16} />
@@ -660,7 +740,7 @@ export default function PaypertapHero() {
                 Early access users get <span className="text-black">50% off on month 1</span>.
               </motion.div>
 
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="mt-8 hidden gap-3 sm:grid sm:grid-cols-2">
                 <Pill
                   icon={<CatalogIcon size={18} />}
                   title="Catalog, not chaos"
@@ -761,7 +841,7 @@ export default function PaypertapHero() {
           </div>
         </Section>
 
-        <Section className="mt-16 sm:mt-24">
+        <Section className="mt-16 sm:mt-24" id="why-it-exists">
           <SectionHeading
             eyebrow="why it exists"
             title="Made for sellers who want a real brand without a real headache."
@@ -804,7 +884,7 @@ export default function PaypertapHero() {
           </div>
         </Section>
 
-        <Section className="mt-16 sm:mt-24">
+        <Section className="mt-16 sm:mt-24" id="retargeting">
           <SectionHeading
             eyebrow="retargeting"
             title="Don’t start every drop from zero."
@@ -852,13 +932,15 @@ export default function PaypertapHero() {
         </Section>
 
         <Section className="mt-16 sm:mt-24" id="pricing">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between md:gap-8">
             <SectionHeading
               eyebrow="pricing"
               title="Affordable pricing with zero setup fees."
               subtitle="Pick monthly for flexibility or yearly for a cleaner discount."
             />
-            <PricingToggle billing={billing} setBilling={setBilling} />
+            <div className="md:pt-2">
+              <PricingToggle billing={billing} setBilling={setBilling} />
+            </div>
           </div>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
@@ -885,7 +967,7 @@ export default function PaypertapHero() {
           </div>
         </Section>
 
-        <Section className="mt-16 sm:mt-24">
+        <Section className="mt-16 sm:mt-24" id="comparison">
           <SectionHeading
             eyebrow="comparison"
             title="Why this feels lighter than a full website stack."
