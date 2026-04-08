@@ -18,20 +18,50 @@ const WhatsAppIcon = ({ size = 24, className = "" }) => (
 );
 
 const ArrowRightIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <line x1="5" y1="12" x2="19" y2="12" />
     <polyline points="12 5 19 12 12 19" />
   </svg>
 );
 
 const CheckIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
 const ShieldIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
@@ -43,14 +73,34 @@ const SparkIcon = ({ size = 18, className = "" }) => (
 );
 
 const TagIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
     <line x1="7" y1="7" x2="7.01" y2="7" />
   </svg>
 );
 
 const CatalogIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <rect x="3" y="3" width="7" height="7" rx="1.5" />
     <rect x="14" y="3" width="7" height="7" rx="1.5" />
     <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -59,13 +109,33 @@ const CatalogIcon = ({ size = 18, className = "" }) => (
 );
 
 const MessageIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
   </svg>
 );
 
 const TargetIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
     <circle cx="12" cy="12" r="9" />
     <circle cx="12" cy="12" r="4" />
     <path d="M12 3v2" />
@@ -73,15 +143,6 @@ const TargetIcon = ({ size = 18, className = "" }) => (
     <path d="M12 21v-2" />
     <path d="M3 12h2" />
   </svg>
-);
-
-const Dot = ({ active = false }) => (
-  <span
-    className={cn(
-      "inline-block h-2 w-2 rounded-full transition-all duration-300",
-      active ? "w-6 bg-[#20c997]" : "bg-black/15"
-    )}
-  />
 );
 
 const Section = ({ children, className = "", id }) => (
@@ -371,20 +432,19 @@ const HeroCopy = () => {
       </motion.div>
 
       <h1 className="max-w-2xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl" style={{ lineHeight: 1.02 }}>
-        {[
-          'Turn "Price?" into "Paid" in a single tap.',
-          "Smart catalogs. Total control. Still closed on WhatsApp.",
-        ].map((line, i) => (
-          <motion.span
-            key={line}
-            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.55, delay: 0.08 + i * 0.08, ease: easeOut }}
-            className="block"
-          >
-            {i === 1 ? <span className="text-[#0f8f67]">{line}</span> : line}
-          </motion.span>
-        ))}
+        {['Turn "Price?" into "Paid" in a single tap.', "Smart catalogs. Total control. Still closed on WhatsApp."].map(
+          (line, i) => (
+            <motion.span
+              key={line}
+              initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.55, delay: 0.08 + i * 0.08, ease: easeOut }}
+              className="block"
+            >
+              {i === 1 ? <span className="text-[#0f8f67]">{line}</span> : line}
+            </motion.span>
+          )
+        )}
       </h1>
 
       <motion.p
@@ -537,7 +597,10 @@ const PhoneMockup = () => {
 
                 <div
                   className="flex-1 bg-[#efe6dd] p-2.5 sm:p-3"
-                  style={{ backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+                  style={{
+                    backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)",
+                    backgroundSize: "18px 18px",
+                  }}
                 >
                   <div className="rounded-2xl border-2 border-black bg-white p-2.5 shadow-[2px_2px_0px_#111] sm:p-3 sm:shadow-[3px_3px_0px_#111]">
                     <div className="text-[9px] font-semibold leading-4 text-black/85 sm:text-[11px] sm:leading-5">
@@ -548,7 +611,9 @@ const PhoneMockup = () => {
                       {"\n"}Bhopal, MP
                       {"\n"}+91 98765 43210
                     </div>
-                    <div className="mt-1.5 text-right text-[9px] font-medium text-black/40 sm:mt-2 sm:text-[10px]">11:28 AM ✓✓</div>
+                    <div className="mt-1.5 text-right text-[9px] font-medium text-black/40 sm:mt-2 sm:text-[10px]">
+                      11:28 AM ✓✓
+                    </div>
                   </div>
 
                   <div className="mt-2.5 flex justify-end sm:mt-3">
@@ -569,8 +634,6 @@ const PhoneMockup = () => {
           </AnimatePresence>
         </div>
       </div>
-
-    
     </div>
   );
 };
@@ -619,26 +682,41 @@ export default function PaypertapHero() {
         subtitle: isYearly ? "25% off yearly billing · perfect for getting started" : "Best for small sellers who want a clean launch",
         accent: "bg-sky-100",
         features: [
+          "90 free messages included",
           "Up to 25 products",
           "Branded catalog page",
           "Manual WhatsApp checkout",
-          "50 paise per retarget message",
-          "10 paise per review request",
+          "Pay Per Tap subdomain link",
+        ],
+      },
+      {
+        title: "Growth",
+        price: isYearly ? "7191" : "799",
+        yearlyPrice: "7191",
+        subtitle: isYearly ? "25% off yearly billing · built for growing brands" : "For sellers who want a stronger branded presence",
+        accent: "bg-emerald-100",
+        highlight: true,
+        features: [
+          "270 free messages included",
+          "Up to 45 products",
+          "Custom branding + better templates",
+          "Your own domain",
+          "Razorpay API support",
         ],
       },
       {
         title: "Pro",
-        price: isYearly ? "8991" : "999",
-        yearlyPrice: "8991",
-        subtitle: isYearly ? "25% off yearly billing · built for growing brands" : "For sellers who want automation and better costs",
-        accent: "bg-emerald-100",
-        highlight: true,
+        price: isYearly ? "11691" : "1299",
+        yearlyPrice: "11691",
+        subtitle: isYearly ? "25% off yearly billing · for serious sellers" : "For sellers who want the strongest setup",
+        accent: "bg-pink-100",
         features: [
-          "Up to 45 products",
-          "Custom branding + better templates",
+          "810 free messages included",
+          "Up to 80 products",
+          "Premium branding + priority templates",
+          "Your own domain",
+          "Advanced storefront customization",
           "Razorpay API support",
-          "35 paise per retarget message",
-          "7 paise per review request",
         ],
       },
     ],
@@ -686,9 +764,7 @@ export default function PaypertapHero() {
                 <div className="text-lg font-black tracking-tight">
                   payper<span className="text-[#0f8f67]">tap</span>
                 </div>
-                <div className="text-xs font-semibold uppercase tracking-[0.25em] text-black/40">
-                  coming soon
-                </div>
+                <div className="text-xs font-semibold uppercase tracking-[0.25em] text-black/40">coming soon</div>
               </div>
             </div>
 
@@ -896,7 +972,9 @@ export default function PaypertapHero() {
                 <div className="rounded-[1.6rem] border-2 border-black bg-[#d8f2ff] p-5 shadow-[4px_4px_0px_#111]">
                   <div className="text-sm font-black uppercase tracking-[0.22em] text-black/40">lead score</div>
                   <div className="mt-3 text-4xl font-black">87</div>
-                  <p className="mt-2 text-sm leading-6 text-black/65">Better outcomes in the dashboard mean better follow-up opportunities later.</p>
+                  <p className="mt-2 text-sm leading-6 text-black/65">
+                    Better outcomes in the dashboard mean better follow-up opportunities later.
+                  </p>
                 </div>
                 <div className="rounded-[1.6rem] border-2 border-black bg-[#dcf8c6] p-5 shadow-[4px_4px_0px_#111]">
                   <div className="text-sm font-black uppercase tracking-[0.22em] text-black/40">latest action</div>
@@ -910,7 +988,8 @@ export default function PaypertapHero() {
                   Example future drop
                 </div>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-black/70">
-                  A seller launches another jeans drop after one month. The dashboard surfaces earlier buyers and interested leads, then creates pre-filled WhatsApp messages for the new launch.
+                  A seller launches another jeans drop after one month. The dashboard surfaces earlier buyers and interested
+                  leads, then creates pre-filled WhatsApp messages for the new launch.
                 </p>
               </div>
             </div>
@@ -918,14 +997,28 @@ export default function PaypertapHero() {
             <div className="rounded-[2rem] border-2 border-black bg-[#fff0a6] p-6 shadow-[10px_10px_0px_#111] sm:p-7">
               <div className="text-xs font-black uppercase tracking-[0.25em] text-black/40">what changes for the seller</div>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-black/80">
-                <li className="flex gap-3"><span>•</span><span>No more starting each drop from zero.</span></li>
-                <li className="flex gap-3"><span>•</span><span>Old customers can be reached again in a single tap.</span></li>
-                <li className="flex gap-3"><span>•</span><span>Manual control stays intact while the business becomes more organized.</span></li>
-                <li className="flex gap-3"><span>•</span><span>You save on unnecessary payment cuts when the flow stays WhatsApp-first.</span></li>
+                <li className="flex gap-3">
+                  <span>•</span>
+                  <span>No more starting each drop from zero.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span>•</span>
+                  <span>Old customers can be reached again in a single tap.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span>•</span>
+                  <span>Manual control stays intact while the business becomes more organized.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span>•</span>
+                  <span>You save on unnecessary payment cuts when the flow stays WhatsApp-first.</span>
+                </li>
               </ul>
               <div className="mt-6 rounded-[1.5rem] border-2 border-black bg-white p-4 shadow-[4px_4px_0px_#111]">
-                <div className="text-sm font-black">Retarget message pricing</div>
-                <div className="mt-2 text-sm leading-7 text-black/75">Starter: 50 paise / message · Pro: 35 paise / message</div>
+                <div className="text-sm font-black">Free messages included</div>
+                <div className="mt-2 text-sm leading-7 text-black/75">
+                  Starter: 90 free messages · Growth: 270 free messages · Pro: 810 free messages
+                </div>
               </div>
             </div>
           </div>
@@ -943,7 +1036,7 @@ export default function PaypertapHero() {
             </div>
           </div>
 
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {pricing.map((plan) => (
               <PricingCard key={plan.title} {...plan} />
             ))}
@@ -953,15 +1046,15 @@ export default function PaypertapHero() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border-2 border-black bg-sky-100 p-4 shadow-[3px_3px_0px_#111]">
                 <div className="text-sm font-black">Starter</div>
-                <div className="mt-1 text-sm text-black/70">50 paise retargeting</div>
+                <div className="mt-1 text-sm text-black/70">90 free messages included</div>
               </div>
               <div className="rounded-2xl border-2 border-black bg-emerald-100 p-4 shadow-[3px_3px_0px_#111]">
-                <div className="text-sm font-black">Pro</div>
-                <div className="mt-1 text-sm text-black/70">35 paise retargeting</div>
+                <div className="text-sm font-black">Growth</div>
+                <div className="mt-1 text-sm text-black/70">270 free messages included</div>
               </div>
               <div className="rounded-2xl border-2 border-black bg-pink-100 p-4 shadow-[3px_3px_0px_#111]">
-                <div className="text-sm font-black">Review requests</div>
-                <div className="mt-1 text-sm text-black/70">10 paise / 7 paise per message</div>
+                <div className="text-sm font-black">Pro</div>
+                <div className="mt-1 text-sm text-black/70">810 free messages included</div>
               </div>
             </div>
           </div>
@@ -1093,7 +1186,8 @@ export default function PaypertapHero() {
                   Start looking like a real brand without building a heavy store.
                 </h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-black/75 sm:text-lg">
-                  Join the waitlist now and get early access when Pay Per Tap opens. It is built for sellers who want speed, style, and control.
+                  Join the waitlist now and get early access when Pay Per Tap opens. It is built for sellers who want speed,
+                  style, and control.
                 </p>
               </div>
 
@@ -1107,9 +1201,7 @@ export default function PaypertapHero() {
                     View plans
                   </HoverButton>
                 </div>
-                <div className="mt-4 text-sm font-medium text-black/60">
-                  Early access users get 50% off on month 1.
-                </div>
+                <div className="mt-4 text-sm font-medium text-black/60">Early access users get 50% off on month 1.</div>
               </div>
             </div>
           </motion.div>
@@ -1118,9 +1210,7 @@ export default function PaypertapHero() {
 
       <footer className="relative z-10 border-t-2 border-black/10 bg-white/70 px-4 py-8 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:px-2">
-          <div className="text-sm font-semibold text-black/55">
-            © 2026 paypertap · Built for WhatsApp-first sellers.
-          </div>
+          <div className="text-sm font-semibold text-black/55">© 2026 paypertap · Built for WhatsApp-first sellers.</div>
           <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
             <a href="#how-it-works" className="transition hover:text-black">
               How it works
