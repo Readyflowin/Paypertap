@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 
 const WHATSAPP_NUMBER = "918602555840";
 const EARLY_ACCESS_MESSAGE =
   "Hi Pay Per Tap, I want early access. Please add me to the waitlist. I understand early access users get 50% off on month 1.";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  EARLY_ACCESS_MESSAGE
-)}`;
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(EARLY_ACCESS_MESSAGE)}`;
+
+const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+const easeOut = [0.22, 1, 0.36, 1];
 
 const WhatsAppIcon = ({ size = 24, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -14,46 +18,40 @@ const WhatsAppIcon = ({ size = 24, className = "" }) => (
   </svg>
 );
 
-const CheckIcon = ({ size = 20, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
 const ArrowRightIcon = ({ size = 18, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <line x1="5" y1="12" x2="19" y2="12" />
     <polyline points="12 5 19 12 12 19" />
   </svg>
 );
 
-const StarIcon = ({ size = 14, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+const CheckIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-const BoltIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-  </svg>
-);
-
-const ShieldIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+const ShieldIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
 
-const TagIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+const SparkIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z" />
+  </svg>
+);
+
+const TagIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
     <line x1="7" y1="7" x2="7.01" y2="7" />
   </svg>
 );
 
-const CatalogIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+const CatalogIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect x="3" y="3" width="7" height="7" rx="1.5" />
     <rect x="14" y="3" width="7" height="7" rx="1.5" />
     <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -61,14 +59,14 @@ const CatalogIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-const MessageIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+const MessageIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" />
   </svg>
 );
 
-const TargetIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+const TargetIcon = ({ size = 18, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className={className}>
     <circle cx="12" cy="12" r="9" />
     <circle cx="12" cy="12" r="4" />
     <path d="M12 3v2" />
@@ -78,14 +76,182 @@ const TargetIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
-const FloatingBadge = ({ children, className = "", delay = 0 }) => (
+const Dot = ({ active = false }) => (
+  <span
+    className={cn(
+      "inline-block h-2 w-2 rounded-full transition-all duration-300",
+      active ? "w-6 bg-[#20c997]" : "bg-black/15"
+    )}
+  />
+);
+
+const Section = ({ children, className = "" }) => (
+  <section className={cn("px-4 sm:px-6", className)}>
+    <div className="mx-auto w-full max-w-7xl">{children}</div>
+  </section>
+);
+
+const SectionHeading = ({ eyebrow, title, subtitle, align = "left" }) => (
+  <div className={cn(align === "center" ? "mx-auto text-center" : "", "max-w-3xl")}>
+    {eyebrow ? (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.6 }}
+        transition={{ duration: 0.45, ease: easeOut }}
+        className="mb-4 inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-200 px-4 py-1 text-xs font-bold tracking-[0.22em] text-black uppercase shadow-[3px_3px_0px_#111]"
+      >
+        <SparkIcon size={12} />
+        {eyebrow}
+      </motion.div>
+    ) : null}
+    <motion.h2
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.5 }}
+      transition={{ duration: 0.5, ease: easeOut }}
+      className="text-3xl font-black tracking-tight text-black sm:text-4xl lg:text-5xl"
+    >
+      {title}
+    </motion.h2>
+    {subtitle ? (
+      <motion.p
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.05, ease: easeOut }}
+        className="mt-4 text-base leading-8 text-black/65 sm:text-lg"
+      >
+        {subtitle}
+      </motion.p>
+    ) : null}
+  </div>
+);
+
+const HoverButton = ({ href, children, variant = "primary", className = "" }) => {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-black px-5 py-3 text-sm font-bold transition-all duration-200 shadow-[4px_4px_0px_#111] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#111]";
+  const styles =
+    variant === "primary"
+      ? "bg-[#25D366] text-black hover:bg-[#21c55d]"
+      : variant === "pink"
+      ? "bg-[#f7b6ff] text-black hover:bg-[#f29dfd]"
+      : variant === "yellow"
+      ? "bg-[#ffe36e] text-black hover:bg-[#ffd84d]"
+      : "bg-white text-black hover:bg-black/5";
+
+  return (
+    <a href={href} className={cn(base, styles, className)}>
+      {children}
+    </a>
+  );
+};
+
+const Pill = ({ icon, title, text, color = "bg-white" }) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0.7, y: 20 }}
-    animate={{ opacity: 1, scale: 1, y: 0 }}
-    transition={{ delay, duration: 0.6, type: "spring", bounce: 0.4 }}
-    className={`absolute z-20 ${className}`}
+    initial={{ opacity: 0, y: 14 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.4 }}
+    transition={{ duration: 0.45, ease: easeOut }}
+    className={cn("rounded-3xl border-2 border-black p-5 shadow-[5px_5px_0px_#111]", color)}
   >
-    {children}
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-black bg-white text-black shadow-[3px_3px_0px_#111]">
+        {icon}
+      </div>
+      <div>
+        <div className="text-lg font-black">{title}</div>
+        <div className="mt-1 text-sm leading-6 text-black/65">{text}</div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const PricingToggle = ({ billing, setBilling }) => (
+  <div className="inline-flex rounded-full border-2 border-black bg-white p-1 shadow-[4px_4px_0px_#111]">
+    <button
+      onClick={() => setBilling("monthly")}
+      className={cn(
+        "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
+        billing === "monthly" ? "bg-[#20c997] text-black" : "bg-transparent text-black/70 hover:text-black"
+      )}
+    >
+      Monthly
+    </button>
+    <button
+      onClick={() => setBilling("yearly")}
+      className={cn(
+        "rounded-full px-5 py-2 text-sm font-bold transition-all duration-200",
+        billing === "yearly" ? "bg-[#20c997] text-black" : "bg-transparent text-black/70 hover:text-black"
+      )}
+    >
+      Yearly · 25% off
+    </button>
+  </div>
+);
+
+const PricingCard = ({ title, price, yearlyPrice, subtitle, features, accent, highlight = false }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.35 }}
+    transition={{ duration: 0.5, ease: easeOut }}
+    className={cn("rounded-[2rem] border-2 border-black p-7 shadow-[10px_10px_0px_#111]", accent)}
+  >
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h3 className="text-3xl font-black tracking-tight text-black">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-black/65">{subtitle}</p>
+      </div>
+      {highlight ? (
+        <span className="rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-xs font-black shadow-[3px_3px_0px_#111]">
+          Best value
+        </span>
+      ) : null}
+    </div>
+
+    <div className="mt-6 flex items-end gap-3">
+      <div className="text-5xl font-black tracking-tight text-black">₹{price}</div>
+      <div className="pb-1 text-sm font-bold text-black/65">/month</div>
+    </div>
+    <div className="mt-1 text-sm font-medium text-black/55">Yearly: ₹{yearlyPrice} paid once</div>
+
+    <div className="mt-6 rounded-3xl border-2 border-black bg-white p-4 shadow-[4px_4px_0px_#111]">
+      <div className="mb-2 text-sm font-black uppercase tracking-[0.18em] text-black/40">Includes</div>
+      <ul className="space-y-3">
+        {features.map((feature) => (
+          <li key={feature} className="flex items-start gap-3 text-sm leading-6 text-black/80">
+            <span className="mt-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#20c997]/20 text-[#0f8f67]">
+              <CheckIcon size={13} />
+            </span>
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <HoverButton href={WHATSAPP_URL} variant={highlight ? "primary" : "white"} className="mt-6 w-full">
+      Select plan <ArrowRightIcon size={16} />
+    </HoverButton>
+  </motion.div>
+);
+
+const MiniFlowCard = ({ step, title, desc, color }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.35 }}
+    transition={{ duration: 0.5, ease: easeOut }}
+    className={cn("rounded-[1.8rem] border-2 border-black p-5 shadow-[5px_5px_0px_#111]", color)}
+  >
+    <div className="mb-3 flex items-center justify-between">
+      <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0px_#111] font-black">
+        {step}
+      </div>
+      <div className="text-[10px] font-black uppercase tracking-[0.3em] text-black/35">flow</div>
+    </div>
+    <div className="text-xl font-black text-black">{title}</div>
+    <p className="mt-2 text-sm leading-6 text-black/65">{desc}</p>
   </motion.div>
 );
 
@@ -94,55 +260,59 @@ const PhoneMockup = () => {
   const screens = ["catalog", "checkout", "whatsapp"];
 
   useEffect(() => {
-    const t = setInterval(() => setScreen((s) => (s + 1) % screens.length), 2800);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setScreen((s) => (s + 1) % screens.length), 2800);
+    return () => clearInterval(timer);
   }, []);
 
-  const demoProducts = [
-    { name: "Minimal Shirt", price: "₹599" },
-    { name: "Denim Cargo", price: "₹1,299" },
+  const products = [
     { name: "Oversized Tee", price: "₹449" },
+    { name: "Denim Cargo", price: "₹1,299" },
+    { name: "Printed Shirt", price: "₹599" },
     { name: "Layered Set", price: "₹849" },
   ];
 
   return (
-    <div className="relative w-[200px] h-[400px] md:w-[240px] md:h-[480px] mx-auto">
-      <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-b from-[#1a1a1a] to-[#0d0d0d] shadow-2xl border border-white/10">
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-16 h-4 bg-[#0d0d0d] rounded-full z-10" />
-        <div className="absolute inset-[6px] rounded-[2.2rem] overflow-hidden bg-white">
+    <div className="relative mx-auto h-[350px] w-[176px] sm:h-[390px] sm:w-[196px] md:h-[500px] md:w-[246px] lg:h-[520px] lg:w-[260px]">
+      <div className="absolute inset-0 rounded-[2.4rem] border-2 border-black bg-white shadow-[12px_12px_0px_#111] sm:rounded-[2.6rem] sm:shadow-[14px_14px_0px_#111]">
+        <div className="absolute inset-[6px] overflow-hidden rounded-[2.05rem] border-2 border-black bg-[#fbfbfb] sm:inset-[7px] sm:rounded-[2.3rem]">
           <AnimatePresence mode="wait">
-            {screen === 0 && (
+            {screen === 0 ? (
               <motion.div
                 key="catalog"
-                initial={{ x: 60, opacity: 0 }}
+                initial={{ x: 24, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -60, opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full flex flex-col"
+                exit={{ x: -24, opacity: 0 }}
+                transition={{ duration: 0.32, ease: easeOut }}
+                className="flex h-full flex-col"
               >
-                <div className="bg-[#25D366] px-3 py-2 flex items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
-                    <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
-                  </div>
-                  <div>
-                    <div className="text-white text-[8px] font-bold leading-none">Jiya Fashions</div>
-                    <div className="text-white/70 text-[6px]">paypertap.in/jiyafashions</div>
+                <div className="bg-[#25D366] px-3 py-2.5 sm:px-4 sm:py-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border-2 border-black bg-white shadow-[2px_2px_0px_#111] sm:h-11 sm:w-11 sm:rounded-2xl">
+                      <img src="/logo.png" alt="Pay Per Tap" className="h-full w-full object-contain" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-black text-black sm:text-sm">Jiya Fashions</div>
+                      <div className="text-[9px] font-medium text-black/70 sm:text-[10px]">paypertap.in/jiya</div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 bg-[#f9f9f9] p-2 overflow-hidden">
-                  <div className="text-[7px] font-bold text-gray-500 mb-1.5">NEW ARRIVALS</div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {demoProducts.map((item, i) => (
-                      <div key={i} className="rounded-lg overflow-hidden bg-white shadow-sm border border-gray-100">
-                        <div className="bg-white h-14 flex items-center justify-center">
-                          <div className="w-9 h-9 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-[7px] font-bold text-gray-500">
+
+                <div className="flex-1 p-2.5 sm:p-3">
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-black/35 sm:text-[11px] sm:tracking-[0.25em]">
+                    New arrivals
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    {products.map((product) => (
+                      <div key={product.name} className="overflow-hidden rounded-2xl border-2 border-black bg-white shadow-[2px_2px_0px_#111] sm:shadow-[3px_3px_0px_#111]">
+                        <div className="flex h-18 items-center justify-center bg-gradient-to-br from-emerald-50 to-yellow-50 sm:h-24">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border-2 border-black bg-white text-[10px] font-black text-black/45 sm:h-12 sm:w-12 sm:text-[11px]">
                             IMG
                           </div>
                         </div>
-                        <div className="p-1">
-                          <div className="text-[6px] font-semibold text-gray-800 leading-tight">{item.name}</div>
-                          <div className="text-[6px] text-[#25D366] font-bold">{item.price}</div>
-                          <div className="mt-1 bg-[#25D366] rounded text-white text-[5px] text-center py-0.5 font-bold">
+                        <div className="p-1.5 sm:p-2">
+                          <div className="text-[10px] font-bold text-black leading-tight sm:text-[11px]">{product.name}</div>
+                          <div className="mt-1 text-[10px] font-black text-[#0f8f67] sm:text-[11px]">{product.price}</div>
+                          <div className="mt-2 rounded-full border-2 border-black bg-[#ffe36e] px-2 py-0.5 text-center text-[9px] font-black shadow-[2px_2px_0px_#111] sm:py-1 sm:text-[10px]">
                             BUY
                           </div>
                         </div>
@@ -151,445 +321,739 @@ const PhoneMockup = () => {
                   </div>
                 </div>
               </motion.div>
-            )}
+            ) : null}
 
-            {screen === 1 && (
+            {screen === 1 ? (
               <motion.div
                 key="checkout"
-                initial={{ x: 60, opacity: 0 }}
+                initial={{ x: 24, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -60, opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full flex flex-col"
+                exit={{ x: -24, opacity: 0 }}
+                transition={{ duration: 0.32, ease: easeOut }}
+                className="flex h-full flex-col"
               >
-                <div className="bg-[#25D366] px-3 py-2">
-                  <div className="text-white text-[8px] font-bold">Complete Order</div>
+                <div className="bg-[#ffe36e] px-3 py-2.5 sm:px-4 sm:py-3">
+                  <div className="text-[11px] font-black text-black sm:text-sm">Complete order</div>
                 </div>
-                <div className="flex-1 bg-white p-3 space-y-2">
-                  <div className="bg-[#f0fdf4] rounded-lg p-2 flex gap-2 items-center">
-                    <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-[7px] font-bold text-gray-500">
-                      IMG
-                    </div>
-                    <div>
-                      <div className="text-[7px] font-bold">Minimal Shirt · Size M</div>
-                      <div className="text-[7px] text-[#25D366] font-bold">₹599</div>
+
+                <div className="flex-1 p-2.5 sm:p-3">
+                  <div className="rounded-2xl border-2 border-black bg-emerald-50 p-2.5 shadow-[2px_2px_0px_#111] sm:p-3 sm:shadow-[3px_3px_0px_#111]">
+                    <div className="flex gap-2.5 sm:gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-black bg-white text-[9px] font-black text-black/45 sm:h-14 sm:w-14 sm:text-[11px]">
+                        IMG
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-black text-black leading-tight sm:text-sm">Printed Shirt · M</div>
+                        <div className="text-[11px] font-black text-[#0f8f67] sm:text-sm">₹599</div>
+                      </div>
                     </div>
                   </div>
-                  {["Your Name", "Phone Number", "Delivery Address"].map((label, i) => (
-                    <div key={i}>
-                      <div className="text-[6px] text-gray-400 mb-0.5">{label}</div>
-                      <div className="h-4 bg-gray-100 rounded border border-gray-200 w-full" />
-                    </div>
-                  ))}
-                  <div className="mt-2 bg-[#25D366] rounded-lg py-2 flex items-center justify-center gap-1">
-                    <WhatsAppIcon size={10} className="text-white" />
-                    <span className="text-white text-[7px] font-bold">Continue on WhatsApp</span>
+
+                  <div className="mt-2.5 space-y-2 sm:mt-3 sm:space-y-2.5">
+                    {["Your name", "Phone number", "Delivery address"].map((label) => (
+                      <div key={label}>
+                        <div className="mb-1 text-[8px] font-black uppercase tracking-[0.18em] text-black/35 sm:text-[10px] sm:tracking-[0.2em]">
+                          {label}
+                        </div>
+                        <div className="h-8 rounded-2xl border-2 border-black bg-white shadow-[2px_2px_0px_#111] sm:h-10" />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border-2 border-black bg-[#25D366] px-3 py-2.5 text-center text-[10px] font-black shadow-[2px_2px_0px_#111] sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
+                    Continue on WhatsApp
                   </div>
                 </div>
               </motion.div>
-            )}
+            ) : null}
 
-            {screen === 2 && (
+            {screen === 2 ? (
               <motion.div
                 key="whatsapp"
-                initial={{ x: 60, opacity: 0 }}
+                initial={{ x: 24, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -60, opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="w-full h-full flex flex-col"
+                exit={{ x: -24, opacity: 0 }}
+                transition={{ duration: 0.32, ease: easeOut }}
+                className="flex h-full flex-col"
               >
-                <div className="bg-[#075E54] px-3 py-2 flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-[#25D366] flex items-center justify-center">
-                    <WhatsAppIcon size={10} className="text-white" />
-                  </div>
-                  <div>
-                    <div className="text-white text-[8px] font-bold">Jiya Fashions</div>
-                    <div className="text-green-300 text-[6px]">online</div>
+                <div className="bg-[#075E54] px-3 py-2.5 sm:px-4 sm:py-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-[#25D366] shadow-[2px_2px_0px_#111] sm:h-8 sm:w-8">
+                      <WhatsAppIcon size={13} className="text-white" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-black text-white sm:text-sm">Jiya Fashions</div>
+                      <div className="text-[9px] font-medium text-white/70 sm:text-[10px]">online</div>
+                    </div>
                   </div>
                 </div>
+
                 <div
-                  className="flex-1 bg-[#e5ddd5] p-2 space-y-1.5"
-                  style={{
-                    backgroundImage:
-                      'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23c1b5a9\' fill-opacity=\'0.15\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                  }}
+                  className="flex-1 bg-[#efe6dd] p-2.5 sm:p-3"
+                  style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
                 >
-                  <div className="flex justify-start">
-                    <div className="bg-white rounded-lg p-1.5 max-w-[80%] shadow-sm">
-                      <div className="text-[6px] text-gray-800 leading-relaxed">
-                        New Order
-                        <br />
-                        Product: Minimal Shirt (M)
-                        <br />
-                        Price: ₹599
-                        <br />
-                        Priya Sharma
-                        <br />
-                        Bhopal, MP 462001
-                        <br />
-                        +91 98765 43210
-                      </div>
-                      <div className="text-[5px] text-gray-400 text-right mt-0.5">11:28 AM ✓✓</div>
+                  <div className="rounded-2xl border-2 border-black bg-white p-2.5 shadow-[2px_2px_0px_#111] sm:p-3 sm:shadow-[3px_3px_0px_#111]">
+                    <div className="text-[9px] font-semibold leading-4 text-black/85 sm:text-[11px] sm:leading-5">
+                      New Order
+                      {"\n"}Product: Printed Shirt (M)
+                      {"\n"}Price: ₹599
+                      {"\n"}Priya Sharma
+                      {"\n"}Bhopal, MP
+                      {"\n"}+91 98765 43210
+                    </div>
+                    <div className="mt-1.5 text-right text-[9px] font-medium text-black/40 sm:mt-2 sm:text-[10px]">11:28 AM ✓✓</div>
+                  </div>
+
+                  <div className="mt-2.5 flex justify-end sm:mt-3">
+                    <div className="max-w-[82%] rounded-2xl border-2 border-black bg-[#dcf8c6] p-2.5 shadow-[2px_2px_0px_#111] sm:p-3 sm:shadow-[3px_3px_0px_#111]">
+                      <div className="text-[10px] font-semibold text-black/85 sm:text-[11px]">Send payment QR manually</div>
+                      <div className="mt-1 text-right text-[9px] font-medium text-black/40 sm:text-[10px]">11:29 AM ✓✓</div>
                     </div>
                   </div>
-                  <div className="flex justify-end">
-                    <div className="bg-[#dcf8c6] rounded-lg p-1.5 max-w-[70%] shadow-sm">
-                      <div className="text-[6px] text-gray-800">Sending payment QR...</div>
-                      <div className="text-[5px] text-gray-400 text-right mt-0.5">11:29 AM ✓✓</div>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-[5px] bg-[#25D366]/20 text-[#075E54] px-2 py-0.5 rounded-full font-bold">
+
+                  <div className="mt-3 text-center sm:mt-4">
+                    <span className="inline-flex rounded-full border-2 border-black bg-amber-200 px-3 py-1 text-[9px] font-black shadow-[2px_2px_0px_#111] sm:text-[10px]">
                       Sale done — no 2% cut
                     </span>
                   </div>
                 </div>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
       </div>
 
-      <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
-        {screens.map((_, i) => (
-          <div
-            key={i}
-            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-              screen === i ? "bg-[#25D366] w-3.5" : "bg-white/30"
-            }`}
-          />
+      <div className="absolute -bottom-8 left-1/2 flex -translate-x-1/2 gap-1.5 sm:-bottom-9">
+        {screens.map((_, index) => (
+          <Dot key={index} active={screen === index} />
         ))}
       </div>
     </div>
   );
 };
 
-const StatPill = ({ value, label, icon, delay }) => (
+const FloatingBadge = ({ children, className = "", delay = 0 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.5 }}
-    className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-3 py-2 backdrop-blur-sm"
+    initial={{ opacity: 0, scale: 0.85, y: 14 }}
+    whileInView={{ opacity: 1, scale: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.4 }}
+    transition={{ delay, duration: 0.5, type: "spring", bounce: 0.34 }}
+    className={cn("absolute z-20", className)}
   >
-    <div className="w-7 h-7 rounded-xl bg-[#25D366]/20 flex items-center justify-center text-[#25D366] shrink-0">{icon}</div>
-    <div>
-      <div className="text-white font-bold text-sm leading-none">{value}</div>
-      <div className="text-white/40 text-[10px] leading-none mt-0.5">{label}</div>
+    {children}
+  </motion.div>
+);
+
+const Stat = ({ value, label, icon, color = "bg-white" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 16 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.45 }}
+    transition={{ duration: 0.45, ease: easeOut }}
+    className={cn("rounded-3xl border-2 border-black p-4 shadow-[5px_5px_0px_#111]", color)}
+  >
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-black bg-white shadow-[3px_3px_0px_#111] text-black">
+        {icon}
+      </div>
+      <div>
+        <div className="text-2xl font-black tracking-tight text-black">{value}</div>
+        <div className="text-sm font-medium text-black/60">{label}</div>
+      </div>
     </div>
   </motion.div>
 );
 
-const PrimaryWhatsAppButton = ({ className = "", children }) => (
-  <motion.a
-    whileHover={{ scale: 1.03 }}
-    whileTap={{ scale: 0.98 }}
-    href={WHATSAPP_URL}
-    className={`inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#25D366]/25 hover:bg-[#22c55e] transition-colors ${className}`}
-  >
-    <WhatsAppIcon size={16} />
-    {children}
-  </motion.a>
-);
-
-const SecondaryWhatsAppButton = ({ className = "" }) => (
-  <a
-    href={WHATSAPP_URL}
-    className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/8 px-5 py-3 text-sm font-semibold text-white hover:bg-white/12 transition-colors ${className}`}
-  >
-    <MessageIcon size={16} />
-    Join Waitlist
-  </a>
-);
-
-const GlowOrb = ({ className }) => <div className={`absolute rounded-full blur-3xl pointer-events-none ${className}`} />;
-
 export default function PaypertapHero() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { damping: 50, stiffness: 100 });
-  const springY = useSpring(mouseY, { damping: 50, stiffness: 100 });
+  const springX = useSpring(mouseX, { damping: 50, stiffness: 90 });
+  const springY = useSpring(mouseY, { damping: 50, stiffness: 90 });
+  const [billing, setBilling] = useState("monthly");
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    mouseX.set((e.clientX - rect.left - rect.width / 2) * 0.015);
-    mouseY.set((e.clientY - rect.top - rect.height / 2) * 0.015);
+    mouseX.set((e.clientX - rect.left - rect.width / 2) * 0.012);
+    mouseY.set((e.clientY - rect.top - rect.height / 2) * 0.012);
   };
 
-  const headlineWords = ["Launch a beautiful", "selling page.", "Keep the closing", "on WhatsApp."];
+  const isYearly = billing === "yearly";
 
-  const subText =
-    "Pay Per Tap helps sellers who do not want a heavy website, expensive development, or complicated management. It gives them a clean catalog-style storefront, a smooth buyer flow, and a seller dashboard that keeps every conversation visible.";
+  const pricing = useMemo(
+    () => [
+      {
+        title: "Starter",
+        price: isYearly ? "2691" : "299",
+        yearlyPrice: "2691",
+        subtitle: isYearly ? "25% off yearly billing · perfect for getting started" : "Best for small sellers who want a clean launch",
+        accent: "bg-sky-100",
+        features: [
+          "Up to 25 products",
+          "Branded catalog page",
+          "Manual WhatsApp checkout",
+          "50 paise per retarget message",
+          "10 paise per review request",
+        ],
+      },
+      {
+        title: "Pro",
+        price: isYearly ? "8991" : "999",
+        yearlyPrice: "8991",
+        subtitle: isYearly ? "25% off yearly billing · built for growing brands" : "For sellers who want automation and better costs",
+        accent: "bg-emerald-100",
+        highlight: true,
+        features: [
+          "Up to 45 products",
+          "Custom branding + better templates",
+          "Razorpay API support",
+          "35 paise per retarget message",
+          "7 paise per review request",
+        ],
+      },
+    ],
+    [isYearly]
+  );
 
-  const perks = [
-    "Cheaper than Shopify for a lean launch",
-    "Faster than WordPress for a simple catalog flow",
-    "WhatsApp checkout with manual seller control",
-    "Retargeting and follow-up built in",
-  ];
-
-  const flowCards = [
+  const cards = [
     {
-      title: "Browse",
-      desc: "A clean catalog with templates, product images, variants, and pricing.",
       icon: <CatalogIcon size={18} />,
+      title: "Choose a template",
+      text: "Pick a colorful storefront style that matches your brand.",
+      color: "bg-sky-100",
     },
     {
-      title: "Checkout",
-      desc: "Buyer fills details, taps complete purchase, and opens WhatsApp with context.",
       icon: <MessageIcon size={18} />,
+      title: "Buyer taps buy",
+      text: "Collect phone, address, and order details before WhatsApp opens.",
+      color: "bg-amber-100",
     },
     {
-      title: "Retarget",
-      desc: "Mark outcomes in the dashboard, score conversations, and run follow-ups later.",
       icon: <TargetIcon size={18} />,
+      title: "Retarget later",
+      text: "Bring back previous buyers when a new drop goes live.",
+      color: "bg-pink-100",
     },
   ];
+
+  const headline = ['Turn "Price?" into "Paid" in a single tap.', "Smart catalogs. Total control. Still closed on WhatsApp."];
 
   return (
     <div
-      className="relative min-h-screen w-full overflow-hidden flex flex-col"
-      style={{
-        background: "linear-gradient(135deg, #0a0f0a 0%, #0d1a10 40%, #071209 100%)",
-        fontFamily: "'DM Sans', 'Sora', system-ui, sans-serif",
-      }}
       onMouseMove={handleMouseMove}
+      className="relative min-h-screen overflow-hidden bg-[#faf7f2] text-black"
+      style={{ fontFamily: "Inter, system-ui, sans-serif" }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
-        * { font-family: 'DM Sans', system-ui, sans-serif; }
-        h1, h2, .display { font-family: 'Sora', system-ui, sans-serif; }
-        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes shimmer { 0%{background-position:200% center} 100%{background-position:-200% center} }
-        .shimmer-text {
-          background: linear-gradient(90deg, #fff 0%, #25D366 35%, #fff 50%, #25D366 65%, #fff 100%);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: shimmer 4s linear infinite;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+        .noise {
+          background-image:
+            linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+          background-size: 48px 48px;
         }
-        .float-anim { animation: floatY 4s ease-in-out infinite; }
+        .soft-shadow { box-shadow: 6px 6px 0px #111; }
+        .soft-shadow-sm { box-shadow: 4px 4px 0px #111; }
       `}</style>
 
-      <GlowOrb className="w-[600px] h-[600px] bg-[#25D366]/8 -top-40 -right-40" />
-      <GlowOrb className="w-[400px] h-[400px] bg-[#25D366]/5 bottom-0 -left-20" />
-      <GlowOrb className="w-[300px] h-[300px] bg-emerald-900/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+      <div className="noise absolute inset-0 opacity-40" />
+      <div className="pointer-events-none absolute -top-32 right-[-120px] h-[420px] w-[420px] rounded-full bg-[#25D366]/12 blur-3xl" />
+      <div className="pointer-events-none absolute top-[500px] left-[-100px] h-[320px] w-[320px] rounded-full bg-[#f7b6ff]/15 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-120px] right-[10%] h-[300px] w-[300px] rounded-full bg-[#ffe36e]/15 blur-3xl" />
 
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(37,211,102,1) 1px, transparent 1px), linear-gradient(90deg, rgba(37,211,102,1) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      <motion.nav
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-30 flex items-center justify-between px-6 md:px-12 py-5"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-16 h-16 rounded-xl bg-white/10 border border-white/10 overflow-hidden shadow-lg shadow-black/20 flex items-center justify-center">
-            <img src="/logo.png" alt="Pay Per Tap" className="w-full h-full object-contain" />
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight" style={{ fontFamily: "Sora" }}>
-            payper<span className="text-[#25D366]">tap</span>
-          </span>
-          <span className="hidden sm:flex items-center gap-1 bg-[#25D366]/15 border border-[#25D366]/30 text-[#25D366] text-[10px] font-bold px-2 py-0.5 rounded-full">
-            <BoltIcon size={9} /> LAUNCHING SOON
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-1 text-white/40 text-xs">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
-            Building in public
-          </div>
-          <SecondaryWhatsAppButton className="hidden sm:inline-flex" />
-        </div>
-      </motion.nav>
-
-      <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center gap-10 px-6 md:px-12 py-8 lg:py-0 max-w-7xl mx-auto w-full">
-        <div className="flex-1 flex flex-col items-start max-w-xl">
+      <header className="relative z-30">
+        <Section className="pt-6">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="flex items-center gap-2 mb-5"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#25D366]" />
-            <span className="text-white/50 text-xs font-medium">For Instagram & WhatsApp sellers</span>
-            <span className="w-1 h-1 rounded-full bg-white/20" />
-            <span className="text-[#25D366] text-xs font-semibold">India-first</span>
-          </motion.div>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold leading-[1.08] tracking-tight mb-3" style={{ fontFamily: "Sora" }}>
-            {headlineWords.map((word, wi) => (
-              <motion.span
-                key={wi}
-                initial={{ opacity: 0, y: 30, filter: "blur(4px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{ delay: 0.2 + wi * 0.1, duration: 0.6 }}
-                className="block"
-              >
-                {wi === 0 || wi === 2 ? (
-                  <span className={wi === 0 ? "shimmer-text" : "text-white/30"}>{word}</span>
-                ) : (
-                  <span className="text-white">{word}</span>
-                )}
-              </motion.span>
-            ))}
-          </h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, duration: 0.5 }}
-            className="text-white/55 text-base leading-relaxed mb-7 max-w-lg"
+            transition={{ duration: 0.5, ease: easeOut }}
+            className="flex items-center justify-between rounded-[2rem] border-2 border-black bg-white px-4 py-3 soft-shadow"
           >
-            {subText}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6 w-full"
-          >
-            {perks.map((perk, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#25D366]/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckIcon size={10} className="text-[#25D366]" />
-                </div>
-                <span className="text-white/60 text-[13px] leading-snug">{perk}</span>
-              </div>
-            ))}
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-7 w-full max-w-2xl">
-            <StatPill value="₹0" label="setup to start" icon={<BoltIcon size={12} />} delay={0.8} />
-            <StatPill value="Manual" label="seller control" icon={<ShieldIcon size={12} />} delay={0.9} />
-            <StatPill value="Fast" label="React catalog" icon={<TagIcon size={12} />} delay={1.0} />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <PrimaryWhatsAppButton>Get Early Access</PrimaryWhatsAppButton>
-            <SecondaryWhatsAppButton className="sm:hidden" />
-          </div>
-
-          <p className="text-white/28 text-[11px] mt-2 pl-1">Early access users get 50% off for month 1.</p>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.15, duration: 0.5 }}
-            className="flex items-center gap-3 mt-5 flex-wrap"
-          >
-            <div className="flex">
-              {["✓", "✓", "✓", "✓", "✓"].map((e, i) => (
-                <div key={i} className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1a2e1e] to-[#0d1a10] border-2 border-[#0a0f0a] flex items-center justify-center text-[10px] font-bold text-[#25D366] -ml-1 first:ml-0">
-                  {e}
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="flex items-center gap-0.5">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <StarIcon key={i} className="text-amber-400" />
-                ))}
-              </div>
-              <span className="text-white/30 text-[10px]">Built for sellers who want control</span>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="flex items-center gap-1.5">
-              <ShieldIcon size={12} className="text-[#25D366]" />
-              <span className="text-white/30 text-[10px]">WhatsApp-first launch flow</span>
-            </div>
-          </motion.div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.7, type: "spring" }}
-          style={{ x: springX, y: springY }}
-          className="relative flex items-center justify-center w-full lg:w-auto lg:flex-1 max-w-sm lg:max-w-none"
-        >
-          <div className="absolute w-64 h-64 rounded-full bg-[#25D366]/10 blur-2xl" />
-          <div className="absolute w-48 h-48 rounded-full border border-[#25D366]/10 animate-ping" style={{ animationDuration: "3s" }} />
-
-          <div className="float-anim relative z-10 mt-8">
-            <PhoneMockup />
-          </div>
-
-          <FloatingBadge className="-top-2 -left-4 md:-left-12" delay={0.9}>
-            <div className="bg-[#0d1a10] border border-[#25D366]/30 rounded-2xl px-3 py-2 flex items-center gap-2 shadow-xl backdrop-blur-md">
-              <div className="w-7 h-7 rounded-xl bg-[#25D366] flex items-center justify-center">
-                <BoltIcon size={13} className="text-white" />
-              </div>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Pay Per Tap" className="h-12 w-12 object-contain" />
               <div>
-                <div className="text-white text-[11px] font-bold leading-none">₹0 setup</div>
-                <div className="text-white/40 text-[9px] leading-none mt-0.5">free to launch</div>
-              </div>
-            </div>
-          </FloatingBadge>
-
-          <FloatingBadge className="top-16 -right-4 md:-right-14" delay={1.0}>
-            <div className="bg-[#0d1a10] border border-white/10 rounded-2xl px-3 py-2 shadow-xl backdrop-blur-md">
-              <div className="flex items-center gap-1.5 mb-1">
-                <div className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
-                <span className="text-[#25D366] text-[10px] font-bold">NEW SALE</span>
-              </div>
-              <div className="text-white text-[11px] font-bold">Priya → Minimal Shirt</div>
-              <div className="text-white/40 text-[9px]">just now · via WhatsApp</div>
-            </div>
-          </FloatingBadge>
-
-          <FloatingBadge className="bottom-12 -left-4 md:-left-16" delay={1.1}>
-            <div className="bg-[#0d1a10] border border-white/10 rounded-2xl px-3 py-2 shadow-xl backdrop-blur-md">
-              <div className="text-white/40 text-[9px] mb-0.5">vs Shopify + WordPress</div>
-              <div className="flex items-end gap-1">
-                <span className="text-[#25D366] text-base font-bold leading-none">Lean</span>
-                <span className="text-white/30 text-[9px] mb-0.5">launch stack</span>
-              </div>
-            </div>
-          </FloatingBadge>
-        </motion.div>
-      </div>
-
-      <div className="relative z-20 px-6 md:px-12 pb-10 pt-2 max-w-7xl mx-auto w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.05, duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-3"
-        >
-          {flowCards.map((card, i) => (
-            <div key={card.title} className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-4 shadow-2xl shadow-black/10">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-11 h-11 rounded-2xl bg-[#25D366]/15 border border-[#25D366]/20 flex items-center justify-center text-xl text-[#25D366]">
-                  {card.icon}
+                <div className="text-lg font-black tracking-tight">
+                  payper<span className="text-[#0f8f67]">tap</span>
                 </div>
-                <div className="text-white/20 text-[10px] uppercase tracking-[0.3em]">0{i + 1}</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.25em] text-black/40">
+                  coming soon
+                </div>
               </div>
-              <div className="text-white font-semibold text-lg mb-1">{card.title}</div>
-              <p className="text-white/45 text-sm leading-relaxed">{card.desc}</p>
             </div>
-          ))}
-        </motion.div>
 
-        <div className="mt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-3xl border border-white/10 bg-black/20 backdrop-blur-md px-5 py-4">
-          <div>
-            <div className="text-white font-semibold">Manual control first. Automation later.</div>
-            <div className="text-white/40 text-sm">Start with WhatsApp checkout, then add payments and retargeting as you grow.</div>
+            <nav className="hidden items-center gap-6 text-sm font-semibold text-black/70 md:flex">
+              <a href="#how-it-works" className="transition hover:text-black">
+                How it works
+              </a>
+              <a href="#pricing" className="transition hover:text-black">
+                Pricing
+              </a>
+              <a href="#faq" className="transition hover:text-black">
+                FAQ
+              </a>
+            </nav>
+
+            <HoverButton href={WHATSAPP_URL} variant="primary" className="hidden sm:inline-flex">
+              Talk to us
+            </HoverButton>
+          </motion.div>
+        </Section>
+      </header>
+
+      <main className="relative z-10">
+        <Section className="pt-8 sm:pt-12 lg:pt-16">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-10">
+            <div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: easeOut }}
+                className="mb-5 inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-200 px-4 py-2 text-xs font-black tracking-[0.2em] uppercase soft-shadow-sm"
+              >
+                <SparkIcon size={12} />
+                whatsapp-first commerce
+              </motion.div>
+
+              <h1 className="max-w-2xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl" style={{ lineHeight: 1.02 }}>
+                {headline.map((line, i) => (
+                  <motion.span
+                    key={line}
+                    initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{ duration: 0.55, delay: 0.08 + i * 0.08, ease: easeOut }}
+                    className="block"
+                  >
+                    {i === 1 ? <span className="text-[#0f8f67]">{line}</span> : line}
+                  </motion.span>
+                ))}
+              </h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.16, duration: 0.5, ease: easeOut }}
+                className="mt-6 max-w-xl text-base leading-8 text-black/65 sm:text-lg"
+              >
+                Pay Per Tap is for Instagram and WhatsApp sellers who want a branded catalog without the cost and complexity of a full website. Customers browse, submit details, and finish the order on WhatsApp while you stay in control.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.24, duration: 0.5, ease: easeOut }}
+                className="mt-8 flex flex-wrap gap-3"
+              >
+                <HoverButton href={WHATSAPP_URL} variant="primary">
+                  Get early access <ArrowRightIcon size={16} />
+                </HoverButton>
+                <HoverButton href="#pricing" variant="white">
+                  See pricing
+                </HoverButton>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5, ease: easeOut }}
+                className="mt-4 text-sm font-semibold text-black/45"
+              >
+                Early access users get <span className="text-black">50% off on month 1</span>.
+              </motion.div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <Pill
+                  icon={<CatalogIcon size={18} />}
+                  title="Catalog, not chaos"
+                  text="Show products, variants, and prices in a clean branded flow."
+                  color="bg-sky-100"
+                />
+                <Pill
+                  icon={<ShieldIcon size={18} />}
+                  title="Manual control"
+                  text="You can keep the payment and conversation in your own hands."
+                  color="bg-emerald-100"
+                />
+                <Pill
+                  icon={<TargetIcon size={18} />}
+                  title="Retargeting built in"
+                  text="Bring back customers when your next drop goes live."
+                  color="bg-pink-100 sm:col-span-2"
+                />
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.65, type: "spring", bounce: 0.22 }}
+              style={{ x: springX, y: springY }}
+              className="relative mx-auto w-full max-w-[580px] lg:mt-4"
+            >
+              <div className="absolute -left-3 top-10 h-24 w-24 rounded-full bg-[#25D366]/12 blur-2xl" />
+              <div className="absolute -right-4 top-0 h-28 w-28 rounded-full bg-[#f7b6ff]/20 blur-2xl" />
+
+              <div className="rounded-[2.1rem] border-2 border-black bg-white p-3.5 shadow-[12px_12px_0px_#111] sm:p-5">
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-[1.08fr_0.92fr]">
+                  <div className="rounded-[1.65rem] border-2 border-black bg-[#f7f2ff] p-4 shadow-[5px_5px_0px_#111] sm:p-5">
+                    <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-black/40">
+                      <span className="inline-block h-2 w-2 rounded-full bg-[#25D366]" />
+                      live preview
+                    </div>
+                    <PhoneMockup />
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className="rounded-[1.65rem] border-2 border-black bg-[#fff0a6] p-4 shadow-[5px_5px_0px_#111] sm:p-5">
+                      <div className="text-xs font-black uppercase tracking-[0.24em] text-black/40">What it replaces</div>
+                      <div className="mt-3 space-y-2.5 text-sm leading-7 text-black/80">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>Shopify fees and setup overwhelm.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>WordPress speed and maintenance pain.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1">•</span>
+                          <span>Instagram DM chaos after every drop.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                      <div className="rounded-[1.65rem] border-2 border-black bg-[#dcf8c6] p-4 shadow-[5px_5px_0px_#111]">
+                        <div className="flex items-center gap-2 text-sm font-black">
+                          <MessageIcon size={16} />
+                          Buyer flow
+                        </div>
+                        <div className="mt-3 space-y-1.5 text-sm font-medium leading-7 text-black/75">
+                          <div>Browse the catalog</div>
+                          <div>Enter phone + address</div>
+                          <div>Open WhatsApp with order context</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[1.65rem] border-2 border-black bg-[#d8f2ff] p-4 shadow-[5px_5px_0px_#111]">
+                        <div className="flex items-center gap-2 text-sm font-black">
+                          <TargetIcon size={16} />
+                          Seller dashboard
+                        </div>
+                        <div className="mt-3 space-y-1.5 text-sm font-medium leading-7 text-black/75">
+                          <div>Mark sale / lead / not interested</div>
+                          <div>See conversation history</div>
+                          <div>Retarget buyers on next drop</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
-          <a href={WHATSAPP_URL} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-[#25D366]/25">
-            Get Early Access <ArrowRightIcon size={16} />
-          </a>
+        </Section>
+
+        <Section className="mt-14 sm:mt-20">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Stat value="₹0" label="setup to start" icon={<SparkIcon size={18} />} color="bg-sky-100" />
+            <Stat value="Manual" label="seller control" icon={<ShieldIcon size={18} />} color="bg-emerald-100" />
+            <Stat value="Fast" label="React-first storefront" icon={<TagIcon size={18} />} color="bg-pink-100" />
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24">
+          <SectionHeading
+            eyebrow="why it exists"
+            title="Made for sellers who want a real brand without a real headache."
+            subtitle="Pay Per Tap bridges the gap between a plain WhatsApp chat and an expensive full e-commerce stack."
+            align="center"
+          />
+          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Pill icon={<SparkIcon size={18} />} title="Cheaper than Shopify" text="Get started without paying for a heavy stack." color="bg-amber-100" />
+            <Pill icon={<CatalogIcon size={18} />} title="Looks like a brand" text="Templates, colors, product cards, and a clean catalog feel." color="bg-sky-100" />
+            <Pill icon={<MessageIcon size={18} />} title="WhatsApp-native" text="Buyer flow closes where your sellers already work." color="bg-emerald-100" />
+            <Pill icon={<TargetIcon size={18} />} title="Retarget later" text="Your next drop can reach earlier buyers instantly." color="bg-pink-100" />
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24" id="how-it-works">
+          <SectionHeading
+            eyebrow="how it works"
+            title="From catalog to WhatsApp in one smooth flow."
+            subtitle="This is intentionally simple. The customer gets a clean page, and the seller keeps manual control."
+          />
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            <MiniFlowCard
+              step="1"
+              title="Pick a template"
+              desc="Choose how your storefront should look, then add your branding and colors."
+              color="bg-sky-100"
+            />
+            <MiniFlowCard
+              step="2"
+              title="Add products"
+              desc="Upload product images, variants, descriptions, and pricing without building a full website."
+              color="bg-amber-100"
+            />
+            <MiniFlowCard
+              step="3"
+              title="Close on WhatsApp"
+              desc="The buyer submits details and the complete order opens in WhatsApp for your seller to handle."
+              color="bg-emerald-100"
+            />
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24">
+          <SectionHeading
+            eyebrow="retargeting"
+            title="Don’t start every drop from zero."
+            subtitle="Your dashboard remembers who bought what, who replied, and who is worth reaching out to again."
+          />
+          <div className="mt-10 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-[2rem] border-2 border-black bg-white p-6 shadow-[10px_10px_0px_#111] sm:p-7">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[1.6rem] border-2 border-black bg-[#d8f2ff] p-5 shadow-[4px_4px_0px_#111]">
+                  <div className="text-sm font-black uppercase tracking-[0.22em] text-black/40">lead score</div>
+                  <div className="mt-3 text-4xl font-black">87</div>
+                  <p className="mt-2 text-sm leading-6 text-black/65">Better outcomes in the dashboard mean better follow-up opportunities later.</p>
+                </div>
+                <div className="rounded-[1.6rem] border-2 border-black bg-[#dcf8c6] p-5 shadow-[4px_4px_0px_#111]">
+                  <div className="text-sm font-black uppercase tracking-[0.22em] text-black/40">latest action</div>
+                  <div className="mt-3 text-2xl font-black">Marked as Sale</div>
+                  <p className="mt-2 text-sm leading-6 text-black/65">Seller can update the conversation status after each chat.</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-[1.6rem] border-2 border-black bg-[#f7f2ff] p-5 shadow-[4px_4px_0px_#111]">
+                <div className="flex items-center gap-2 text-sm font-black">
+                  <TargetIcon size={16} />
+                  Example future drop
+                </div>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-black/70">
+                  A seller launches another jeans drop after one month. The dashboard surfaces earlier buyers and interested leads, then creates pre-filled WhatsApp messages for the new launch.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border-2 border-black bg-[#fff0a6] p-6 shadow-[10px_10px_0px_#111] sm:p-7">
+              <div className="text-xs font-black uppercase tracking-[0.25em] text-black/40">what changes for the seller</div>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-black/80">
+                <li className="flex gap-3"><span>•</span><span>No more starting each drop from zero.</span></li>
+                <li className="flex gap-3"><span>•</span><span>Old customers can be reached again in a single tap.</span></li>
+                <li className="flex gap-3"><span>•</span><span>Manual control stays intact while the business becomes more organized.</span></li>
+                <li className="flex gap-3"><span>•</span><span>You save on unnecessary payment cuts when the flow stays WhatsApp-first.</span></li>
+              </ul>
+              <div className="mt-6 rounded-[1.5rem] border-2 border-black bg-white p-4 shadow-[4px_4px_0px_#111]">
+                <div className="text-sm font-black">Retarget message pricing</div>
+                <div className="mt-2 text-sm leading-7 text-black/75">Starter: 50 paise / message · Pro: 35 paise / message</div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24" id="pricing">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <SectionHeading
+              eyebrow="pricing"
+              title="Affordable pricing with zero setup fees."
+              subtitle="Pick monthly for flexibility or yearly for a cleaner discount."
+            />
+            <PricingToggle billing={billing} setBilling={setBilling} />
+          </div>
+
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            {pricing.map((plan) => (
+              <PricingCard key={plan.title} {...plan} />
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-[2rem] border-2 border-black bg-white p-5 shadow-[5px_5px_0px_#111]">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border-2 border-black bg-sky-100 p-4 shadow-[3px_3px_0px_#111]">
+                <div className="text-sm font-black">Starter</div>
+                <div className="mt-1 text-sm text-black/70">50 paise retargeting</div>
+              </div>
+              <div className="rounded-2xl border-2 border-black bg-emerald-100 p-4 shadow-[3px_3px_0px_#111]">
+                <div className="text-sm font-black">Pro</div>
+                <div className="mt-1 text-sm text-black/70">35 paise retargeting</div>
+              </div>
+              <div className="rounded-2xl border-2 border-black bg-pink-100 p-4 shadow-[3px_3px_0px_#111]">
+                <div className="text-sm font-black">Review requests</div>
+                <div className="mt-1 text-sm text-black/70">10 paise / 7 paise per message</div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24">
+          <SectionHeading
+            eyebrow="comparison"
+            title="Why this feels lighter than a full website stack."
+            subtitle="The goal is not to replace everything. The goal is to make selling simpler for people who do not want complexity."
+            align="center"
+          />
+
+          <div className="mt-10 grid gap-4 xl:grid-cols-4">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45, ease: easeOut }}
+              className="rounded-[1.8rem] border-2 border-black bg-[#ffe36e] p-5 shadow-[5px_5px_0px_#111]"
+            >
+              <div className="text-lg font-black">Pay Per Tap</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-black/80">
+                <div>• Clean catalog page</div>
+                <div>• WhatsApp-first order flow</div>
+                <div>• Manual control retained</div>
+                <div>• Retargeting built in</div>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45, delay: 0.03, ease: easeOut }}
+              className="rounded-[1.8rem] border-2 border-black bg-sky-100 p-5 shadow-[5px_5px_0px_#111]"
+            >
+              <div className="text-lg font-black">Shopify</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-black/80">
+                <div>• More setup</div>
+                <div>• More cost</div>
+                <div>• More overhead</div>
+                <div>• Less manual simplicity</div>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45, delay: 0.06, ease: easeOut }}
+              className="rounded-[1.8rem] border-2 border-black bg-[#f7b6ff] p-5 shadow-[5px_5px_0px_#111]"
+            >
+              <div className="text-lg font-black">WordPress</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-black/80">
+                <div>• Needs upkeep</div>
+                <div>• Can get slow</div>
+                <div>• Plugin management</div>
+                <div>• More moving parts</div>
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.45, delay: 0.09, ease: easeOut }}
+              className="rounded-[1.8rem] border-2 border-black bg-emerald-100 p-5 shadow-[5px_5px_0px_#111]"
+            >
+              <div className="text-lg font-black">DM-only selling</div>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-black/80">
+                <div>• Hard to track</div>
+                <div>• Hard to retarget</div>
+                <div>• No branded page</div>
+                <div>• Chaotic at scale</div>
+              </div>
+            </motion.div>
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24" id="faq">
+          <SectionHeading
+            eyebrow="faq"
+            title="A few things people will ask."
+            subtitle="Simple answers for the coming soon page, so the idea feels clear right away."
+            align="center"
+          />
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            {[
+              {
+                q: "Is this a full e-commerce store?",
+                a: "Not exactly. It is a branded catalog and WhatsApp-first selling flow built for simple, fast selling.",
+              },
+              {
+                q: "Can I keep payment manual?",
+                a: "Yes. Manual QR / UPI collection is part of the flow for sellers who want control.",
+              },
+              {
+                q: "Why is this different?",
+                a: "Because it keeps the sale simple for the customer and the seller, while still letting you track and retarget later.",
+              },
+            ].map((faq) => (
+              <motion.div
+                key={faq.q}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.45, ease: easeOut }}
+                className="rounded-[1.8rem] border-2 border-black bg-white p-6 shadow-[5px_5px_0px_#111]"
+              >
+                <div className="text-xl font-black">{faq.q}</div>
+                <p className="mt-3 text-sm leading-7 text-black/70">{faq.a}</p>
+              </motion.div>
+            ))}
+          </div>
+        </Section>
+
+        <Section className="mt-16 sm:mt-24 pb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 0.55, ease: easeOut }}
+            className="rounded-[2.2rem] border-2 border-black bg-[#20c997] p-8 shadow-[10px_10px_0px_#111] sm:p-10"
+          >
+            <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-1 text-xs font-black tracking-[0.22em] uppercase shadow-[3px_3px_0px_#111]">
+                  launching soon
+                </div>
+                <h2 className="max-w-2xl text-3xl font-black tracking-tight text-black sm:text-4xl lg:text-5xl">
+                  Start looking like a real brand without building a heavy store.
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-8 text-black/75 sm:text-lg">
+                  Join the waitlist now and get early access when Pay Per Tap opens. It is built for sellers who want speed, style, and control.
+                </p>
+              </div>
+
+              <div className="rounded-[1.8rem] border-2 border-black bg-white p-5 shadow-[5px_5px_0px_#111]">
+                <div className="text-sm font-black uppercase tracking-[0.24em] text-black/40">Join waitlist</div>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row lg:flex-col">
+                  <HoverButton href={WHATSAPP_URL} variant="primary" className="w-full">
+                    WhatsApp us <WhatsAppIcon size={16} />
+                  </HoverButton>
+                  <HoverButton href="#pricing" variant="white" className="w-full">
+                    View plans
+                  </HoverButton>
+                </div>
+                <div className="mt-4 text-sm font-medium text-black/60">
+                  Early access users get 50% off on month 1.
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </Section>
+      </main>
+
+      <footer className="relative z-10 border-t-2 border-black/10 bg-white/70 px-4 py-8 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:px-2">
+          <div className="text-sm font-semibold text-black/55">
+            © 2026 paypertap · Built for WhatsApp-first sellers.
+          </div>
+          <div className="flex items-center gap-3 text-sm font-semibold text-black/55">
+            <a href="#how-it-works" className="transition hover:text-black">
+              How it works
+            </a>
+            <span className="text-black/20">•</span>
+            <a href="#pricing" className="transition hover:text-black">
+              Pricing
+            </a>
+            <span className="text-black/20">•</span>
+            <a href={WHATSAPP_URL} className="transition hover:text-black">
+              Contact
+            </a>
+          </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
