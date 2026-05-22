@@ -6,8 +6,8 @@ import {
   type SellerWelcomePayload,
   type StoreCreatedPayload,
   getEmailTemplate,
-} from "./_lib/emailTemplates";
-import { isValidEmail, sendResendEmail } from "./_lib/resendClient";
+} from "./_lib/emailTemplates.js";
+import { isValidEmail, sendResendEmail } from "./_lib/resendClient.js";
 
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.status(statusCode).json(body);

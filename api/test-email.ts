@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-import { loadLocalEnv } from "./_env";
+import { loadLocalEnv } from "./_env.js";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
