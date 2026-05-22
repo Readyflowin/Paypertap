@@ -7,10 +7,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
-*.local
+
+# Environment files - DO NOT COMMIT
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +31,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
