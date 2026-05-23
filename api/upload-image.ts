@@ -33,6 +33,44 @@ function getRequiredEnv(name: string) {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
+function getBearerToken(req: any) {
+  const header = req.headers?.authorization || req.headers?.Authorization;
+
+  if (typeof header !== "string") {
+    return "";
+  }
+
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || "";
+}
+
+async function verifyFirebaseUser(req: any) {
+  const idToken = getBearerToken(req);
+  const apiKey = getRequiredEnv("VITE_FIREBASE_API_KEY");
+
+  if (!idToken || !apiKey) {
+    return false;
+  }
+
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    }
+  );
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const data = (await response.json().catch(() => ({}))) as {
+    users?: unknown[];
+  };
+  return Array.isArray(data.users) && data.users.length > 0;
+}
+
 function firstFile(value: unknown): UploadedFile | null {
   if (Array.isArray(value)) {
     return (value[0] as UploadedFile | undefined) ?? null;
@@ -111,6 +149,13 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { success: false, error: "Method not allowed." });
+  }
+
+  if (!(await verifyFirebaseUser(req))) {
+    return sendJson(res, 401, {
+      success: false,
+      error: "Please sign in before uploading images.",
+    });
   }
 
   const bucketName = getRequiredEnv("CLOUDFLARE_R2_BUCKET_NAME");

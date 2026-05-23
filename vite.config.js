@@ -32,5 +32,43 @@ export default defineConfig(({ mode }) => {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
       },
     },
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "react-vendor",
+                test: /node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/,
+                priority: 40,
+              },
+              {
+                name: "firebase-vendor",
+                test: /node_modules[\\/](@firebase|firebase)[\\/]/,
+                priority: 35,
+                maxSize: 260 * 1024,
+              },
+              {
+                name: "ui-vendor",
+                test: /node_modules[\\/](lucide-react|framer-motion|@studio-freight|clsx|tailwind-merge)[\\/]/,
+                priority: 30,
+              },
+              {
+                name: "aws-vendor",
+                test: /node_modules[\\/](@aws-sdk|@smithy)[\\/]/,
+                priority: 25,
+                maxSize: 260 * 1024,
+              },
+              {
+                name: "vendor",
+                test: /node_modules[\\/]/,
+                priority: 10,
+                maxSize: 280 * 1024,
+              },
+            ],
+          },
+        },
+      },
+    },
   };
 });

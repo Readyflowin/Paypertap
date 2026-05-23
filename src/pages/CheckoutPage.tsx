@@ -1,36 +1,59 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuthUser } from "../hooks/useAuthUser";
-import { formatINR } from "../lib/money";
+import { ArrowLeft, ImageIcon, ShieldCheck, WalletCards } from "lucide-react";
+
 import {
-  getProductById,
-  getPublicProductById,
-} from "../services/productService";
-import { getPublicStoreData } from "../services/publicStoreService";
-import { startMockBookingPayment } from "../services/mockPaymentService";
-import { getSellerByUid } from "../services/sellerService";
+  PptBadge,
+  PptButton,
+  PptEmptyState,
+  PptField,
+  PptNotice,
+  PptPriceBreakdown,
+  PptTapLoader,
+  type PptTone,
+} from "@/components/ui";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { formatINR } from "@/lib/money";
+import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailability";
+import { getProductById, getPublicProductById } from "@/services/productService";
+import { getPublicStoreData } from "@/services/publicStoreService";
+import { startMockBookingPayment } from "@/services/mockPaymentService";
+import { getSellerByUid } from "@/services/sellerService";
 import {
   sendBookingCreatedEmail,
   sendBuyerBookingConfirmationEmail,
-} from "../services/emailEventService";
-import { markCheckoutEmailEventSent } from "../services/checkoutService";
-import type { CheckoutSession, Product, Store } from "../types/firestore";
+} from "@/services/emailEventService";
+import { markCheckoutEmailEventSent } from "@/services/checkoutService";
+import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type CheckoutStep = "details" | "payment";
 
-function getAvailableQuantity(product: Product): number {
-  return Math.max(
-    product.inventoryQuantity - product.reservedQuantity - product.soldQuantity,
-    0
-  );
+function getProductImage(product: Product): string {
+  const image = product.images?.find((item) => item.thumbUrl || item.url || item.mediumUrl);
+  return image?.thumbUrl || image?.url || image?.mediumUrl || "";
 }
 
-function getProductImage(product: Product): string {
-  const image = product.images?.find(
-    (item) => item.thumbUrl || item.url || item.mediumUrl
-  );
+function getProductBadge(
+  product: Product,
+  availableQuantity: number
+): { label: string; tone: PptTone } {
+  if (product.status === "sold") return { label: "Sold", tone: "sold" };
+  if (product.status === "hold") return { label: "Reserved", tone: "reserved" };
+  if (product.status !== "open") return { label: "Unavailable", tone: "neutral" };
+  if (availableQuantity <= 0) return { label: "Unavailable", tone: "neutral" };
+  if (availableQuantity === 1) return { label: "1 left", tone: "hot" };
+  return { label: "Open", tone: "success" };
+}
 
-  return image?.thumbUrl || image?.url || image?.mediumUrl || "";
+function CheckoutLoading() {
+  return (
+    <main className="pds-page grid place-items-center">
+      <PptTapLoader
+        title="Preparing checkout..."
+        description="Loading your product and reservation details."
+      />
+    </main>
+  );
 }
 
 export default function CheckoutPage() {
@@ -98,8 +121,7 @@ export default function CheckoutPage() {
   const availableQuantity = product ? getAvailableQuantity(product) : 0;
   const canCheckout =
     Boolean(store?.isPublished) &&
-    product?.status === "open" &&
-    availableQuantity > 0 &&
+    Boolean(product && isProductBookable(product)) &&
     !isOwnerPreview;
 
   function validateDetails() {
@@ -174,10 +196,7 @@ export default function CheckoutPage() {
         });
 
         if (sent) {
-          await markCheckoutEmailEventSent(
-            checkoutSession.checkoutId,
-            "sellerBookingSentAt"
-          );
+          await markCheckoutEmailEventSent(checkoutSession.checkoutId, "sellerBookingSentAt");
         }
       }
     } catch (error) {
@@ -194,10 +213,7 @@ export default function CheckoutPage() {
 
       if (sent) {
         try {
-          await markCheckoutEmailEventSent(
-            checkoutSession.checkoutId,
-            "buyerBookingSentAt"
-          );
+          await markCheckoutEmailEventSent(checkoutSession.checkoutId, "buyerBookingSentAt");
         } catch (error) {
           console.warn("Could not mark buyer booking email as sent:", error);
         }
@@ -206,20 +222,28 @@ export default function CheckoutPage() {
   }
 
   if (loading || authLoading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <p className="text-sm font-medium text-gray-600">Loading checkout...</p>
-      </main>
-    );
+    return <CheckoutLoading />;
   }
 
   if (error && (!store || !product)) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <section className="max-w-sm rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-gray-950">Checkout unavailable</h1>
-          <p className="mt-2 text-sm text-gray-500">{error}</p>
-        </section>
+      <main className="pds-page grid place-items-center px-4">
+        <PptEmptyState
+          title="Checkout unavailable"
+          description={error}
+          icon={<ShieldCheck size={28} aria-hidden="true" />}
+          action={
+            <PptButton
+              type="button"
+              variant="primary"
+              rounded="pill"
+              onClick={() => navigate(`/${storeSlug}`)}
+            >
+              Back to store
+            </PptButton>
+          }
+          className="max-w-sm"
+        />
       </main>
     );
   }
@@ -229,126 +253,178 @@ export default function CheckoutPage() {
   const productImageUrl = getProductImage(product);
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] text-gray-950">
-      <section className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
+    <main className="pds-page">
+      <section className="pds-container">
         <Link
           to={`/${storeSlug}/product/${product.productId || product.id}`}
-          className="text-sm font-medium text-gray-600 transition hover:text-gray-950"
+          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--pds-muted)] transition hover:text-[var(--pds-primary)]"
         >
+          <ArrowLeft size={16} aria-hidden="true" />
           Back to product
         </Link>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_0.8fr]">
-          <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Checkout</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">
-              Book for ₹20
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-gray-600">
-              Pay ₹20 advance to reserve this item. The remaining amount is paid
-              directly to the seller on WhatsApp/UPI/COD.
-            </p>
+        <header className="mt-6 max-w-3xl">
+          <PptBadge tone="primary" icon={<WalletCards size={14} aria-hidden="true" />}>
+            Reservation checkout
+          </PptBadge>
+          <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
+            Reserve your item
+          </h1>
+          <p className="mt-3 max-w-2xl text-base font-light leading-7 text-[var(--pds-muted)]">
+            Pay ₹20 now. Pay the remaining amount directly to the seller on WhatsApp.
+          </p>
+        </header>
 
-            {!canCheckout ? (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                {isOwnerPreview
-                  ? "Owner preview only. Publish the store before checkout."
-                  : "This product is not available for booking."}
-              </div>
-            ) : null}
-
-            {step === "details" ? (
-              <form onSubmit={handleDetailsSubmit} className="mt-6 space-y-4">
-                <BuyerFields
-                  buyerAddress={buyerAddress}
-                  buyerCity={buyerCity}
-                  buyerName={buyerName}
-                  buyerPhone={buyerPhone}
-                  buyerPincode={buyerPincode}
-                  setBuyerAddress={setBuyerAddress}
-                  setBuyerCity={setBuyerCity}
-                  setBuyerName={setBuyerName}
-                  setBuyerPhone={setBuyerPhone}
-                  setBuyerPincode={setBuyerPincode}
-                />
-
-                {error ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                    {error}
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={!canCheckout}
-                  className="w-full rounded-2xl bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-                >
-                  Continue
-                </button>
-              </form>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm leading-6 text-green-800">
-                  Buyer details saved locally for this mock payment step.
+        <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start">
+          <section className="order-2 lg:order-1">
+            <div className="pds-panel">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-light text-[var(--pds-muted)]">Buyer details</p>
+                  <h2 className="mt-1 text-2xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
+                    Where should the seller contact you?
+                  </h2>
                 </div>
-
-                {error ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                    {error}
-                  </div>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={handleMockPayment}
-                  disabled={saving || !canCheckout}
-                  className="w-full rounded-2xl bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-                >
-                  {saving ? "Processing mock payment..." : "Pay ₹20 Advance (Mock)"}
-                </button>
+                <PptBadge tone={step === "payment" ? "warning" : "info"}>
+                  {step === "payment" ? "Payment pending" : "Details"}
+                </PptBadge>
               </div>
-            )}
+
+              {!canCheckout ? (
+                <PptNotice
+                  tone={isOwnerPreview ? "warning" : "danger"}
+                  title={
+                    isOwnerPreview
+                      ? "Owner preview only"
+                      : "This item is no longer available for booking."
+                  }
+                  className="mt-5"
+                >
+                  {isOwnerPreview
+                    ? "Publish the store before accepting buyer reservations."
+                    : "Please go back to the store and choose another available product."}
+                </PptNotice>
+              ) : null}
+
+              {step === "details" ? (
+                <form onSubmit={handleDetailsSubmit} className="mt-6 space-y-4">
+                  <BuyerFields
+                    buyerAddress={buyerAddress}
+                    buyerCity={buyerCity}
+                    buyerName={buyerName}
+                    buyerPhone={buyerPhone}
+                    buyerPincode={buyerPincode}
+                    setBuyerAddress={setBuyerAddress}
+                    setBuyerCity={setBuyerCity}
+                    setBuyerName={setBuyerName}
+                    setBuyerPhone={setBuyerPhone}
+                    setBuyerPincode={setBuyerPincode}
+                  />
+
+                  {error ? <ErrorNotice message={error} /> : null}
+
+                  <PptButton type="submit" fullWidth size="lg" disabled={!canCheckout}>
+                    Continue to ₹20 booking
+                  </PptButton>
+                </form>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  <PptNotice tone="success" title="Details saved">
+                    Your item is reserved after the ₹20 booking is recorded.
+                  </PptNotice>
+
+                  {error ? <ErrorNotice message={error} /> : null}
+
+                  <PptButton
+                    type="button"
+                    onClick={handleMockPayment}
+                    disabled={saving || !canCheckout}
+                    loading={saving}
+                    fullWidth
+                    size="lg"
+                  >
+                    {saving ? "Reserving item..." : "Pay ₹20 & reserve"}
+                  </PptButton>
+                </div>
+              )}
+
+              <PptNotice
+                tone="info"
+                title="After payment, we’ll open WhatsApp with a ready message to the seller."
+                icon={<ShieldCheck size={18} aria-hidden="true" />}
+                className="mt-5"
+              >
+                The seller confirms the remaining payment and delivery details directly on WhatsApp.
+              </PptNotice>
+            </div>
           </section>
 
-          <aside className="h-fit rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold tracking-tight">Order summary</h2>
-            <div className="mt-4 flex gap-3">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
-                {productImageUrl ? (
-                  <img
-                    src={productImageUrl}
-                    alt={product.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-gray-400">
-                    No image
-                  </div>
-                )}
-              </div>
-              <p className="text-sm font-medium text-gray-700">{product.title}</p>
-            </div>
-
-            <div className="mt-5 space-y-3 text-sm">
-              <SummaryRow label="Product price" value={formatINR(product.price)} />
-              <SummaryRow
-                label="Pay now"
-                value={`${formatINR(product.bookingAdvanceAmount)} advance`}
-              />
-              <SummaryRow
-                label="Remaining amount"
-                value={formatINR(product.sellerCollectAmount)}
-              />
-            </div>
-
-            <p className="mt-5 text-xs leading-5 text-gray-500">
-              Remaining payment and delivery confirmation happen directly with
-              the seller after booking.
-            </p>
+          <aside className="order-1 space-y-4 lg:sticky lg:top-6 lg:order-2">
+            <ProductSummaryCard
+              product={product}
+              storeName={store.storeName}
+              imageUrl={productImageUrl}
+              availableQuantity={availableQuantity}
+            />
+            <PptPriceBreakdown
+              productPrice={product.price}
+              advanceAmount={product.bookingAdvanceAmount || 20}
+              currency="₹"
+              note="The ₹20 booking advance is adjusted against the product price."
+            />
           </aside>
         </div>
       </section>
     </main>
+  );
+}
+
+function ProductSummaryCard({
+  product,
+  storeName,
+  imageUrl,
+  availableQuantity,
+}: {
+  product: Product;
+  storeName: string;
+  imageUrl: string;
+  availableQuantity: number;
+}) {
+  const badge = getProductBadge(product, availableQuantity);
+
+  return (
+    <div className="pds-panel">
+      <h2 className="text-xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
+        Product summary
+      </h2>
+      <div className="mt-4 flex gap-3">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-[var(--pds-border)] bg-[var(--pds-surface-soft)]">
+          {imageUrl ? (
+            <img src={imageUrl} alt={product.title} className="h-full w-full object-cover" />
+          ) : (
+            <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--pds-muted)]">
+            {storeName}
+          </p>
+          <p className="mt-1 line-clamp-2 text-base font-medium text-[var(--pds-text)]">
+            {product.title}
+          </p>
+          <p className="mt-2 text-xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
+            {formatINR(product.price)}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <PptBadge tone={badge.tone}>{badge.label}</PptBadge>
+            <PptBadge tone="primary">Reserve with ₹20</PptBadge>
+          </div>
+          <p className="mt-2 text-xs font-light text-[var(--pds-muted)]">
+            {availableQuantity > 0 ? `${availableQuantity} available` : "Unavailable"}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -378,57 +454,53 @@ function BuyerFields({
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" value={buyerName} onChange={setBuyerName} />
-        <Field
-          label="Phone"
+        <PptField
+          label="Name"
+          placeholder="Your full name"
+          value={buyerName}
+          onChange={(event) => setBuyerName(event.target.value)}
+          required
+        />
+        <PptField
+          label="WhatsApp number"
+          placeholder="10 digit mobile number"
           type="tel"
           value={buyerPhone}
-          onChange={setBuyerPhone}
+          onChange={(event) => setBuyerPhone(event.target.value)}
+          required
         />
       </div>
-      <Field label="Address" value={buyerAddress} onChange={setBuyerAddress} />
+      <PptField
+        label="Address"
+        placeholder="House number, street, area"
+        value={buyerAddress}
+        onChange={(event) => setBuyerAddress(event.target.value)}
+        required
+      />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="City" value={buyerCity} onChange={setBuyerCity} />
-        <Field
+        <PptField
+          label="City"
+          placeholder="City"
+          value={buyerCity}
+          onChange={(event) => setBuyerCity(event.target.value)}
+          required
+        />
+        <PptField
           label="Pincode"
+          placeholder="Pincode"
           value={buyerPincode}
-          onChange={setBuyerPincode}
+          onChange={(event) => setBuyerPincode(event.target.value)}
+          required
         />
       </div>
     </>
   );
 }
 
-function Field({
-  label,
-  onChange,
-  type = "text",
-  value,
-}: {
-  label: string;
-  onChange: (value: string) => void;
-  type?: string;
-  value: string;
-}) {
+function ErrorNotice({ message }: { message: string }) {
   return (
-    <label className="block text-sm font-medium text-gray-800">
-      {label}
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required
-        className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-gray-950"
-      />
-    </label>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-bold text-gray-950">{value}</span>
-    </div>
+    <PptNotice tone="danger" title="Please check your details">
+      {message}
+    </PptNotice>
   );
 }

@@ -13,7 +13,6 @@ import {
 import { db } from "../lib/firebase";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
-import { sendProductAddedEmail } from "./emailEventService";
 import { uploadProductImage } from "./uploadService";
 
 type CreateSellerProductInput = {
@@ -210,23 +209,8 @@ export async function createSellerProduct(
     ...productData,
   };
 
-  if (user.email) {
-    void sendProductAddedEmail({
-      sellerEmail: user.email,
-      product: createdProduct,
-      storeSlug: storeId,
-    }).then(async (sent) => {
-      if (!sent) return;
-
-      try {
-        await updateDoc(productRef, {
-          "emailEvents.productAddedSentAt": serverTimestamp(),
-        });
-      } catch (error) {
-        console.warn("Could not mark product added email as sent:", error);
-      }
-    });
-  }
+  // Product-created seller emails are intentionally disabled to avoid Resend quota waste.
+  // The dashboard/onboarding success state is the product creation confirmation.
 
   return createdProduct;
 }
@@ -252,12 +236,16 @@ export async function updateSellerProduct(
     throw new Error("Product price must be greater than ₹20.");
   }
 
-  const inventoryQuantity = toPositiveInt(
+  let inventoryQuantity = toPositiveInt(
     input.inventoryQuantity,
     "Inventory quantity"
   );
   const reservedQuantity = Number(product.reservedQuantity || 0);
   const soldQuantity = Number(product.soldQuantity || 0);
+
+  if (input.status === "open" && inventoryQuantity <= reservedQuantity + soldQuantity) {
+    inventoryQuantity = reservedQuantity + soldQuantity + 1;
+  }
 
   if (inventoryQuantity < reservedQuantity + soldQuantity) {
     throw new Error("Inventory cannot be lower than reserved plus sold quantity.");

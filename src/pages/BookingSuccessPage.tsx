@@ -1,14 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { formatINR } from "../lib/money";
-import { getProductById } from "../services/productService";
-import { getStoreById } from "../services/storeService";
+import { useNavigate, useParams } from "react-router-dom";
+import { CheckCircle2, Copy, ImageIcon, MessageCircle } from "lucide-react";
+
+import {
+  PptBadge,
+  PptBrandIcon,
+  PptButton,
+  PptEmptyState,
+  PptNotice,
+  PptPriceBreakdown,
+  PptTapLoader,
+} from "@/components/ui";
+import { formatINR } from "@/lib/money";
+import { getProductById } from "@/services/productService";
+import { getStoreById } from "@/services/storeService";
 import {
   buildBuyerBookingMessage,
   buildBuyerBookingWhatsAppUrl,
   getStoreWhatsAppPhone,
-} from "../services/whatsappService";
-import type { CheckoutSession, Product, Store } from "../types/firestore";
+} from "@/services/whatsappService";
+import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type SuccessState = {
   checkout: CheckoutSession | null;
@@ -19,6 +30,7 @@ type SuccessState = {
 };
 
 export default function BookingSuccessPage() {
+  const navigate = useNavigate();
   const { storeSlug = "", checkoutId = "" } = useParams();
   const [state, setState] = useState<SuccessState>({
     checkout: null,
@@ -36,12 +48,8 @@ export default function BookingSuccessPage() {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
 
-        const storedCheckout = sessionStorage.getItem(
-          `paypertap:checkout:${checkoutId}`
-        );
-        const checkout = storedCheckout
-          ? (JSON.parse(storedCheckout) as CheckoutSession)
-          : null;
+        const storedCheckout = sessionStorage.getItem(`paypertap:checkout:${checkoutId}`);
+        const checkout = storedCheckout ? (JSON.parse(storedCheckout) as CheckoutSession) : null;
 
         if (!checkout) {
           throw new Error("Booking details are not available on this device.");
@@ -66,7 +74,7 @@ export default function BookingSuccessPage() {
           });
         }
       } catch (error) {
-        console.error("Booking success load failed:", error);
+        console.warn("Booking success load failed:", error);
 
         if (!cancelled) {
           setState({
@@ -103,13 +111,11 @@ export default function BookingSuccessPage() {
       buyerCity: state.checkout.buyerCity,
       buyerPincode: state.checkout.buyerPincode,
     };
-  }, [state.checkout, state.store, storeSlug]);
+  }, [state.checkout, storeSlug]);
 
   const whatsappMessage = whatsappInput ? buildBuyerBookingMessage(whatsappInput) : "";
   const sellerWhatsAppPhone = getStoreWhatsAppPhone(state.store);
-  const whatsappUrl = whatsappInput
-    ? buildBuyerBookingWhatsAppUrl(state.store, whatsappMessage)
-    : "#";
+  const whatsappUrl = whatsappInput ? buildBuyerBookingWhatsAppUrl(state.store, whatsappMessage) : "#";
   const hasSellerPhone = Boolean(sellerWhatsAppPhone);
 
   async function handleCopyMessage() {
@@ -119,23 +125,42 @@ export default function BookingSuccessPage() {
     setCopied(true);
   }
 
+  function openWhatsApp() {
+    if (!hasSellerPhone || !whatsappUrl) return;
+
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  }
+
   if (state.loading) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <p className="text-sm font-medium text-gray-600">Loading booking...</p>
+      <main className="pds-page grid place-items-center">
+        <PptTapLoader
+          title="Loading booking..."
+          description="Preparing your WhatsApp handoff."
+        />
       </main>
     );
   }
 
   if (state.error || !state.checkout) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <section className="max-w-sm rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-gray-950">Booking not found</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            We could not find this booking session.
-          </p>
-        </section>
+      <main className="pds-page grid place-items-center px-4">
+        <PptEmptyState
+          title="Booking not found"
+          description="Please go back to the store and try again."
+          icon={<MessageCircle size={28} aria-hidden="true" />}
+          action={
+            <PptButton
+              type="button"
+              variant="primary"
+              rounded="pill"
+              onClick={() => navigate(`/${storeSlug}`)}
+            >
+              Back to store
+            </PptButton>
+          }
+          className="max-w-sm"
+        />
       </main>
     );
   }
@@ -144,104 +169,127 @@ export default function BookingSuccessPage() {
   const productImage = state.product?.images?.find(
     (image) => image.thumbUrl || image.url || image.mediumUrl
   );
-  const productImageUrl =
-    productImage?.thumbUrl || productImage?.url || productImage?.mediumUrl || "";
+  const productImageUrl = productImage?.thumbUrl || productImage?.url || productImage?.mediumUrl || "";
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] px-4 py-8 text-gray-950">
-      <section className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-sm font-medium text-green-700">Booking ready</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight">
-          Your item is reserved.
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-gray-600">
-          Message the seller on WhatsApp to complete remaining payment and
-          delivery confirmation.
-        </p>
-
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-          Mock payment completed for development. Real Razorpay verification
-          will be connected later.
-        </div>
-
-        <div className="mt-6 space-y-3 rounded-2xl border border-gray-200 p-4 text-sm">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="h-16 w-16 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
-              {productImageUrl ? (
-                <img
-                  src={productImageUrl}
-                  alt={productImage?.alt || checkout.productTitle}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-gray-400">
-                  No image
-                </div>
-              )}
-            </div>
-            <p className="font-semibold text-gray-950">{checkout.productTitle}</p>
+    <main className="pds-page">
+      <section className="pds-container max-w-3xl">
+        <div className="pds-success-card text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[var(--pds-success-soft)] text-[var(--pds-success)]">
+            <CheckCircle2 size={34} strokeWidth={2.4} aria-hidden="true" />
           </div>
-          <SummaryRow label="Product" value={checkout.productTitle} />
-          <SummaryRow
-            label="Advance paid"
-            value={formatINR(checkout.bookingAdvanceAmount)}
-          />
-          <SummaryRow
-            label="Remaining amount"
-            value={formatINR(checkout.sellerCollectAmount)}
-          />
-        </div>
+          <PptBadge tone="success" className="mt-5">
+            Booking confirmed
+          </PptBadge>
+          <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
+            Booking confirmed
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-base font-light leading-7 text-[var(--pds-muted)]">
+            Your ₹20 booking advance has been recorded.
+          </p>
 
-        <div className="mt-6 grid gap-3">
-          {hasSellerPhone ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center rounded-2xl bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-black"
-            >
-              Confirm on WhatsApp
-            </a>
-          ) : (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            {hasSellerPhone ? (
+              <PptButton
+                type="button"
+                variant="whatsapp"
+                size="lg"
+                rounded="pill"
+                icon={<PptBrandIcon type="whatsapp" size={18} />}
+                onClick={openWhatsApp}
+              >
+                Message seller on WhatsApp
+              </PptButton>
+            ) : (
+              <PptButton type="button" variant="secondary" size="lg" rounded="pill" disabled>
+                Seller WhatsApp unavailable
+              </PptButton>
+            )}
+
             <button
               type="button"
               onClick={handleCopyMessage}
-              className="rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-gray-50"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-[var(--pds-muted)] transition hover:text-[var(--pds-primary)]"
             >
-              {copied ? "Message copied" : "Copy message"}
+              <Copy size={13} aria-hidden="true" />
+              {copied ? "Message copied" : "WhatsApp not opening? Copy message"}
             </button>
-          )}
+          </div>
         </div>
 
-        {!hasSellerPhone ? (
-          <>
-            <p className="mt-3 text-xs leading-5 text-gray-500">
-              Seller WhatsApp number is not available yet.
-            </p>
-            <textarea
-              readOnly
-              value={whatsappMessage}
-              className="mt-5 h-44 w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 p-4 text-xs leading-5 text-gray-700"
-            />
-          </>
-        ) : null}
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-start">
+          <div className="pds-panel">
+            <div className="flex gap-4">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-[var(--pds-border)] bg-[var(--pds-surface-soft)]">
+                {productImageUrl ? (
+                  <img
+                    src={productImageUrl}
+                    alt={productImage?.alt || checkout.productTitle}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <PptBadge tone="success">₹20 paid</PptBadge>
+                <h2 className="mt-3 line-clamp-2 text-xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
+                  {checkout.productTitle}
+                </h2>
+                <p className="mt-1 text-sm font-light text-[var(--pds-muted)]">
+                  {state.store?.storeName || "Seller store"}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <PptBadge tone="neutral">Price {formatINR(checkout.productPrice)}</PptBadge>
+                  <PptBadge tone="primary">
+                    Remaining {formatINR(checkout.sellerCollectAmount)}
+                  </PptBadge>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <Link
-          to={`/${storeSlug}`}
-          className="mt-5 inline-flex text-sm font-medium text-gray-600 transition hover:text-gray-950"
-        >
-          Back to store
-        </Link>
+          <aside className="space-y-4 lg:sticky lg:top-6">
+            <PptPriceBreakdown
+              productPrice={checkout.productPrice}
+              advanceAmount={checkout.bookingAdvanceAmount}
+              currency="₹"
+              note="Remaining amount is paid directly to the seller."
+            />
+          </aside>
+        </div>
+
+        <div className="mt-5 grid gap-5">
+          <PptNotice
+            tone="info"
+            title="After booking, message the seller on WhatsApp."
+            icon={<PptBrandIcon type="whatsapp" size={18} />}
+          >
+            We prepared a message with your booking details so the seller can confirm the remaining
+            amount directly.
+          </PptNotice>
+
+          <details className="pds-panel group">
+            <summary className="cursor-pointer text-sm font-medium text-[var(--pds-text)] transition hover:text-[var(--pds-primary)]">
+              View message preview
+            </summary>
+            <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[20px] bg-[var(--pds-surface-soft)] p-4 text-xs leading-6 text-[var(--pds-muted)]">
+              {whatsappMessage}
+            </pre>
+          </details>
+
+          <div className="flex justify-center">
+            <PptButton
+              type="button"
+              variant="secondary"
+              rounded="pill"
+              onClick={() => navigate(`/${storeSlug}`)}
+            >
+              Back to store
+            </PptButton>
+          </div>
+        </div>
       </section>
     </main>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-right font-bold text-gray-950">{value}</span>
-    </div>
   );
 }

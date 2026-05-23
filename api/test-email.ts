@@ -60,6 +60,10 @@ function getEmailAddressFromHeader(value: string) {
 export default async function handler(req: any, res: any) {
   loadLocalEnv({ override: true });
 
+  if (process.env.PAYPERTAP_ENABLE_TEST_ENDPOINTS !== "true") {
+    return sendJson(res, 404, { success: false, error: "Not found." });
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { success: false, error: "Method not allowed." });

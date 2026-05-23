@@ -5,11 +5,15 @@ import AuthPage from "./pages/AuthPage";
 import BookingSuccessPage from "./pages/BookingSuccessPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import DashboardPage from "./pages/DashboardPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
 import IntegrationTestPage from "./pages/IntegrationTestPage";
 import ProductOnboardingPage from "./pages/ProductOnboardingPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import PublicStorePage from "./pages/PublicStorePage";
 import StoreOnboardingPage from "./pages/StoreOnboardingPage";
+
+const enableIntegrationTests =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTEGRATION_TESTS === "true";
 
 export default function App() {
   return (
@@ -21,7 +25,10 @@ export default function App() {
         <Route path="/onboarding/store" element={<StoreOnboardingPage />} />
         <Route path="/onboarding/product" element={<ProductOnboardingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/integration-test" element={<IntegrationTestPage />} />
+        <Route path="/design-system" element={<DesignSystemPage />} />
+        {enableIntegrationTests ? (
+          <Route path="/integration-test" element={<IntegrationTestPage />} />
+        ) : null}
         <Route path="/:storeSlug/product/:productId" element={<ProductDetailPage />} />
         <Route path="/:storeSlug/checkout/:productId" element={<CheckoutPage />} />
         <Route

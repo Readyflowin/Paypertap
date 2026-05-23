@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { ImageUp, Loader2, Mail, Send, UploadCloud } from "lucide-react";
+import { ImageUp, Mail, Send, UploadCloud } from "lucide-react";
 
 import {
   sendTestEmail,
   uploadTestImage,
   type UploadImageResponse,
 } from "@/services/integrationTestService";
+import { Button, Card, Input } from "@/components/ui";
 
 type StatusState = {
   type: "success" | "error" | "idle";
@@ -21,8 +22,8 @@ function StatusMessage({ status }: { status: StatusState }) {
 
   const colorClass =
     status.type === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : "border-rose-200 bg-rose-50 text-rose-800";
+      ? "border-[#b9eadf] bg-[#ecfdf8] text-[#08745f]"
+      : "border-[#fecaca] bg-[#fff1f2] text-[var(--ppt-danger)]";
 
   return <p className={`rounded-md border px-3 py-2 text-sm ${colorClass}`}>{status.message}</p>;
 }
@@ -87,86 +88,78 @@ export default function IntegrationTestPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f4ef] px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
+    <main className="min-h-screen px-4 py-8 text-[var(--ppt-text)] sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <header className="border-b border-slate-200 pb-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ppt-text-muted)]">
             Backend checks
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">
+          <h1 className="mt-2 text-3xl font-bold tracking-normal text-[var(--ppt-text)] sm:text-4xl">
             PayPerTap Integration Test
           </h1>
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-950 text-white">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[var(--ppt-radius-sm)] bg-[var(--ppt-text)] text-white">
               <Mail size={20} aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-xl font-semibold text-slate-950">Resend Email Test</h2>
+              <h2 className="text-xl font-semibold text-[var(--ppt-text)]">Resend Email Test</h2>
             </div>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              className="min-h-11 flex-1 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-200"
+            <Input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="email@example.com"
               autoComplete="email"
+              fullWidth
             />
-            <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
+            <Button
               onClick={handleSendEmail}
-              disabled={isSendingEmail}
+              isLoading={isSendingEmail}
+              leftIcon={<Send size={18} aria-hidden="true" />}
             >
-              {isSendingEmail ? (
-                <Loader2 className="animate-spin" size={18} aria-hidden="true" />
-              ) : (
-                <Send size={18} aria-hidden="true" />
-              )}
               Send test email
-            </button>
+            </Button>
           </div>
 
           <div className="mt-4">
             <StatusMessage status={emailStatus} />
           </div>
-        </section>
+        </Card>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-700 text-white">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[var(--ppt-radius-sm)] bg-[var(--ppt-success)] text-white">
               <ImageUp size={20} aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-xl font-semibold text-slate-950">Cloudflare R2 Upload Test</h2>
+              <h2 className="text-xl font-semibold text-[var(--ppt-text)]">
+                Cloudflare R2 Upload Test
+              </h2>
             </div>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              className="min-h-11 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-base file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-semibold file:text-slate-800"
+            <Input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              fullWidth
+              className="file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-[var(--ppt-text)]"
             />
-            <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-teal-700 px-4 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
+            <Button
+              variant="success"
               onClick={handleUploadImage}
-              disabled={isUploading}
+              isLoading={isUploading}
+              leftIcon={<UploadCloud size={18} aria-hidden="true" />}
             >
-              {isUploading ? (
-                <Loader2 className="animate-spin" size={18} aria-hidden="true" />
-              ) : (
-                <UploadCloud size={18} aria-hidden="true" />
-              )}
               Upload image
-            </button>
+            </Button>
           </div>
 
           <div className="mt-4">
@@ -174,15 +167,17 @@ export default function IntegrationTestPage() {
           </div>
 
           {uploadResult?.key ? (
-            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-700">Object key</p>
-              <p className="mt-1 break-all text-sm text-slate-950">{uploadResult.key}</p>
+            <div className="mt-4 rounded-[var(--ppt-radius-md)] border border-[var(--ppt-border)] bg-[var(--ppt-surface-soft)] p-4">
+              <p className="text-sm font-semibold text-[var(--ppt-text-muted)]">Object key</p>
+              <p className="mt-1 break-all text-sm text-[var(--ppt-text)]">{uploadResult.key}</p>
 
               {uploadResult.url ? (
                 <>
-                  <p className="mt-4 text-sm font-semibold text-slate-700">Public URL</p>
+                  <p className="mt-4 text-sm font-semibold text-[var(--ppt-text-muted)]">
+                    Public URL
+                  </p>
                   <a
-                    className="mt-1 block break-all text-sm font-medium text-teal-700 underline-offset-2 hover:underline"
+                    className="mt-1 block break-all text-sm font-medium underline-offset-2 hover:underline"
                     href={uploadResult.url}
                     target="_blank"
                     rel="noreferrer"
@@ -190,7 +185,7 @@ export default function IntegrationTestPage() {
                     {uploadResult.url}
                   </a>
                   <img
-                    className="mt-4 max-h-80 w-full rounded-md border border-slate-200 object-contain"
+                    className="mt-4 max-h-80 w-full rounded-[var(--ppt-radius-md)] border border-[var(--ppt-border)] object-contain"
                     src={uploadResult.url}
                     alt="Uploaded preview"
                   />
@@ -198,7 +193,7 @@ export default function IntegrationTestPage() {
               ) : null}
             </div>
           ) : null}
-        </section>
+        </Card>
       </div>
     </main>
   );

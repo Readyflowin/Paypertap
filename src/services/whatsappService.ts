@@ -105,10 +105,11 @@ export function buildSellerPaymentCollectionMessage(
   input: SellerMessageInput
 ): string {
   const base = [
-    `Hi ${input.buyerName}, thanks for booking ${input.productTitle} from our store.`,
+    `Hi ${input.buyerName}, thanks for booking ${input.productTitle} from our PayPerTap store.`,
     "",
-    `Advance paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
-    `Remaining amount: ₹${input.sellerCollectAmount}`,
+    `Your ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT} booking advance is recorded.`,
+    `Remaining amount: ₹${input.sellerCollectAmount}.`,
+    "Please confirm payment/delivery details here.",
     "",
   ];
 

@@ -1,10 +1,43 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { useAuthUser } from "../hooks/useAuthUser";
-import { formatINR } from "../lib/money";
-import { getProductById, getPublicProductById } from "../services/productService";
-import { getPublicStoreData } from "../services/publicStoreService";
-import type { Product, Store } from "../types/firestore";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ImageIcon,
+  MessageCircle,
+  Package,
+  Sparkles,
+  Store as StoreIcon,
+} from "lucide-react";
+
+import {
+  PptBadge,
+  PptBrandIcon,
+  PptButton,
+  PptEmptyState,
+  PptIconButton,
+  PptNotice,
+  PptPriceBreakdown,
+  PptSkeletonProductGrid,
+  PptTapLoader,
+  type PptTone,
+} from "@/components/ui";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { formatINR } from "@/lib/money";
+import {
+  getAvailableQuantity,
+  getProductUnavailableLabel,
+  isProductBookable,
+} from "@/lib/productAvailability";
+import {
+  getStoreFontClass,
+  getStoreInstagramUrl,
+  getStoreThemeClass,
+  getStoreThemeStyle,
+} from "@/lib/storeTheme";
+import { getProductById, getPublicProductById } from "@/services/productService";
+import { getPublicStoreData } from "@/services/publicStoreService";
+import type { Product, Store } from "@/types/firestore";
 
 type PageState = {
   store: Store | null;
@@ -15,21 +48,114 @@ type PageState = {
 };
 
 function getProductImage(product: Product): string {
-  const image = product.images?.find(
-    (item) => item.thumbUrl || item.url || item.mediumUrl
-  );
-
+  const image = product.images?.find((item) => item.thumbUrl || item.url || item.mediumUrl);
   return image?.thumbUrl || image?.url || image?.mediumUrl || "";
 }
 
-function getAvailableQuantity(product: Product): number {
-  return Math.max(
-    product.inventoryQuantity - product.reservedQuantity - product.soldQuantity,
-    0
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function getStatusBadge(product: Product, isReserved: boolean): { label: string; tone: PptTone } {
+  if (product.status === "sold") return { label: "Sold", tone: "sold" };
+  if (isReserved) return { label: "Reserved", tone: "reserved" };
+  if (product.status === "open" && getAvailableQuantity(product) <= 0) {
+    return { label: "Unavailable", tone: "neutral" };
+  }
+  if (product.status === "open") return { label: "Open", tone: "success" };
+  return { label: "Unavailable", tone: "neutral" };
+}
+
+function ProductDetailLoading() {
+  return (
+    <main className="pds-page min-h-screen px-4 py-6 sm:py-10">
+      <section className="pds-container">
+        <div className="flex min-h-[35vh] items-center justify-center">
+          <PptTapLoader title="Loading product..." description="Checking availability and booking details." />
+        </div>
+        <div className="mt-8">
+          <PptSkeletonProductGrid />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function StoreMiniBlock({
+  store,
+  storeSlug,
+}: {
+  store: Store;
+  storeSlug: string;
+}) {
+  const navigate = useNavigate();
+  const instagramUrl = getStoreInstagramUrl(store);
+
+  return (
+    <div className="pds-panel">
+      <div className="flex items-center gap-3">
+        {store.logoUrl ? (
+          <img
+            src={store.logoUrl}
+            alt={`${store.storeName} logo`}
+            className="h-12 w-12 rounded-[18px] border border-[var(--pds-border)] object-cover"
+          />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#5B35F5,#EC4899)] text-sm font-semibold text-white">
+            {getInitials(store.storeName) || <StoreIcon size={18} />}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <strong className="block truncate text-sm font-semibold text-[var(--pds-text)]">
+            {store.storeName}
+          </strong>
+          <span className="mt-1 block line-clamp-1 text-xs text-[var(--pds-muted)]">
+            {store.bio || "Fresh drops, limited pieces."}
+          </span>
+        </div>
+        {instagramUrl ? (
+          <PptIconButton
+            label={`Open ${store.storeName} on Instagram`}
+            tone="instagram"
+            onClick={() => window.open(instagramUrl, "_blank", "noreferrer")}
+          >
+            <PptBrandIcon type="instagram" size={18} />
+          </PptIconButton>
+        ) : null}
+      </div>
+      <div className="mt-4">
+        <PptButton
+          variant="secondary"
+          fullWidth
+          onClick={() => {
+            navigate(`/${storeSlug}`);
+          }}
+        >
+          View store
+        </PptButton>
+      </div>
+    </div>
+  );
+}
+
+function Step({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-[20px] border border-[var(--pds-border)] bg-white px-3 py-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-[var(--pds-primary-soft)] text-[var(--pds-primary)]">
+        {icon}
+      </span>
+      <span className="text-sm font-medium text-[var(--pds-text)]">{title}</span>
+    </div>
   );
 }
 
 export default function ProductDetailPage() {
+  const navigate = useNavigate();
   const { storeSlug = "", productId = "" } = useParams();
   const { user, loading: authLoading } = useAuthUser();
   const [state, setState] = useState<PageState>({
@@ -95,22 +221,22 @@ export default function ProductDetailPage() {
   }, [authLoading, productId, storeSlug, user?.uid]);
 
   if (state.loading || authLoading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <p className="text-sm font-medium text-gray-600">Loading product...</p>
-      </main>
-    );
+    return <ProductDetailLoading />;
   }
 
   if (state.error || !state.store || !state.product) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#F9FAFB] px-4">
-        <section className="max-w-sm rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-gray-950">Product not found</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            This item may be unavailable or the store may be unpublished.
-          </p>
-        </section>
+      <main className="pds-page grid min-h-screen place-items-center px-4 py-8">
+        <PptEmptyState
+          title="Product not available"
+          description="This product may be sold out or unpublished."
+          icon={<Package size={22} />}
+          action={
+            <PptButton variant="secondary" icon={<ArrowLeft size={17} />} onClick={() => navigate(`/${storeSlug}`)}>
+              Back to store
+            </PptButton>
+          }
+        />
       </main>
     );
   }
@@ -118,113 +244,139 @@ export default function ProductDetailPage() {
   const { store, product, isOwnerPreview } = state;
   const imageUrl = getProductImage(product);
   const availableQuantity = getAvailableQuantity(product);
-  const isAvailable =
-    store.isPublished &&
-    product.status === "open" &&
-    availableQuantity > 0 &&
-    !isOwnerPreview;
-  const isSoldOut = product.status === "sold" || availableQuantity <= 0;
+  const isAvailable = store.isPublished && isProductBookable(product) && !isOwnerPreview;
+  const isSoldOut = product.status === "sold";
+  const isReserved =
+    product.status === "hold" || (availableQuantity <= 0 && product.reservedQuantity > 0);
+  const checkoutHref = `/${storeSlug}/checkout/${product.productId || product.id}`;
+  const statusBadge = getStatusBadge(product, isReserved);
+  const unavailableLabel = getProductUnavailableLabel(product);
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] text-gray-950">
-      <section className="mx-auto max-w-5xl px-4 py-6 sm:py-10">
-        <Link
-          to={`/${storeSlug}`}
-          className="text-sm font-medium text-gray-600 transition hover:text-gray-950"
-        >
-          Back to {store.storeName}
-        </Link>
+    <main
+      className={`pds-page ppt-public-store-page min-h-screen px-4 py-6 sm:py-10 ${getStoreThemeClass(store)} ${getStoreFontClass(store)}`}
+      style={getStoreThemeStyle(store)}
+    >
+      <section className="mx-auto w-full max-w-5xl">
+        <div className="mx-auto max-w-[460px] lg:max-w-none">
+          <Link
+            to={`/${storeSlug}`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[var(--pds-muted)] transition hover:text-[var(--pds-primary)]"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to store
+          </Link>
 
-        <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-          <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-            <div className="aspect-[4/5] bg-gray-100">
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={product.images?.[0]?.alt || product.title}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm font-semibold text-gray-400">
-                  No image
+          <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_0.86fr] lg:items-start">
+            <section className="pds-panel overflow-hidden p-3">
+              <div className="aspect-[4/5] overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,#f4f1ff,#fff)]">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={product.images?.[0]?.alt || product.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-[var(--pds-muted)]">
+                    <ImageIcon size={32} />
+                    <span className="text-sm font-medium">No image</span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <div className="space-y-5 lg:sticky lg:top-6">
+              <section className="pds-panel">
+                {isOwnerPreview ? (
+                  <div className="mb-4">
+                    <PptNotice tone="warning" title="Owner preview">
+                      Checkout is disabled until this store is published.
+                    </PptNotice>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {product.category ? <PptBadge tone="primary">{product.category}</PptBadge> : null}
+                  <PptBadge tone={statusBadge.tone}>{statusBadge.label}</PptBadge>
                 </div>
-              )}
+
+                <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-[-0.05em] text-[var(--pds-text)]">
+                  {product.title}
+                </h1>
+                <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[var(--pds-text)]">
+                  {formatINR(product.price)}
+                </p>
+                {product.description ? (
+                  <p className="mt-4 text-sm leading-6 text-[var(--pds-muted)]">
+                    {product.description}
+                  </p>
+                ) : null}
+
+                <div className="mt-5">
+                  <PptBadge tone={availableQuantity === 1 ? "warning" : isSoldOut ? "sold" : "neutral"}>
+                    {availableQuantity === 1
+                      ? "Only 1 piece available"
+                      : availableQuantity > 1
+                        ? `${availableQuantity} available`
+                        : isReserved
+                          ? "Reserved"
+                          : isSoldOut
+                            ? "Sold out"
+                            : "Unavailable"}
+                  </PptBadge>
+                </div>
+
+                <div className="mt-5">
+                  <PptPriceBreakdown
+                    productPrice={product.price}
+                    advanceAmount={product.bookingAdvanceAmount || 20}
+                  />
+                </div>
+
+                <div className="mt-5">
+                  <PptNotice tone="info" title="Reserve this item with ₹20">
+                    Your ₹20 booking advance reserves the item. The seller confirms delivery and
+                    remaining payment on WhatsApp.
+                  </PptNotice>
+                </div>
+
+                <p className="mt-5 text-sm leading-6 text-[var(--pds-muted)]">
+                  Pay the remaining amount directly to the seller on WhatsApp.
+                </p>
+
+                {isAvailable ? (
+                  <div className="mt-5">
+                    <PptButton fullWidth size="lg" rightIcon={<ArrowLeft className="rotate-180" size={17} />} onClick={() => navigate(checkoutHref)}>
+                      Reserve with ₹20
+                    </PptButton>
+                  </div>
+                ) : (
+                  <div className="mt-5">
+                    <PptButton fullWidth variant="secondary" disabled>
+                      {isOwnerPreview ? "Preview only" : unavailableLabel}
+                    </PptButton>
+                    <div className="mt-3">
+                      <PptNotice tone={isSoldOut ? "danger" : "warning"} title="This item is not bookable">
+                        {isSoldOut
+                          ? "This product is sold out."
+                          : "This product is currently reserved or unavailable."}
+                      </PptNotice>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section className="pds-panel">
+                <h2 className="text-base font-semibold text-[var(--pds-text)]">How it works</h2>
+                <div className="mt-4 grid gap-3">
+                  <Step icon={<Sparkles size={18} />} title="Pay ₹20 booking advance" />
+                  <Step icon={<CheckCircle2 size={18} />} title="Item gets reserved" />
+                  <Step icon={<MessageCircle size={18} />} title="Confirm remaining payment on WhatsApp" />
+                </div>
+              </section>
+
+              <StoreMiniBlock store={store} storeSlug={storeSlug} />
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            {isOwnerPreview ? (
-              <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                Owner preview. Checkout is disabled until this store is published.
-              </div>
-            ) : null}
-
-            <p className="text-sm font-medium text-gray-500">
-              {product.category || "General"}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-black tracking-tight">
-                {product.title}
-              </h1>
-              <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-bold capitalize text-gray-600">
-                {product.status}
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-gray-600">
-              {product.description || "No description added yet."}
-            </p>
-
-            <div className="mt-6 grid gap-3 rounded-2xl border border-gray-200 p-4 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-gray-500">Product price</span>
-                <span className="font-bold">{formatINR(product.price)}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-gray-500">Pay now</span>
-                <span className="font-bold">
-                  {formatINR(product.bookingAdvanceAmount)} advance
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-gray-500">Pay seller later</span>
-                <span className="font-bold">
-                  {formatINR(product.sellerCollectAmount)}
-                </span>
-              </div>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-gray-500">
-              Pay ₹20 advance to reserve this item. The remaining amount is paid
-              directly to the seller on WhatsApp/UPI/COD.
-            </p>
-
-            <div className="mt-5 flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3 text-sm">
-              <span className="font-medium text-gray-600">Availability</span>
-              <span className="font-bold text-gray-950">
-                {product.status === "open" && availableQuantity > 0
-                  ? `${availableQuantity} available`
-                  : isSoldOut
-                    ? "Sold out"
-                    : "Reserved"}
-              </span>
-            </div>
-
-            {isAvailable ? (
-              <Link
-                to={`/${storeSlug}/checkout/${product.productId || product.id}`}
-                className="mt-6 flex w-full items-center justify-center rounded-2xl bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-black"
-              >
-                Book for ₹20
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="mt-6 w-full rounded-2xl bg-gray-200 px-4 py-3 text-sm font-bold text-gray-500"
-              >
-                {isOwnerPreview ? "Preview only" : isSoldOut ? "Sold out" : "Reserved"}
-              </button>
-            )}
           </div>
         </div>
       </section>

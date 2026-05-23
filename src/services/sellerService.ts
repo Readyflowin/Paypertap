@@ -13,6 +13,7 @@ import {
   sendStoreCreatedEmail,
 } from "./emailEventService";
 import { createSellerProduct } from "./productService";
+import { normalizeInstagramProfile } from "./storeService";
 
 type PrepareSellerResult = {
   sellerId: string;
@@ -23,6 +24,7 @@ type PrepareSellerResult = {
 type StoreOnboardingInput = {
   phone: string;
   storeName: string;
+  instagramProfile?: string;
   logoUrl?: string;
   logoKey?: string;
 };
@@ -259,6 +261,12 @@ export async function completeStoreOnboarding(
   if (existingStoreId) {
     await reserveStoreSlug(existingStoreId, uid);
   }
+  const instagram = normalizeInstagramProfile(
+    input.instagramProfile ||
+      existingStore?.instagramUrl ||
+      existingStore?.instagramHandle ||
+      ""
+  );
 
   const storePayload = {
     storeId,
@@ -278,6 +286,11 @@ export async function completeStoreOnboarding(
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     phone,
     whatsappPhone: phone,
+    instagramUrl: instagram.instagramUrl,
+    instagramHandle: instagram.instagramHandle,
+    heroHeading: existingStore?.heroHeading || "",
+    heroSubtitle: existingStore?.heroSubtitle || "",
+    themeStyle: existingStore?.themeStyle || "clean-minimal",
     isPublished: existingStore?.isPublished ?? true,
     updatedAt: serverTimestamp(),
   };

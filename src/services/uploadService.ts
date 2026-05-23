@@ -1,4 +1,5 @@
 import type { ProductImage } from "../types/firestore";
+import { auth } from "../lib/firebase";
 
 const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const maxImageSize = 5 * 1024 * 1024;
@@ -32,6 +33,12 @@ export async function uploadImageToR2(
 ): Promise<{ url: string; key: string }> {
   validateImageFile(file);
 
+  const idToken = await auth.currentUser?.getIdToken();
+
+  if (!idToken) {
+    throw new Error("Please sign in before uploading images.");
+  }
+
   // TODO: add client-side compression before upload for large images.
   const formData = new FormData();
   formData.append("file", file);
@@ -39,6 +46,9 @@ export async function uploadImageToR2(
 
   const response = await fetch("/api/upload-image", {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
     body: formData,
   });
 

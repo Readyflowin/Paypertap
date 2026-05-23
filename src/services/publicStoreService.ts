@@ -3,7 +3,7 @@ import {
   getPublicProductsByStoreId,
   getSellerProductsForStore,
 } from "./productService";
-import { getStoreById } from "./storeService";
+import { getStoreBySlugOrId } from "./storeService";
 import { getThemeById } from "./themeService";
 
 export type PublicStoreData = {
@@ -17,7 +17,7 @@ export async function getPublicStoreData(
   storeId: string,
   viewerUid?: string | null
 ): Promise<PublicStoreData | null> {
-  const store = await getStoreById(storeId);
+  const store = await getStoreBySlugOrId(storeId);
 
   if (!store) {
     return null;

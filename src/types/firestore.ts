@@ -24,23 +24,35 @@ export type Store = {
   storeSlug: string;
   storeName: string;
   bio: string;
+  tagline?: string;
   logoUrl?: string;
   logoKey?: string;
   heroImageUrl?: string;
   themeId: string;
-  primaryColor: string;
+  backgroundColor?: string;
+  textColor?: string;
+  cardColor?: string;
+  primaryColor?: string;
   secondaryColor: string;
-  accentColor: string;
+  accentColor?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
   colors?: {
     primaryColor: string;
     secondaryColor: string;
     accentColor: string;
   };
-  fontStyle: string;
+  fontStyle?: string;
   isPublished: boolean;
   bookingAdvanceAmount?: number;
   phone?: string;
   whatsappPhone?: string;
+  whatsappNumber?: string;
+  instagramUrl?: string;
+  instagramHandle?: string;
+  heroHeading?: string;
+  heroSubtitle?: string;
+  themeStyle?: "soft-boutique" | "dark-drop" | "clean-minimal" | string;
   emailEvents?: {
     storeCreatedSentAt?: unknown;
   };
