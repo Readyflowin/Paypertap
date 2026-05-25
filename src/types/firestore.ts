@@ -180,6 +180,9 @@ export type CheckoutSession = {
   buyerPincode: string;
   status: CheckoutSessionStatus;
   whatsappOpened: boolean;
+  reservationApplied?: boolean;
+  reservedProductId?: string;
+  reservedQuantity?: number;
   emailEvents?: {
     sellerBookingSentAt?: unknown;
     buyerBookingSentAt?: unknown;

@@ -12,7 +12,7 @@ const products = [
       "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=220&q=80",
     name: "Vintage denim jacket",
     remaining: "₹1,479 remaining",
-    status: "WhatsApp ready",
+    status: "Reserved",
   },
   {
     alt: "Linen outfit product thumbnail",
@@ -21,7 +21,7 @@ const products = [
       "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=220&q=80",
     name: "Linen co-ord set",
     remaining: "₹879 remaining",
-    status: "Buyer details captured",
+    status: "Contacted",
   },
   {
     alt: "Handmade tote product thumbnail",
@@ -30,7 +30,7 @@ const products = [
       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=220&q=80",
     name: "Handmade bag",
     remaining: "₹629 remaining",
-    status: "Follow-up due",
+    status: "Sold",
   },
 ];
 
@@ -110,6 +110,8 @@ export function HomeDashboardPreview() {
                       <img
                         src={product.image}
                         alt={product.alt}
+                        width={220}
+                        height={220}
                         loading="lazy"
                         decoding="async"
                       />

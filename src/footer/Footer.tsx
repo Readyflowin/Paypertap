@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import logo from "../assets/Logo.png";
+import logo from "../assets/Logo-128.png";
 import { companyLinks, legalLinks, productLinks, sellerLinks } from "./footerLinks";
 
 function FooterColumn({
@@ -43,7 +43,11 @@ export function Footer() {
                 src={logo}
                 alt="PayPerTap logo"
                 className="h-full w-full object-contain"
+                width={40}
+                height={40}
+                decoding="async"
                 draggable={false}
+                loading="lazy"
               />
             </span>
             <span className="text-lg font-extrabold">PayPerTap</span>

@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Heart,
   ImageIcon,
   MessageCircle,
   Search,
   ShieldCheck,
-  ShoppingBag,
   Store as StoreIcon,
   X,
 } from "lucide-react";
 
 import { PptBadge, PptBrandIcon, PptButton } from "@/components/ui";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
+import {
+  getAvailableQuantity as getSharedAvailableQuantity,
+  getProductUnavailableLabel,
+  isProductBookable,
+} from "@/lib/productAvailability";
 import { PaymentTrustStrip } from "../../PaymentTrustStrip";
 import {
   getProductDetailImageUrls,
@@ -54,7 +58,7 @@ function getInitials(name: string) {
 }
 
 function getStoreTagline(store: StorefrontThemeProps["store"]) {
-  return store.tagline || store.bio || "Fresh finds curated for quick booking.";
+  return store.tagline || store.bio || "Fresh drops, limited pieces.";
 }
 
 function getProductId(product: StorefrontProduct) {
@@ -88,17 +92,11 @@ function getProductStatus(product: StorefrontProduct) {
 }
 
 function getAvailableQuantity(product: StorefrontProduct) {
-  const flexibleProduct = product as FlexibleProduct;
-  const inventory = Number(product.inventoryQuantity ?? flexibleProduct.inventory ?? 1);
-  const reserved = Number(product.reservedQuantity ?? 0);
-  const sold = Number(product.soldQuantity ?? 0);
-
-  if (!Number.isFinite(inventory)) return 0;
-  return Math.max(0, inventory - reserved - sold);
+  return getSharedAvailableQuantity(product);
 }
 
 function isBookable(product: StorefrontProduct) {
-  return getProductStatus(product) === "open" && getAvailableQuantity(product) > 0;
+  return isProductBookable(product);
 }
 
 function isVisibleProduct(product: StorefrontProduct) {
@@ -127,9 +125,107 @@ function getSellerCollectAmount(price: number) {
 
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
-  if (status === "sold") return "Sold out";
-  if (status === "hold" || status === "reserved") return "Reserved";
-  return "Not bookable";
+  if (status === "reserved") return "Reserved";
+  return getProductUnavailableLabel(product);
+}
+
+function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }) {
+  const storeName = store.storeName || "PayPerTap Store";
+  const initials = getInitials(storeName);
+  const contact = getStoreContactInfo(store);
+
+  return (
+    <header className="relative overflow-hidden rounded-[34px] border border-[#e7ded4] bg-[#fffaf4] shadow-[0_22px_64px_rgba(78,61,43,0.09)]">
+      <div className="grid min-w-0 gap-6 px-5 py-7 sm:px-8 sm:py-9 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)] md:items-end">
+        <div className="min-w-0">
+          <div className="mb-6 flex min-w-0 items-center gap-3">
+            {store.logoUrl ? (
+              <img
+                src={store.logoUrl}
+                alt={`${storeName} logo`}
+                decoding="async"
+                fetchPriority="high"
+                loading="eager"
+                className="h-14 w-14 shrink-0 rounded-full border border-[#e4d9cd] object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#171411] text-sm font-medium text-[#fffaf4]">
+                {initials || <StoreIcon size={20} aria-hidden="true" />}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="inline-flex rounded-full border border-[#d9cbbb] bg-white/80 px-3 py-1 text-xs font-medium text-[#443a32]">
+                  Verified booking
+                </span>
+                {contact.instagramUrl ? (
+                  <a
+                    href={contact.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#d9cbbb] bg-white/70 px-2.5 py-1 text-xs font-medium text-[#6f6257] hover:text-[#171411]"
+                  >
+                    <PptBrandIcon type="instagram" size={14} />
+                    <span className="truncate">{contact.instagramLabel}</span>
+                  </a>
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7f6f]">
+                Curated storefront
+              </p>
+            </div>
+          </div>
+
+          <h1 className="max-w-3xl break-words text-4xl font-medium leading-[0.98] tracking-[-0.055em] text-[#171411] sm:text-6xl">
+            {storeName}
+          </h1>
+          <p className="mt-4 max-w-xl text-base leading-7 text-[#6f6257]">
+            {getStoreTagline(store)}
+          </p>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-[#75695f]">
+            Reserve your item with {formatINR(BOOKING_ADVANCE_AMOUNT)}. Confirm the rest directly with the seller on WhatsApp.
+          </p>
+          <a
+            href="#products"
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 text-sm font-medium text-[#fffaf4] transition hover:bg-[#2a241f] min-[420px]:w-fit"
+          >
+            Shop products
+          </a>
+        </div>
+
+        <div className="min-w-0 rounded-[24px] border border-[#e3d6c8] bg-[#f7efe6] p-4 text-sm text-[#6f6257]">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+            <div className="flex min-w-0 items-start gap-3 rounded-[18px] border border-[#e7ded4] bg-[#fffaf4] p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#171411] text-[#fffaf4]">
+                <ShieldCheck size={16} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-medium text-[#171411]">
+                  {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
+                  Platform booking recorded.
+                </p>
+              </div>
+            </div>
+            <div className="flex min-w-0 items-start gap-3 rounded-[18px] border border-[#e7ded4] bg-[#fffaf4] p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#171411] text-[#fffaf4]">
+                <MessageCircle size={16} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-medium text-[#171411]">
+                  Seller confirms on WhatsApp
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
+                  Continue chat after booking.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }
 
 function Theme2Hero({ store }: { store: StorefrontThemeProps["store"] }) {
@@ -182,39 +278,6 @@ function Theme2Hero({ store }: { store: StorefrontThemeProps["store"] }) {
         </div>
       </div>
     </header>
-  );
-}
-
-function Theme2TrustStrip() {
-  const items = [
-    {
-      icon: <ShieldCheck size={15} aria-hidden="true" />,
-      label: `₹${BOOKING_ADVANCE_AMOUNT} reserves your item`,
-    },
-    {
-      icon: <PptBrandIcon type="whatsapp" size={15} />,
-      label: "Seller confirms on WhatsApp",
-    },
-    {
-      icon: <ShoppingBag size={15} aria-hidden="true" />,
-      label: "Pay remaining directly",
-    },
-  ];
-
-  return (
-    <section className="grid gap-2 min-[520px]:grid-cols-3" aria-label="How booking works">
-      {items.map(({ icon, label }) => (
-        <div
-          key={label}
-          className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#e7ded4] bg-white/72 px-4 py-3 text-sm font-medium text-[#443a32] shadow-[0_10px_28px_rgba(78,61,43,0.04)]"
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#171411] text-[#fffaf4]">
-            {icon}
-          </span>
-          <span className="min-w-0 whitespace-normal break-words leading-5">{label}</span>
-        </div>
-      ))}
-    </section>
   );
 }
 
@@ -368,7 +431,7 @@ function Theme2ProductGrid({
     : "Select All to view the full edit.";
 
   return (
-    <section>
+    <section id="products">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7f6f]">
@@ -605,36 +668,27 @@ function Theme2ProductDetail({
 
         <div className="grid min-w-0 max-w-full gap-4 overflow-x-hidden p-4 pb-28 sm:pb-4 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] md:items-start">
           <div className="grid min-w-0 max-w-full gap-2">
-            {imageSlots.slice(0, 3).map((imageUrl, index) => (
-              <div
-                key={`${imageUrl}-${index}`}
-                className={
-                  index === 0
-                    ? "aspect-[4/5] min-w-0 overflow-hidden rounded-[24px] bg-[#eee5da]"
-                    : "hidden aspect-square min-w-0 overflow-hidden rounded-2xl bg-[#eee5da] sm:block"
-                }
-              >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt={`${title} image ${index + 1}`}
-                    decoding="async"
-                    fetchPriority={index === 0 ? "high" : "auto"}
-                    loading={index === 0 ? "eager" : "lazy"}
-                    className="h-full w-full max-w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[#9a8c7f]">
-                    <ImageIcon size={24} aria-hidden="true" />
-                  </div>
-                )}
-              </div>
-            ))}
+            <div className="aspect-[4/5] min-w-0 overflow-hidden rounded-[24px] bg-[#eee5da]">
+              {imageSlots[0] ? (
+                <img
+                  src={imageSlots[0]}
+                  alt={`${title} image 1`}
+                  decoding="async"
+                  fetchPriority="high"
+                  loading="eager"
+                  className="h-full w-full max-w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[#9a8c7f]">
+                  <ImageIcon size={24} aria-hidden="true" />
+                </div>
+              )}
+            </div>
             {imageSlots.length > 1 ? (
-              <div className="grid min-w-0 max-w-full grid-cols-2 gap-2 sm:hidden">
+              <div className="grid min-w-0 max-w-full grid-cols-2 gap-2">
                 {imageSlots.slice(1, 3).map((imageUrl, index) => (
                   <div
-                    key={`mobile-${imageUrl}-${index}`}
+                    key={`${imageUrl}-${index}`}
                     className="aspect-square min-w-0 overflow-hidden rounded-2xl bg-[#eee5da]"
                   >
                     {imageUrl ? (
@@ -877,6 +931,7 @@ export default function Theme2({
   store,
   storeSlug,
 }: StorefrontThemeProps) {
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<StorefrontProduct | null>(null);
   const [activeCollection, setActiveCollection] = useState(ALL_COLLECTIONS);
   const [searchQuery, setSearchQuery] = useState("");
@@ -929,20 +984,30 @@ export default function Theme2({
   const selectedProductFallbackIndex = selectedProduct
     ? getProductFallbackIndex(selectedProduct)
     : 0;
+  const handleProductSelect = (product: StorefrontProduct) => {
+    if (isOwnerPreview) {
+      setSelectedProduct(product);
+      return;
+    }
+
+    const productId = getProductId(product);
+    if (productId) {
+      navigate(`/${storeSlug}/product/${productId}`);
+    }
+  };
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f5eee6] px-3 py-4 text-[#171411] sm:px-5 sm:py-6">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-        <Theme2Hero store={store} />
-        <Theme2TrustStrip />
-        <PaymentTrustStrip variant="theme2" />
+        <Theme2EditorialHero store={store} />
+        <PaymentTrustStrip showTrustRows={false} variant="theme2" />
         <Theme2ProductGrid
           collections={collections}
           getProductFallbackIndex={getProductFallbackIndex}
           isProductSaved={wishlist.isWishlisted}
           onCollectionChange={setActiveCollection}
           onSearchChange={setSearchQuery}
-          onSelect={setSelectedProduct}
+          onSelect={handleProductSelect}
           onToggleProductSaved={wishlist.toggleWishlistItem}
           onToggleSavedView={() => setShowSavedOnly((current) => !current)}
           products={displayedProducts}
@@ -955,7 +1020,7 @@ export default function Theme2({
         <Theme2Footer store={store} />
       </div>
 
-      {selectedProduct ? (
+      {isOwnerPreview && selectedProduct ? (
         <Theme2ProductDetail
           fallbackIndex={selectedProductFallbackIndex}
           isSaved={wishlist.isWishlisted(selectedProduct, selectedProductFallbackIndex)}

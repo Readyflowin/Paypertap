@@ -17,7 +17,7 @@ export function PptPriceBreakdown({
   productPrice,
   advanceAmount = 20,
   currency = "₹",
-  note = "The ₹20 booking advance is adjusted against the product price.",
+  note = "PayPerTap keeps the ₹20 booking fee. The remaining amount is paid directly to the seller.",
 }: PptPriceBreakdownProps) {
   const safePrice = Math.max(Number(productPrice) || 0, 0);
   const safeAdvance = Math.max(Number(advanceAmount) || 0, 0);
@@ -30,11 +30,11 @@ export function PptPriceBreakdown({
         <strong>{formatAmount(safePrice, currency)}</strong>
       </div>
       <div className="pds-price-row">
-        <span>Booking advance today</span>
+        <span>Booking fee via PayPerTap</span>
         <strong>{formatAmount(safeAdvance, currency)}</strong>
       </div>
       <div className="pds-price-row is-main">
-        <span>Pay seller later</span>
+        <span>Pay seller directly</span>
         <strong>{formatAmount(remainingAmount, currency)}</strong>
       </div>
       <p>{note}</p>

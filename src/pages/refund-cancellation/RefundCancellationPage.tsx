@@ -4,13 +4,17 @@ export function RefundCancellationPage() {
   return (
     <LegalPage
       canonicalPath="/refund-cancellation"
-      title="Refund and Cancellation Policy"
-      h1="Refund and Cancellation Policy"
-      description="Refund and cancellation policy foundation for PayPerTap verified booking flows."
+      title="PayPerTap Refund and Cancellation Policy | Rs. 20 Booking"
+      h1="Refund & Cancellation Policy"
+      description="Refund and cancellation policy for PayPerTap verified booking flows, the Rs. 20 booking fee, and seller-managed remaining payments."
       sections={[
         {
           title: "Fixed booking fee",
           body: "The Rs. 20 booking fee is a PayPerTap platform verified-booking fee in Phase 1 and is separate from the seller's remaining product amount.",
+        },
+        {
+          title: "PayPerTap role",
+          body: "PayPerTap does not handle the full product payment or full product refund in Phase 1. The booking fee is connected to the verified-booking workflow.",
         },
         {
           title: "Remaining product amount",

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Sparkles } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 
 import { PptButton, PptField, PptNotice } from "../components/ui";
 import {
@@ -147,7 +147,7 @@ export default function AuthPage() {
       <section className="pds-panel w-full max-w-md">
         <div className="text-center">
           <div className="pds-kicker mx-auto">
-            <Sparkles size={16} />
+            <ShieldCheck size={16} />
             PayPerTap Seller
           </div>
           <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-[-0.05em] text-[var(--pds-text)]">

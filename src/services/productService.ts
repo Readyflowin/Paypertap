@@ -278,6 +278,14 @@ export async function updateSellerProduct(
     throw new Error("Inventory cannot be lower than reserved plus sold quantity.");
   }
 
+  const inventoryStatusCounts =
+    input.status === "sold"
+      ? {
+          reservedQuantity: 0,
+          soldQuantity: inventoryQuantity,
+        }
+      : {};
+
   let images: ProductImage[] = product.images || [];
   const collectionId = input.collectionId?.trim() || "";
   const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
@@ -300,6 +308,7 @@ export async function updateSellerProduct(
     sellerCollectAmount: getSellerCollectAmount(price),
     inventoryQuantity,
     status: input.status,
+    ...inventoryStatusCounts,
     images,
     updatedAt: serverTimestamp(),
   };

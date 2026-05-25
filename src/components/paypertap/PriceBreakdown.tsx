@@ -19,7 +19,7 @@ function getHelperText(mode: PriceBreakdownMode) {
     return "PayPerTap keeps ₹20 as the verified booking fee. You collect the remaining amount directly.";
   }
 
-  return "The ₹20 booking advance is adjusted against the product price.";
+  return "PayPerTap keeps the ₹20 booking fee. The remaining amount is paid directly to the seller.";
 }
 
 export function PriceBreakdown({
@@ -43,7 +43,7 @@ export function PriceBreakdown({
         )}
       >
         <span className="font-bold text-[var(--ppt-primary-dark)]">
-          {formatINR(safeAdvanceAmount)} booking
+          {formatINR(safeAdvanceAmount)} booking fee
         </span>
         <span className="text-[var(--ppt-text-muted)]">+</span>
         <span className="font-semibold text-[var(--ppt-text)]">
@@ -62,8 +62,8 @@ export function PriceBreakdown({
         ]
       : [
           ["Product price", safePrice],
-          ["Booking advance today", safeAdvanceAmount],
-          ["Pay seller later", remainingAmount],
+          ["Booking fee via PayPerTap", safeAdvanceAmount],
+          ["Pay seller directly", remainingAmount],
         ];
 
   return (

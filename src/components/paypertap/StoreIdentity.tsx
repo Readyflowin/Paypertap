@@ -47,6 +47,8 @@ function StoreLogo({ storeName, logoUrl, compact }: Pick<StoreIdentityProps, "st
       <img
         src={logoUrl}
         alt={`${storeName} logo`}
+        decoding="async"
+        loading={compact ? "lazy" : "eager"}
         className={clsx(sizeClassName, "shrink-0 border border-[var(--ppt-border)] object-cover")}
       />
     );

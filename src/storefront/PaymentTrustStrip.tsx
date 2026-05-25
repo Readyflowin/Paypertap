@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { IndianRupee, ShieldCheck } from "lucide-react";
 
 import googlePayLogo from "@/assets/payment/google-pay-logo.svg";
 import phonePeLogo from "@/assets/payment/phonepe-logo.svg";
@@ -10,6 +10,7 @@ type PaymentTrustVariant = "theme1" | "theme2" | "theme3";
 
 type PaymentTrustStripProps = {
   compact?: boolean;
+  showTrustRows?: boolean;
   variant: PaymentTrustVariant;
 };
 
@@ -44,19 +45,32 @@ const variantClasses: Record<
       "border-neutral-800 bg-neutral-950 text-white/68 shadow-[0_18px_44px_rgba(10,10,12,0.16)]",
     label: "text-white",
     badge: "border-white/12 bg-white/8 text-white/72",
-    logoBadge: "border-white/14 bg-white",
+    logoBadge: "border-white/12 bg-white/95",
     iconBadge: "bg-white text-neutral-950",
   },
 };
 
 const paymentLogos = [
-  { alt: "UPI accepted by seller", src: upiLogo },
-  { alt: "Google Pay accepted by seller", src: googlePayLogo },
-  { alt: "PhonePe accepted by seller", src: phonePeLogo },
+  {
+    alt: "UPI accepted by seller",
+    imageClassName: "max-h-[18px] max-w-[64px] sm:max-h-[22px] sm:max-w-[88px]",
+    src: upiLogo,
+  },
+  {
+    alt: "Google Pay accepted by seller",
+    imageClassName: "h-[18px] w-[76px] sm:h-[22px] sm:w-[92px]",
+    src: googlePayLogo,
+  },
+  {
+    alt: "PhonePe accepted by seller",
+    imageClassName: "max-h-[18px] max-w-[64px] sm:max-h-[22px] sm:max-w-[88px]",
+    src: phonePeLogo,
+  },
 ];
 
 export function PaymentTrustStrip({
   compact = false,
+  showTrustRows = true,
   variant,
 }: PaymentTrustStripProps) {
   const classes = variantClasses[variant];
@@ -65,7 +79,7 @@ export function PaymentTrustStrip({
     <section
       aria-label="Payment and booking trust"
       className={`min-w-0 rounded-[24px] border ${classes.shell} ${
-        compact ? "p-3" : "p-4"
+        compact ? "p-3" : "p-3.5 sm:p-4"
       }`}
     >
       <div
@@ -85,11 +99,11 @@ export function PaymentTrustStrip({
           </p>
         </div>
 
-        <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
+        <div className="flex min-w-0 flex-wrap gap-1.5 sm:justify-end sm:gap-2">
           {paymentLogos.map((logo) => (
             <span
               key={logo.alt}
-              className={`inline-flex h-10 min-w-[78px] shrink-0 items-center justify-center rounded-full border px-3 ${classes.logoBadge}`}
+              className={`inline-flex h-8 min-w-0 max-w-[90px] shrink items-center justify-center rounded-full border px-2.5 sm:h-9 sm:max-w-[104px] sm:px-3 ${classes.logoBadge}`}
             >
               <img
                 src={logo.src}
@@ -97,13 +111,14 @@ export function PaymentTrustStrip({
                 decoding="async"
                 loading="lazy"
                 draggable={false}
-                className="block max-h-6 w-auto max-w-[96px] object-contain"
+                className={`block object-contain ${logo.imageClassName}`}
               />
             </span>
           ))}
         </div>
       </div>
 
+      {showTrustRows ? (
       <div
         className={`mt-3 grid gap-2 ${
           compact ? "" : "min-[560px]:grid-cols-3"
@@ -136,12 +151,17 @@ export function PaymentTrustStrip({
         <div
           className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
         >
-          <span className="shrink-0 font-semibold">₹</span>
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+          >
+            <IndianRupee size={14} aria-hidden="true" />
+          </span>
           <span className="min-w-0 whitespace-normal break-words">
             Remaining amount paid directly to seller
           </span>
         </div>
       </div>
+      ) : null}
     </section>
   );
 }

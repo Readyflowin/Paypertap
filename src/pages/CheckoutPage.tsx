@@ -45,6 +45,21 @@ function getProductBadge(
   return { label: "Open", tone: "success" };
 }
 
+function getCheckoutErrorMessage(error: unknown): string {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code)
+      : "";
+
+  if (code === "permission-denied") {
+    return "Booking could not reserve this item. PayPerTap needs a backend reservation step or a scoped Firestore rule for this mock flow.";
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+
+  return "Could not start mock payment.";
+}
+
 function CheckoutLoading() {
   return (
     <main className="pds-page grid place-items-center">
@@ -156,13 +171,20 @@ export default function CheckoutPage() {
       setError("");
       validateDetails();
 
+      const latestProduct = await getPublicProductById(product.productId || product.id);
+
+      if (!latestProduct || !isProductBookable(latestProduct)) {
+        setProduct(latestProduct);
+        throw new Error("This item was just reserved. Please choose another product.");
+      }
+
       // TODO: Inventory hold will move to backend/Admin SDK after real payment verification.
       const result = await startMockBookingPayment({
-        sellerId: product.sellerId,
+        sellerId: latestProduct.sellerId,
         storeId: store.storeId,
-        productId: product.productId || product.id,
-        productTitle: product.title,
-        productPrice: product.price,
+        productId: latestProduct.productId || latestProduct.id,
+        productTitle: latestProduct.title,
+        productPrice: latestProduct.price,
         buyerName,
         buyerPhone,
         buyerAddress,
@@ -175,11 +197,15 @@ export default function CheckoutPage() {
         JSON.stringify(result.checkoutSession)
       );
 
+      if (!result.reservationApplied) {
+        throw new Error("This item could not be reserved. Please try another product.");
+      }
+
       void sendBookingEmails(result.checkoutSession);
       navigate(`/${storeSlug}/booking-success/${result.checkoutId}`);
     } catch (err) {
       console.error("Mock payment failed:", err);
-      setError(err instanceof Error ? err.message : "Could not start mock payment.");
+      setError(getCheckoutErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -370,7 +396,7 @@ export default function CheckoutPage() {
               productPrice={product.price}
               advanceAmount={product.bookingAdvanceAmount || 20}
               currency="₹"
-              note="The ₹20 booking advance is adjusted against the product price."
+              note="PayPerTap keeps the ₹20 booking fee. Pay the remaining amount directly to the seller."
             />
           </aside>
         </div>
@@ -400,7 +426,13 @@ function ProductSummaryCard({
       <div className="mt-4 flex gap-3">
         <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-[var(--pds-border)] bg-[var(--pds-surface-soft)]">
           {imageUrl ? (
-            <img src={imageUrl} alt={product.title} className="h-full w-full object-cover" />
+            <img
+              src={imageUrl}
+              alt={product.title}
+              className="h-full w-full object-cover"
+              decoding="async"
+              loading="lazy"
+            />
           ) : (
             <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />
           )}

@@ -15,8 +15,8 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Store,
   UploadCloud,
   WalletCards,
@@ -53,7 +53,7 @@ const colorTokens = [
 ];
 
 const badgeSamples: Array<[string, PptTone, React.ReactNode]> = [
-  ["Live", "success", <Sparkles size={13} />],
+  ["Live", "success", <ShieldCheck size={13} />],
   ["Open", "success", null],
   ["1 left", "warning", null],
   ["Hot", "hot", null],
@@ -192,7 +192,7 @@ function BookingSuccessPreview() {
         <Check size={22} />
       </div>
       <h3>Booking confirmed</h3>
-      <p>Your ₹20 booking advance has been recorded.</p>
+      <p>Your ₹20 booking via PayPerTap has been recorded.</p>
       <Button variant="whatsapp" fullWidth icon={<BrandIcon type="whatsapp" />}>
         Message seller on WhatsApp
       </Button>
@@ -348,7 +348,7 @@ export default function DesignSystemPage() {
           <section className="pds-hero">
             <div className="pds-hero-copy">
               <div className="pds-kicker">
-                <Sparkles size={16} />
+                <ShieldCheck size={16} />
                 PayPerTap design system
               </div>
               <h1>Reusable UI for storefronts, bookings and seller dashboards.</h1>
@@ -358,7 +358,7 @@ export default function DesignSystemPage() {
                 and conversion-focused buyer flows.
               </p>
               <div className="pds-hero-actions">
-                <Button variant="primary" icon={<Sparkles size={17} />}>
+                <Button variant="primary" icon={<ShieldCheck size={17} />}>
                   Reserve for ₹20
                 </Button>
                 <Button variant="secondary" icon={<Eye size={17} />}>
@@ -399,7 +399,7 @@ export default function DesignSystemPage() {
           >
             <div className="pds-panel">
               <div className="pds-row">
-                <Button variant="primary" icon={<Sparkles size={17} />}>Primary</Button>
+                <Button variant="primary" icon={<ShieldCheck size={17} />}>Primary</Button>
                 <Button variant="secondary">Secondary</Button>
                 <Button variant="ghost">Ghost</Button>
                 <Button variant="danger" icon={<AlertCircle size={17} />}>Danger</Button>

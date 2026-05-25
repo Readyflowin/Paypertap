@@ -1,22 +1,40 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
-import logo from "../assets/Logo.png";
+import logo from "../assets/Logo-128.png";
 import { headerLinks } from "./headerLinks";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 18);
-    handleScroll();
+    let frameId: number | null = null;
+
+    const updateScrolledState = () => {
+      const next = window.scrollY > 18;
+      setIsScrolled((prev) => (prev === next ? prev : next));
+    };
+
+    const handleScroll = () => {
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        updateScrolledState();
+      });
+    };
+
+    updateScrolledState();
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -43,35 +61,35 @@ export function Header() {
     <>
       <nav className="pointer-events-none fixed inset-x-0 top-0 z-[120] flex justify-center px-3 py-3 sm:px-5 md:py-5">
         <motion.div
-          initial={{ y: -76, opacity: 0 }}
+          initial={reduceMotion ? false : { y: -76, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.04 }}
+          transition={{ duration: reduceMotion ? 0 : 0.7, ease: [0.16, 1, 0.3, 1], delay: reduceMotion ? 0 : 0.04 }}
           aria-label="Marketing navigation"
           className={[
-            "pointer-events-auto relative flex w-full max-w-[1080px] items-center justify-between overflow-hidden rounded-full border px-3 py-2 transition-all duration-500 sm:px-4 md:px-5 md:py-2.5",
+            "pointer-events-auto relative flex w-full max-w-[1080px] items-center justify-between overflow-hidden rounded-full border px-3 py-2 transition-colors duration-300 sm:px-4 md:px-5 md:py-2.5",
             isScrolled
-              ? "border-black/10 bg-[#fbf8ee]/90 shadow-[0_20px_60px_rgba(7,7,7,0.12)] backdrop-blur-2xl"
-              : "border-white/70 bg-[#fbf8ee]/75 shadow-[0_18px_46px_rgba(7,7,7,0.08)] backdrop-blur-xl",
+              ? "border-black/10 bg-[#fbf8ee]/92 shadow-[0_12px_34px_rgba(7,7,7,0.1)] backdrop-blur-sm sm:backdrop-blur-md"
+              : "border-white/70 bg-[#fbf8ee]/86 shadow-[0_10px_26px_rgba(7,7,7,0.07)] backdrop-blur-sm",
           ].join(" ")}
         >
           <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.12))]" />
-          <div className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-[#1DFF8A]/60 to-transparent" />
 
           <Link
             to="/"
             aria-label="PayPerTap homepage"
             className="group relative z-10 flex min-w-0 items-center gap-2.5 text-[#070707]"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/80 shadow-[inset_0_0_0_1px_rgba(7,7,7,0.06)] transition-transform duration-500 group-hover:rotate-[8deg] md:h-10 md:w-10">
-              <img
-                src={logo}
-                alt="PayPerTap logo"
-                className="h-full w-full object-contain"
-                draggable={false}
-              />
-            </span>
+            <img
+              src={logo}
+              alt="PayPerTap logo"
+              className="h-9 w-9 shrink-0 object-contain transition-transform duration-500 group-hover:rotate-[8deg] md:h-10 md:w-10"
+              width={40}
+              height={40}
+              decoding="async"
+              draggable={false}
+            />
 
-            <span className="hidden text-sm font-black uppercase text-[#070707] sm:block md:text-base">
+            <span className="block truncate text-sm font-black uppercase text-[#070707] md:text-base">
               PayPerTap
             </span>
           </Link>
@@ -143,7 +161,8 @@ export function Header() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-[130] bg-[#070707]/28 backdrop-blur-sm lg:hidden"
+              transition={{ duration: reduceMotion ? 0 : 0.18 }}
+              className="fixed inset-0 z-[130] bg-[#070707]/28 lg:hidden"
             />
 
             <motion.aside
@@ -151,11 +170,11 @@ export function Header() {
               role="dialog"
               aria-modal="true"
               aria-label="PayPerTap menu"
-              initial={{ x: "104%" }}
+              initial={reduceMotion ? false : { x: "104%" }}
               animate={{ x: 0 }}
               exit={{ x: "104%" }}
-              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed bottom-3 right-3 top-3 z-[140] flex w-[min(88vw,360px)] flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fbf8ee]/95 p-5 shadow-[0_28px_90px_rgba(7,7,7,0.22)] backdrop-blur-2xl lg:hidden"
+              transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed bottom-3 right-3 top-3 z-[140] flex w-[min(88vw,360px)] flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fbf8ee]/98 p-5 shadow-[0_20px_54px_rgba(7,7,7,0.18)] backdrop-blur-sm lg:hidden"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(124,58,237,0.14),transparent_34%),radial-gradient(circle_at_88%_88%,rgba(29,255,138,0.13),transparent_26%)]" />
               <div className="relative flex items-center justify-between gap-4">
@@ -164,14 +183,15 @@ export function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex min-w-0 items-center gap-3 text-[#070707]"
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-white/80">
-                    <img
-                      src={logo}
-                      alt="PayPerTap logo"
-                      className="h-full w-full object-contain"
-                      draggable={false}
-                    />
-                  </span>
+                  <img
+                    src={logo}
+                    alt="PayPerTap logo"
+                    className="h-10 w-10 shrink-0 object-contain"
+                    width={40}
+                    height={40}
+                    decoding="async"
+                    draggable={false}
+                  />
                   <span className="min-w-0">
                     <span className="block truncate text-base font-black text-[#070707]">
                       PayPerTap
@@ -201,9 +221,9 @@ export function Header() {
                     className="ppt-mobile-menu-link group rounded-3xl border border-black/10 bg-white/50 px-4 py-4 shadow-[0_14px_34px_rgba(7,7,7,0.06)] transition active:scale-[0.99]"
                   >
                     <motion.span
-                      initial={{ opacity: 0, x: -12 }}
+                      initial={reduceMotion ? false : { opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: reduceMotion ? 0 : index * 0.04 }}
                       className="flex items-center justify-between gap-4"
                     >
                       <span className="min-w-0">
@@ -238,5 +258,3 @@ export function Header() {
     </>
   );
 }
-
-export const MarketingHeader = Header;

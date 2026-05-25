@@ -11,10 +11,10 @@ type Capability = {
 };
 
 const productImage =
-  "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=420&q=80";
+  "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=360&q=74";
 
 const toteImage =
-  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=420&q=80";
+  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=360&q=74";
 
 const capabilities: Capability[] = [
   {
@@ -28,8 +28,8 @@ const capabilities: Capability[] = [
           <strong>New drop</strong>
         </div>
         <div>
-          <img src={productImage} alt="" loading="lazy" decoding="async" />
-          <img src={toteImage} alt="" loading="lazy" decoding="async" />
+          <img src={productImage} alt="" width={360} height={240} loading="lazy" decoding="async" />
+          <img src={toteImage} alt="" width={360} height={240} loading="lazy" decoding="async" />
         </div>
       </div>
     ),

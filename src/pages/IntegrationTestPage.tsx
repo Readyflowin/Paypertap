@@ -188,6 +188,8 @@ export default function IntegrationTestPage() {
                     className="mt-4 max-h-80 w-full rounded-[var(--ppt-radius-md)] border border-[var(--ppt-border)] object-contain"
                     src={uploadResult.url}
                     alt="Uploaded preview"
+                    decoding="async"
+                    loading="lazy"
                   />
                 </>
               ) : null}

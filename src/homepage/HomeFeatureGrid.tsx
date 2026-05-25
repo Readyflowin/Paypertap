@@ -47,28 +47,28 @@ const products = [
   {
     alt: "Denim jacket on a clothing rack",
     image:
-      "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=720&q=80",
+      "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=520&q=74",
     name: "Denim jacket",
     price: "₹1,499",
   },
   {
     alt: "Neutral linen outfit flatlay",
     image:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=720&q=80",
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=520&q=74",
     name: "Linen co-ord",
     price: "₹899",
   },
   {
     alt: "Handmade tote bag close up",
     image:
-      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=720&q=80",
+      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=520&q=74",
     name: "Handmade bag",
     price: "₹649",
   },
   {
     alt: "Minimal jewellery tray",
     image:
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=720&q=80",
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=520&q=74",
     name: "Drop earrings",
     price: "₹399",
   },
@@ -111,6 +111,8 @@ export function HomeFeatureGrid() {
                   <img
                     src={product.image}
                     alt={product.alt}
+                    width={520}
+                    height={347}
                     loading="lazy"
                     decoding="async"
                   />

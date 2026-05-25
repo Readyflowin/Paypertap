@@ -15,11 +15,11 @@ const pricingFacts = [
   },
   {
     icon: <Landmark size={20} strokeWidth={2.2} />,
-    title: "No seller payout setup needed in Phase 1.",
+    title: "No seller bank settlement setup needed in Phase 1.",
   },
   {
     icon: <ShieldCheck size={20} strokeWidth={2.2} />,
-    title: "No split payment complexity or seller payout KYC in Phase 1.",
+    title: "No complex payment routing or settlement KYC in Phase 1.",
   },
 ];
 

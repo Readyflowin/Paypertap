@@ -28,7 +28,7 @@ export function organizationSchema(): JsonLdObject {
     url: SITE_URL,
     logo: `${SITE_URL}/images/logo/paypertap-logo.png`,
     description:
-      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a fixed Rs. 20 verified booking advance.",
+      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a fixed Rs. 20 verified booking flow.",
   };
 }
 
@@ -46,7 +46,9 @@ export function personSchema(): JsonLdObject {
     "@context": "https://schema.org",
     "@type": "Person",
     name: "Aditya",
-    jobTitle: "Founder",
+    jobTitle: "Founder of PayPerTap",
+    description:
+      "Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers.",
     worksFor: {
       "@type": "Organization",
       name: SITE_NAME,

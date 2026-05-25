@@ -143,8 +143,8 @@ export default function ProductOnboardingPage() {
 
         <div className="mt-6">
           <PptNotice tone="info" title="How PayPerTap booking works" icon={<WalletCards size={19} />}>
-            Buyers pay ₹20 advance on PayPerTap. You collect the remaining amount on WhatsApp,
-            UPI, or COD. The Phase 1 booking advance stays fixed at ₹20.
+            Buyers pay ₹20 booking via PayPerTap. You collect the remaining amount on
+            WhatsApp, UPI, or COD. The Phase 1 booking fee stays fixed at ₹20.
           </PptNotice>
         </div>
 
@@ -247,6 +247,8 @@ export default function ProductOnboardingPage() {
                     <img
                       src={imagePreviewUrl}
                       alt={`Selected product preview ${index + 1}`}
+                      decoding="async"
+                      loading="lazy"
                       className="h-full w-full object-cover"
                     />
                   </div>

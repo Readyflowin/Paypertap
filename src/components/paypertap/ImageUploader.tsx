@@ -147,6 +147,8 @@ export function ImageUploader({
           <img
             src={previewUrl}
             alt={activeFile?.name || "Selected image preview"}
+            decoding="async"
+            loading="lazy"
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (

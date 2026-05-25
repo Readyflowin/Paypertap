@@ -11,7 +11,7 @@ export function CTASection({
   title?: string;
 }) {
   return (
-    <section className="px-4 py-16 sm:px-6 lg:px-8">
+    <section className="ppt-core-cta-section px-4 py-16 sm:px-6 lg:px-8">
       <div className="ppt-cta-panel relative mx-auto grid w-full max-w-7xl gap-6 overflow-hidden rounded-[32px] p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="relative min-w-0">
           <MarketingPill>Start with verified booking</MarketingPill>

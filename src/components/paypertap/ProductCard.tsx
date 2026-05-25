@@ -3,6 +3,10 @@ import clsx from "clsx";
 
 import { Badge, Button, Card, type BadgeProps } from "@/components/ui";
 import { formatINR } from "@/lib/money";
+import {
+  getAvailableQuantity as getSharedAvailableQuantity,
+  getProductUnavailableLabel,
+} from "@/lib/productAvailability";
 
 import { PriceBreakdown } from "./PriceBreakdown";
 import { StatusBadge } from "./StatusBadge";
@@ -43,7 +47,11 @@ function getAvailableQuantity({
     return undefined;
   }
 
-  return Math.max(inventoryQuantity - reservedQuantity - soldQuantity, 0);
+  return getSharedAvailableQuantity({
+    inventoryQuantity,
+    reservedQuantity,
+    soldQuantity,
+  });
 }
 
 function getCardBadge(props: ProductCardProps, availableQuantity?: number): {
@@ -52,8 +60,21 @@ function getCardBadge(props: ProductCardProps, availableQuantity?: number): {
 } | null {
   const normalizedStatus = props.status?.toLowerCase();
 
-  if (normalizedStatus === "sold") return { label: "Sold", variant: "dark" };
+  if (normalizedStatus === "sold") return { label: "Sold out", variant: "dark" };
   if (availableQuantity === 1) return { label: "1 left", variant: "warning" };
+  if (typeof availableQuantity === "number" && availableQuantity <= 0) {
+    const label =
+      normalizedStatus === "reserved"
+        ? "Reserved"
+        : getProductUnavailableLabel({
+            status: props.status,
+            inventoryQuantity: props.inventoryQuantity,
+            reservedQuantity: props.reservedQuantity,
+            soldQuantity: props.soldQuantity,
+          });
+
+    return { label, variant: label === "Reserved" ? "warning" : "neutral" };
+  }
   if (props.badge) return { label: props.badge, variant: "primary" };
   if (normalizedStatus === "open") return { label: "Open", variant: "success" };
   if (props.status) return { label: props.status, variant: "neutral" };
@@ -72,6 +93,7 @@ function ProductImage({
     <img
       src={imageUrl}
       alt={title}
+      decoding="async"
       loading="lazy"
       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
     />

@@ -17,6 +17,7 @@ export function FAQBlock({
         <details
           key={item.question}
           className="ppt-faq-item group rounded-[22px] p-5"
+          open={!showLink}
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-bold text-neutral-950">
             <span className="min-w-0">{item.question}</span>

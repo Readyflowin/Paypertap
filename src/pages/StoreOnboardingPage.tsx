@@ -156,6 +156,8 @@ export default function StoreOnboardingPage() {
                 <img
                   src={logoPreviewUrl}
                   alt="Selected store logo preview"
+                  decoding="async"
+                  loading="lazy"
                   className="h-16 w-16 rounded-[18px] object-cover"
                 />
                 <p className="m-0 text-xs font-medium text-[var(--pds-muted)]">

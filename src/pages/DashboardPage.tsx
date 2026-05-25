@@ -48,6 +48,7 @@ import {
   normalizeCollectionName,
 } from "../lib/collections";
 import { formatINR } from "../lib/money";
+import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
 import {
   cancelOrReleaseBooking,
   getCheckoutSessionsBySellerId,
@@ -131,13 +132,6 @@ const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
   Store: StoreIcon,
   Payments: CreditCard,
 };
-
-function getAvailableQuantity(product: Product): number {
-  return Math.max(
-    product.inventoryQuantity - product.reservedQuantity - product.soldQuantity,
-    0
-  );
-}
 
 function getProductImage(product: Product): string {
   const image = product.images?.find(
@@ -750,7 +744,7 @@ function OverviewTab({
           <QuickActionCard
             icon={<CalendarCheck size={20} aria-hidden="true" />}
             title="Check bookings"
-            description="Follow up with buyers who paid the ₹20 booking advance."
+            description="Follow up with buyers who booked through PayPerTap."
             action={
               <PptButton
                 type="button"
@@ -1363,7 +1357,13 @@ function getProductStatusBadge(
   if (product.status === "draft") return { label: "Draft", tone: "warning" };
   if (product.status === "unpublished") return { label: "Hidden", tone: "neutral" };
   if (availableQuantity === 1) return { label: "1 left", tone: "hot" };
-  if (availableQuantity <= 0) return { label: "Sold out", tone: "sold" };
+  if (availableQuantity <= 0) {
+    const label = getProductUnavailableLabel(product);
+    return {
+      label,
+      tone: label === "Reserved" ? "reserved" : label === "Sold out" ? "sold" : "neutral",
+    };
+  }
   return { label: "Open", tone: "success" };
 }
 
@@ -1683,6 +1683,8 @@ function ProductsTab({
                       <img
                         src={imagePreviewUrl}
                         alt={`Selected product preview ${index + 1}`}
+                        decoding="async"
+                        loading="lazy"
                         className="h-full w-full object-cover"
                       />
                     </div>
@@ -2290,6 +2292,8 @@ function EditProductForm({
                 <img
                   src={imagePreviewUrl}
                   alt={`Product preview ${index + 1}`}
+                  decoding="async"
+                  loading="lazy"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -2545,7 +2549,7 @@ function BookingCard({
 
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
         <Metric label="Product price" value={formatINR(booking.productPrice)} />
-        <Metric label="Advance paid" value={formatINR(booking.bookingAdvanceAmount)} />
+        <Metric label="PayPerTap booking fee" value={formatINR(booking.bookingAdvanceAmount)} />
         <Metric label="Collect from buyer" value={formatINR(booking.sellerCollectAmount)} />
       </div>
 
@@ -3110,14 +3114,14 @@ function StoreTab({
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <InfoRow label="Slug" value={storeSlug || "Not set"} />
               <InfoRow label="Public link" value={storeLink || "Not set"} />
-              <InfoRow label="Booking advance" value={formatINR(store?.bookingAdvanceAmount || 20)} />
+              <InfoRow label="Booking fee" value={formatINR(store?.bookingAdvanceAmount || 20)} />
               <InfoRow label="Theme" value={storefrontThemeRegistry[selectedThemeId].name} />
             </div>
           </div>
         </div>
 
         <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
-          Buyers pay ₹20 advance on PayPerTap. You collect the remaining product amount directly on WhatsApp/UPI/COD.
+          Buyers pay ₹20 booking via PayPerTap. You collect the remaining product amount directly on WhatsApp/UPI/COD.
         </div>
         {error ? <ErrorBox message={error} /> : null}
       </form>
@@ -3492,15 +3496,14 @@ function PaymentsTab() {
     <section className="rounded-2xl border border-gray-200 bg-white p-6">
       <p className="text-sm font-medium text-gray-500">Phase 1 mode</p>
       <h2 className="mt-2 text-xl font-semibold tracking-tight">
-        Fixed ₹20 PayPerTap booking advance
+        Fixed ₹20 PayPerTap booking fee
       </h2>
       <p className="mt-3 text-sm leading-6 text-gray-600">
         PayPerTap collects ₹20 from the buyer to reserve the item. You collect
         the remaining product amount directly on WhatsApp/UPI/COD.
       </p>
       <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-        Custom advance and seller payout will be available later after Razorpay
-        Route/Cashfree split setup.
+        Custom booking-fee settings are not part of Phase 1.
       </div>
     </section>
   );

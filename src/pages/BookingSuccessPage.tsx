@@ -185,7 +185,7 @@ export default function BookingSuccessPage() {
             Booking confirmed
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Your ₹20 booking advance has been recorded.
+            Your ₹20 booking via PayPerTap has been recorded.
           </p>
 
           <div className="mt-6 flex flex-col items-center gap-3">
@@ -226,6 +226,8 @@ export default function BookingSuccessPage() {
                     src={productImageUrl}
                     alt={productImage?.alt || checkout.productTitle}
                     className="h-full w-full object-cover"
+                    decoding="async"
+                    loading="lazy"
                   />
                 ) : (
                   <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />

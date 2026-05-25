@@ -1,5 +1,4 @@
 import {
-  createCheckoutSession,
   createCheckoutSessionWithReservation,
   type CreateCheckoutSessionInput,
 } from "./checkoutService";
@@ -8,15 +7,6 @@ import type { CheckoutSession } from "../types/firestore";
 
 function normalizeBuyerPhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
-}
-
-function isPermissionDenied(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    String((error as { code?: unknown }).code) === "permission-denied"
-  );
 }
 
 export async function startMockBookingPayment(
@@ -28,27 +18,8 @@ export async function startMockBookingPayment(
   reservationApplied: boolean;
 }> {
   // TODO: Replace this with backend Razorpay order + payment verification later.
-  let checkoutId = "";
-  let reservationApplied = true;
-
-  try {
-    checkoutId = await createCheckoutSessionWithReservation(input);
-  } catch (error) {
-    if (!isPermissionDenied(error)) {
-      throw error;
-    }
-
-    console.warn(
-      "Public mock checkout cannot update product inventory under current production rules. Falling back to checkoutSession-only create.",
-      error
-    );
-    // TODO: Move reservation to backend after real Razorpay verification.
-    checkoutId = await createCheckoutSession({
-      ...input,
-      status: "booking_paid",
-    });
-    reservationApplied = false;
-  }
+  const checkoutId = await createCheckoutSessionWithReservation(input);
+  const reservationApplied = true;
 
   const productPrice = Math.trunc(Number(input.productPrice));
   const checkoutSession: CheckoutSession = {
@@ -68,6 +39,9 @@ export async function startMockBookingPayment(
     buyerPincode: input.buyerPincode.trim(),
     status: "booking_paid",
     whatsappOpened: false,
+    reservationApplied,
+    reservedProductId: input.productId,
+    reservedQuantity: 1,
   };
 
   return {

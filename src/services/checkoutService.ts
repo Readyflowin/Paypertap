@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
+import { getAvailableQuantity, getNextProductStatus } from "../lib/productAvailability";
 import type { CheckoutSession, CheckoutSessionStatus } from "../types/firestore";
 
 export type CreateCheckoutSessionInput = {
@@ -28,19 +29,6 @@ export type CreateCheckoutSessionInput = {
   buyerEmail?: string;
   status?: CheckoutSessionStatus;
 };
-
-function getNextProductStatus(
-  inventoryQuantity: number,
-  reservedQuantity: number,
-  soldQuantity: number
-) {
-  const availableQuantity = inventoryQuantity - reservedQuantity - soldQuantity;
-
-  if (soldQuantity >= inventoryQuantity) return "sold";
-  if (availableQuantity > 0) return "open";
-  if (reservedQuantity > 0) return "hold";
-  return "open";
-}
 
 function normalizeBuyerPhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
@@ -71,6 +59,7 @@ export async function createCheckoutSession(
     buyerPincode: input.buyerPincode.trim(),
     status: input.status || "booking_paid",
     whatsappOpened: false,
+    reservationApplied: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -113,18 +102,22 @@ export async function createCheckoutSessionWithReservation(
     const inventoryQuantity = Number(product.inventoryQuantity || 0);
     const reservedQuantity = Number(product.reservedQuantity || 0);
     const soldQuantity = Number(product.soldQuantity || 0);
-    const availableQuantity = inventoryQuantity - reservedQuantity - soldQuantity;
+    const availableQuantity = getAvailableQuantity({
+      inventoryQuantity,
+      reservedQuantity,
+      soldQuantity,
+    });
 
     if (product.status !== "open" || availableQuantity <= 0) {
-      throw new Error("This item is no longer available.");
+      throw new Error("This item was just reserved. Please choose another product.");
     }
 
     const nextReservedQuantity = reservedQuantity + 1;
-    const nextStatus = getNextProductStatus(
+    const nextStatus = getNextProductStatus({
       inventoryQuantity,
-      nextReservedQuantity,
+      reservedQuantity: nextReservedQuantity,
       soldQuantity
-    );
+    });
 
     transaction.set(checkoutRef, {
       checkoutId,
@@ -143,6 +136,9 @@ export async function createCheckoutSessionWithReservation(
       buyerPincode: input.buyerPincode.trim(),
       status: "booking_paid",
       whatsappOpened: false,
+      reservationApplied: true,
+      reservedProductId: input.productId,
+      reservedQuantity: 1,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -281,11 +277,11 @@ export async function markBookingSold(
     const soldQuantity = Number(product.soldQuantity || 0);
     const nextReservedQuantity = Math.max(0, reservedQuantity - 1);
     const nextSoldQuantity = Math.min(inventoryQuantity, soldQuantity + 1);
-    const nextStatus = getNextProductStatus(
+    const nextStatus = getNextProductStatus({
       inventoryQuantity,
-      nextReservedQuantity,
-      nextSoldQuantity
-    );
+      reservedQuantity: nextReservedQuantity,
+      soldQuantity: nextSoldQuantity,
+    });
 
     transaction.update(checkoutRef, {
       status: "sold",
@@ -332,11 +328,11 @@ export async function cancelOrReleaseBooking(
     const reservedQuantity = Number(product.reservedQuantity || 0);
     const soldQuantity = Number(product.soldQuantity || 0);
     const nextReservedQuantity = Math.max(0, reservedQuantity - 1);
-    const nextStatus = getNextProductStatus(
+    const nextStatus = getNextProductStatus({
       inventoryQuantity,
-      nextReservedQuantity,
-      soldQuantity
-    );
+      reservedQuantity: nextReservedQuantity,
+      soldQuantity,
+    });
 
     transaction.update(checkoutRef, {
       status: "released",

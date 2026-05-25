@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Link2, MessageCircle, ShieldCheck, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
@@ -9,64 +9,102 @@ import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
 
+const audience = [
+  "Instagram sellers",
+  "WhatsApp sellers",
+  "Thrift stores",
+  "Boutiques and handmade brands",
+];
+
 export function AboutPage() {
   return (
     <MarketingLayout>
       <Seo
         canonicalPath="/about"
-        title="About PayPerTap"
-        description="PayPerTap is an India-first verified booking storefront built for Instagram and WhatsApp sellers."
+        title="About PayPerTap | Verified Booking Storefront for Social Sellers"
+        description="PayPerTap is an India-first verified booking storefront for Instagram and WhatsApp sellers who want product links, Rs. 20 booking, and WhatsApp handoff."
         jsonLd={[breadcrumbListSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }])]}
       />
       <SectionHeader
         eyebrow="About"
-        h1="India-first verified booking storefronts"
-        subtitle="PayPerTap helps Instagram and WhatsApp sellers reduce fake buyers, organize product discovery, and move serious buyers into WhatsApp."
+        h1="Built for India's Instagram and WhatsApp sellers."
+        subtitle="PayPerTap is a verified booking storefront for Indian social sellers. It turns scattered attention into organized product discovery, Rs. 20 booking, and WhatsApp-ready buyer conversations."
       />
-      <MarketingSection>
-        <div className="grid gap-4 md:grid-cols-2">
-          <MarketingCard>
-            <h2 className="text-2xl font-medium tracking-[-0.04em] text-neutral-950">
-              Built for social commerce
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-neutral-600">
-              Many Indian sellers already sell through Instagram posts, WhatsApp chats,
-              UPI, and COD. PayPerTap adds a clean storefront and verified booking layer
-              without forcing a full ecommerce migration.
-            </p>
-          </MarketingCard>
-          <MarketingCard>
-            <h2 className="text-2xl font-medium tracking-[-0.04em] text-neutral-950">
-              Not a payment gateway in Phase 1
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-neutral-600">
-              The buyer pays a fixed Rs. 20 booking fee on PayPerTap. The seller does
-              not receive that fee in Phase 1 and collects the remaining product amount
-              directly from the buyer.
-            </p>
-          </MarketingCard>
-        </div>
-        <div className="mt-4">
-          <MarketingCard>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <h2 className="text-2xl font-medium tracking-[-0.04em] text-neutral-950">
-                  Founder of PayPerTap
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-neutral-600">
-                  Learn why Aditya started PayPerTap for Indian Instagram and
-                  WhatsApp sellers.
-                </p>
-              </div>
-              <Link
-                to="/founder"
-                className="inline-flex w-fit items-center gap-2 rounded-full border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-950"
-              >
-                Founder of PayPerTap <ArrowRight size={15} aria-hidden="true" />
-              </Link>
+      <MarketingSection className="ppt-core-page-section">
+        <div className="ppt-about-story-grid grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <MarketingCard className="ppt-about-lead-card">
+            <div className="ppt-core-icon-tile">
+              <Store size={22} aria-hidden="true" />
             </div>
+            <h2 className="mt-6 text-3xl font-extrabold tracking-[-0.05em] text-neutral-950">
+              What PayPerTap is
+            </h2>
+            <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
+              PayPerTap is a verified booking storefront for Indian Instagram and
+              WhatsApp sellers. It gives sellers a clean product link and gives buyers
+              a simple Rs. 20 booking step before the conversation continues.
+            </p>
           </MarketingCard>
+          <div className="grid gap-4">
+            <MarketingCard>
+              <ShieldCheck className="text-neutral-950" size={22} aria-hidden="true" />
+              <h2 className="mt-4 text-2xl font-extrabold tracking-[-0.04em] text-neutral-950">
+                Why verified booking exists
+              </h2>
+              <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+                Sellers lose time when buyers ask for holds and disappear. A small
+                verified booking step helps separate serious buyers from casual DMs.
+              </p>
+            </MarketingCard>
+            <MarketingCard>
+              <MessageCircle className="text-neutral-950" size={22} aria-hidden="true" />
+              <h2 className="mt-4 text-2xl font-extrabold tracking-[-0.04em] text-neutral-950">
+                Why WhatsApp handoff matters
+              </h2>
+              <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+                Indian sellers already close details on WhatsApp, UPI, COD, or their
+                own process. PayPerTap adds structure without forcing a full ecommerce migration.
+              </p>
+            </MarketingCard>
+          </div>
         </div>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="Who PayPerTap is for"
+        intro="The product is shaped around sellers who want a cleaner store link without giving up their direct buyer relationship."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {audience.map((item) => (
+            <MarketingCard className="ppt-core-mini-card" key={item}>
+              <Link2 size={18} aria-hidden="true" />
+              <strong>{item}</strong>
+            </MarketingCard>
+          ))}
+        </div>
+      </MarketingSection>
+
+      <MarketingSection className="ppt-core-page-section">
+        <MarketingCard className="ppt-founder-link-card">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
+              Founder story
+            </p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.05em] text-neutral-950">
+              Meet the founder of PayPerTap
+            </h2>
+            <p className="ppt-home-copy mt-3 max-w-2xl text-sm leading-7 text-neutral-600">
+              Learn why Aditya started PayPerTap for Indian Instagram and WhatsApp sellers.
+            </p>
+          </div>
+          <Link
+            to="/founder"
+            className="ppt-secondary-link inline-flex w-fit items-center gap-2"
+          >
+            Founder of PayPerTap <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </MarketingCard>
       </MarketingSection>
       <CTASection />
     </MarketingLayout>

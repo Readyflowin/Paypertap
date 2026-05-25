@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   BadgeCheck,
   Heart,
@@ -9,11 +9,15 @@ import {
   Search,
   Store as StoreIcon,
   X,
-  Zap,
 } from "lucide-react";
 
 import { PptBadge, PptBrandIcon, PptButton } from "@/components/ui";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
+import {
+  getAvailableQuantity as getSharedAvailableQuantity,
+  getProductUnavailableLabel,
+  isProductBookable,
+} from "@/lib/productAvailability";
 import { PaymentTrustStrip } from "../../PaymentTrustStrip";
 import {
   getProductDetailImageUrls,
@@ -55,7 +59,7 @@ function getInitials(name: string) {
 }
 
 function getStoreTagline(store: StorefrontThemeProps["store"]) {
-  return store.tagline || store.bio || "Limited drops, easy verified booking.";
+  return store.tagline || store.bio || "Fresh drops, limited pieces.";
 }
 
 function getProductId(product: StorefrontProduct) {
@@ -89,13 +93,7 @@ function getProductStatus(product: StorefrontProduct) {
 }
 
 function getAvailableQuantity(product: StorefrontProduct) {
-  const flexibleProduct = product as FlexibleProduct;
-  const inventory = Number(product.inventoryQuantity ?? flexibleProduct.inventory ?? 1);
-  const reserved = Number(product.reservedQuantity ?? 0);
-  const sold = Number(product.soldQuantity ?? 0);
-
-  if (!Number.isFinite(inventory)) return 0;
-  return Math.max(0, inventory - reserved - sold);
+  return getSharedAvailableQuantity(product);
 }
 
 function hasExplicitAvailability(product: StorefrontProduct) {
@@ -110,7 +108,7 @@ function hasExplicitAvailability(product: StorefrontProduct) {
 }
 
 function isBookable(product: StorefrontProduct) {
-  return getProductStatus(product) === "open" && getAvailableQuantity(product) > 0;
+  return isProductBookable(product);
 }
 
 function isVisibleProduct(product: StorefrontProduct) {
@@ -137,9 +135,108 @@ function getSellerCollectAmount(price: number) {
 
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
-  if (status === "sold") return "Sold out";
-  if (status === "hold" || status === "reserved") return "Reserved";
-  return "Not bookable";
+  if (status === "reserved") return "Reserved";
+  return getProductUnavailableLabel(product);
+}
+
+function Theme3DropHero({ store }: { store: StorefrontThemeProps["store"] }) {
+  const storeName = store.storeName || "PayPerTap Store";
+  const initials = getInitials(storeName);
+  const contact = getStoreContactInfo(store);
+
+  return (
+    <header className="overflow-hidden rounded-[30px] border border-white/10 bg-[#050507] text-white shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
+      <div className="grid min-w-0 gap-6 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)] lg:items-end">
+        <div className="min-w-0">
+          <div className="mb-5 flex min-w-0 items-center gap-3">
+            {store.logoUrl ? (
+              <img
+                src={store.logoUrl}
+                alt={`${storeName} logo`}
+                decoding="async"
+                fetchPriority="high"
+                loading="eager"
+                className="h-14 w-14 shrink-0 rounded-2xl border border-white/16 object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/14 bg-white text-sm font-semibold text-neutral-950">
+                {initials || <StoreIcon size={20} aria-hidden="true" />}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3 py-1 text-xs font-medium text-white/82">
+                  <BadgeCheck size={14} aria-hidden="true" />
+                  Latest drop
+                </p>
+                {contact.instagramUrl ? (
+                  <a
+                    href={contact.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/12 bg-white/7 px-2.5 py-1 text-xs font-medium text-white/64 hover:text-white"
+                  >
+                    <PptBrandIcon type="instagram" size={14} />
+                    <span className="truncate">{contact.instagramLabel}</span>
+                  </a>
+                ) : null}
+              </div>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">
+                Seller confirms on WhatsApp
+              </p>
+            </div>
+          </div>
+
+          <h1 className="max-w-4xl break-words text-4xl font-semibold leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">
+            {storeName}
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-white/68">
+            {getStoreTagline(store)}
+          </p>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-white/54">
+            Reserve your item with {formatINR(BOOKING_ADVANCE_AMOUNT)}. Confirm the rest directly with the seller on WhatsApp.
+          </p>
+          <a
+            href="#products"
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-white px-5 text-sm font-bold uppercase tracking-[0.08em] text-neutral-950 transition hover:bg-white/90 min-[420px]:w-fit"
+          >
+            Shop products
+          </a>
+        </div>
+
+        <div className="min-w-0 rounded-[24px] border border-white/10 bg-neutral-900 p-4 text-sm text-white/64">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="flex min-w-0 items-start gap-3 rounded-[18px] border border-white/10 bg-white/7 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-neutral-950">
+                <BadgeCheck size={16} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold text-white">
+                  {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/48">
+                  Platform booking recorded.
+                </p>
+              </div>
+            </div>
+            <div className="flex min-w-0 items-start gap-3 rounded-[18px] border border-white/10 bg-white/7 p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-neutral-950">
+                <MessageCircle size={16} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold text-white">
+                  Seller confirms on WhatsApp
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/48">
+                  Continue chat after booking.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }
 
 function Theme3Hero({ store }: { store: StorefrontThemeProps["store"] }) {
@@ -189,7 +286,7 @@ function Theme3Hero({ store }: { store: StorefrontThemeProps["store"] }) {
             <p className="text-2xl font-semibold tracking-[-0.04em]">
               ₹{BOOKING_ADVANCE_AMOUNT}
             </p>
-            <p className="mt-1 text-xs leading-5 text-white/58">booking advance</p>
+            <p className="mt-1 text-xs leading-5 text-white/58">booking fee</p>
           </div>
           <div className="rounded-2xl border border-white/12 bg-white/7 p-3">
             <p className="text-2xl font-semibold tracking-[-0.04em]">WA</p>
@@ -201,20 +298,6 @@ function Theme3Hero({ store }: { store: StorefrontThemeProps["store"] }) {
         Limited drop storefront
       </div>
     </header>
-  );
-}
-
-function Theme3MiniInfoBar() {
-  return (
-    <section className="sticky top-2 z-20 rounded-full border border-neutral-200 bg-white/88 px-3 py-2 shadow-[0_12px_30px_rgba(15,15,17,0.1)] backdrop-blur">
-      <div className="flex min-w-0 items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-700 sm:gap-2 sm:text-xs">
-        <Zap size={14} aria-hidden="true" className="shrink-0 text-neutral-950" />
-        <span className="truncate">₹{BOOKING_ADVANCE_AMOUNT} reserves your item</span>
-        <span className="h-1 w-1 shrink-0 rounded-full bg-neutral-300" aria-hidden="true" />
-        <span className="hidden sm:inline">Pay remaining directly to seller</span>
-        <span className="sm:hidden">Pay seller later</span>
-      </div>
-    </section>
   );
 }
 
@@ -239,15 +322,15 @@ function Theme3ProductCard({
   const ctaLabel = isBookable(product) ? `Book ₹${BOOKING_ADVANCE_AMOUNT}` : "View";
 
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-[22px] border border-neutral-300 bg-white shadow-[0_14px_36px_rgba(15,15,17,0.08)]">
+    <article className="relative min-w-0 overflow-hidden rounded-[22px] border border-white/10 bg-neutral-900 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
       <button
         type="button"
         aria-label={isSaved ? "Remove saved item" : "Save item"}
         onClick={() => onToggleSaved(product, fallbackIndex)}
         className={`absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition ${
           isSaved
-            ? "border-neutral-950 bg-neutral-950 text-white"
-            : "border-white/80 bg-white/90 text-neutral-700 hover:text-neutral-950"
+            ? "border-emerald-300 bg-emerald-300 text-neutral-950"
+            : "border-white/12 bg-neutral-950/72 text-white/76 hover:text-white"
         }`}
       >
         <Heart size={15} aria-hidden="true" fill={isSaved ? "currentColor" : "none"} />
@@ -257,7 +340,7 @@ function Theme3ProductCard({
         onClick={() => onSelect(product)}
         className="block h-full w-full text-left"
       >
-        <div className="relative aspect-square overflow-hidden bg-neutral-100">
+        <div className="relative aspect-square overflow-hidden bg-neutral-800">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -268,7 +351,7 @@ function Theme3ProductCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-neutral-400">
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-white/34">
               <ImageIcon size={24} aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-[0.12em]">
                 No image
@@ -283,14 +366,14 @@ function Theme3ProductCard({
         </div>
 
         <div className="min-w-0 p-3">
-          <h2 className="line-clamp-2 min-h-[40px] whitespace-normal break-words text-sm font-semibold leading-5 tracking-[-0.02em] text-neutral-950">
+          <h2 className="line-clamp-2 min-h-[40px] whitespace-normal break-words text-sm font-semibold leading-5 tracking-[-0.02em] text-white">
             {title}
           </h2>
           <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-base font-bold tracking-[-0.04em] text-neutral-950">
+            <p className="min-w-0 truncate text-base font-bold tracking-[-0.04em] text-white">
               {formatINR(price)}
             </p>
-            <span className="max-w-[70px] shrink-0 truncate rounded-full bg-neutral-950 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-white sm:max-w-none sm:px-2.5">
+            <span className="max-w-[70px] shrink-0 truncate rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-neutral-950 sm:max-w-none sm:px-2.5">
               {ctaLabel}
             </span>
           </div>
@@ -343,14 +426,14 @@ function Theme3ProductGrid({
 
   if (totalProductCount === 0) {
     return (
-      <section className="rounded-[28px] border border-neutral-300 bg-white p-8 text-center shadow-[0_18px_48px_rgba(15,15,17,0.07)]">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+      <section className="rounded-[28px] border border-white/10 bg-neutral-900 p-8 text-center shadow-[0_18px_48px_rgba(0,0,0,0.24)]">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-neutral-950">
           <PackageCheck size={22} aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-semibold tracking-[-0.05em] text-neutral-950">
+        <h2 className="text-2xl font-semibold tracking-[-0.05em] text-white">
           No drops listed yet
         </h2>
-        <p className="mt-2 text-sm leading-6 text-neutral-500">
+        <p className="mt-2 text-sm leading-6 text-white/54">
           This seller is preparing their next release.
         </p>
       </section>
@@ -376,23 +459,23 @@ function Theme3ProductGrid({
     : "Switch back to All to browse every drop.";
 
   return (
-    <section>
+    <section id="products">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/42">
             Drop list
           </p>
-          <h2 className="mt-1 text-3xl font-semibold tracking-[-0.06em] text-neutral-950">
+          <h2 className="mt-1 text-3xl font-semibold tracking-[-0.06em] text-white">
             Live items
           </h2>
         </div>
-        <p className="shrink-0 rounded-full border border-neutral-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-neutral-600">
+        <p className="shrink-0 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-white/58">
           {products.length} item{products.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mb-3 flex min-w-0 items-center gap-2 rounded-2xl border border-neutral-300 bg-white px-3 py-2 shadow-[0_12px_30px_rgba(15,15,17,0.07)] focus-within:border-neutral-950 focus-within:ring-2 focus-within:ring-neutral-300">
-        <Search size={16} aria-hidden="true" className="shrink-0 text-neutral-500" />
+      <div className="mb-3 flex min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-neutral-900 px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.22)] focus-within:border-white/28 focus-within:ring-2 focus-within:ring-white/10">
+        <Search size={16} aria-hidden="true" className="shrink-0 text-white/45" />
         <label className="sr-only" htmlFor="theme3-product-search">
           Search drops
         </label>
@@ -402,14 +485,14 @@ function Theme3ProductGrid({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search drops"
-          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-neutral-950 outline-none placeholder:font-medium placeholder:text-neutral-400"
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/34"
         />
         {hasSearch ? (
           <button
             type="button"
             aria-label="Clear search"
             onClick={() => onSearchChange("")}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 hover:border-neutral-950 hover:text-neutral-950"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/60 hover:border-white/24 hover:text-white"
           >
             <X size={14} aria-hidden="true" />
           </button>
@@ -417,8 +500,8 @@ function Theme3ProductGrid({
       </div>
 
       {showSearchPanel ? (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-neutral-950 bg-white shadow-[0_18px_44px_rgba(15,15,17,0.12)]">
-          <div className="border-b border-neutral-200 bg-neutral-950 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-[0_18px_44px_rgba(0,0,0,0.26)]">
+          <div className="border-b border-white/10 bg-neutral-950 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
             Search results
           </div>
           {searchResults.length > 0 ? (
@@ -437,7 +520,7 @@ function Theme3ProductGrid({
                       onSelect(product);
                       setSuggestionsDismissed(true);
                     }}
-                    className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition hover:bg-neutral-100 focus:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-neutral-950"
+                    className="flex w-full min-w-0 items-center gap-3 px-3 py-3 text-left transition hover:bg-white/6 focus:bg-white/6 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/18"
                   >
                     {imageUrl ? (
                       <img
@@ -445,25 +528,25 @@ function Theme3ProductGrid({
                         alt={title}
                         decoding="async"
                         loading="lazy"
-                        className="h-12 w-12 shrink-0 rounded-xl border border-neutral-200 object-cover"
+                        className="h-12 w-12 shrink-0 rounded-xl border border-white/10 object-cover"
                       />
                     ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-500">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-white/40">
                         <ImageIcon size={17} aria-hidden="true" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 whitespace-normal break-words text-sm font-bold leading-5 text-neutral-950">
+                      <p className="line-clamp-2 whitespace-normal break-words text-sm font-bold leading-5 text-white">
                         {title}
                       </p>
-                      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45">
                         {price > 0 ? <span>{formatINR(price)}</span> : null}
                         {collectionName ? (
                           <span className="max-w-full truncate">{collectionName}</span>
                         ) : null}
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-full bg-neutral-950 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-neutral-950">
                       View
                     </span>
                   </button>
@@ -471,14 +554,14 @@ function Theme3ProductGrid({
               })}
             </div>
           ) : (
-            <div className="px-4 py-5 text-sm font-medium text-neutral-500">
+            <div className="px-4 py-5 text-sm font-medium text-white/54">
               {selectedCollection === ALL_COLLECTIONS
                 ? "No results found"
                 : "No results found in this collection"}
             </div>
           )}
           {hasMoreSearchResults ? (
-            <p className="border-t border-neutral-200 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500">
+            <p className="border-t border-white/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-white/45">
               Showing top results
             </p>
           ) : null}
@@ -491,8 +574,8 @@ function Theme3ProductGrid({
           onClick={onToggleSavedView}
           className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition ${
             showSavedOnly
-              ? "border-neutral-950 bg-neutral-950 text-white"
-              : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-950 hover:text-neutral-950"
+              ? "border-white bg-white text-neutral-950"
+              : "border-white/10 bg-neutral-900 text-white/70 hover:border-white/24 hover:text-white"
           }`}
         >
           <Heart
@@ -505,7 +588,7 @@ function Theme3ProductGrid({
         </button>
       </div>
       {showSavedOnly ? (
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.08em] text-neutral-500">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.08em] text-white/45">
           Saved uses current search and collection
         </p>
       ) : null}
@@ -522,8 +605,8 @@ function Theme3ProductGrid({
                 onClick={() => onCollectionChange(collection)}
                 className={`max-w-[180px] shrink-0 truncate rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] ${
                   isActive
-                    ? "border-neutral-950 bg-neutral-950 text-white"
-                    : "border-neutral-300 bg-white text-neutral-700"
+                    ? "border-white bg-white text-neutral-950"
+                    : "border-white/10 bg-neutral-900 text-white/70"
                 }`}
               >
                 {collection}
@@ -535,14 +618,14 @@ function Theme3ProductGrid({
 
       {products.length === 0 ? (
         hasSearch && showSearchPanel ? null : (
-        <section className="rounded-[28px] border border-neutral-300 bg-white p-8 text-center shadow-[0_18px_48px_rgba(15,15,17,0.07)]">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+        <section className="rounded-[28px] border border-white/10 bg-neutral-900 p-8 text-center shadow-[0_18px_48px_rgba(0,0,0,0.24)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-neutral-950">
             <PackageCheck size={22} aria-hidden="true" />
           </div>
-          <h2 className="text-2xl font-semibold tracking-[-0.05em] text-neutral-950">
+          <h2 className="text-2xl font-semibold tracking-[-0.05em] text-white">
             {emptyTitle}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">
+          <p className="mt-2 text-sm leading-6 text-white/54">
             {emptyDescription}
           </p>
         </section>
@@ -663,7 +746,7 @@ function Theme3ProductDetail({
             ) : null}
           </div>
 
-          <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-white/10 bg-white p-5 text-neutral-950">
+          <section className="min-w-0 max-w-full overflow-hidden rounded-[24px] border border-white/10 bg-neutral-900 p-5 text-white">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-[1_1_13rem]">
                 <h2 className="break-words text-4xl font-semibold leading-[0.95] tracking-[-0.065em]">
@@ -684,8 +767,8 @@ function Theme3ProductDetail({
                 onClick={() => onToggleSaved(product, fallbackIndex)}
                 className={`inline-flex min-h-9 max-w-full shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-bold uppercase tracking-[0.08em] ${
                   isSaved
-                    ? "border-neutral-950 bg-neutral-950 text-white"
-                    : "border-neutral-200 bg-white text-neutral-700"
+                    ? "border-emerald-300 bg-emerald-300 text-neutral-950"
+                    : "border-white/12 bg-neutral-950 text-white/70"
                 }`}
               >
                 <Heart
@@ -698,7 +781,7 @@ function Theme3ProductDetail({
             </div>
 
             {hasExplicitAvailability(product) ? (
-              <p className="mt-4 max-w-full break-words rounded-2xl bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-600">
+              <p className="mt-4 max-w-full break-words rounded-2xl bg-white/8 px-4 py-3 text-sm font-medium text-white/62">
                 {bookable
                   ? "This item is available for verified booking."
                   : "This item is not currently bookable."}
@@ -706,13 +789,13 @@ function Theme3ProductDetail({
             ) : null}
 
             {description ? (
-              <p className="mt-5 whitespace-pre-line break-words text-sm leading-7 text-neutral-600">
+              <p className="mt-5 whitespace-pre-line break-words text-sm leading-7 text-white/64">
                 {description}
               </p>
             ) : null}
 
-            <div className="mt-6 min-w-0 max-w-full rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
-              <strong className="block font-semibold text-neutral-950">
+            <div className="mt-6 min-w-0 max-w-full rounded-[20px] border border-white/10 bg-white/7 p-4 text-sm leading-6 text-white/64">
+              <strong className="block font-semibold text-white">
                 Pay ₹{BOOKING_ADVANCE_AMOUNT} to reserve this item.
               </strong>
               {sellerCollectAmount !== null
@@ -729,16 +812,20 @@ function Theme3ProductDetail({
               {bookable ? (
                 <Link
                   to={checkoutHref}
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-neutral-950 px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.08em] text-white shadow-[0_14px_34px_rgba(15,15,17,0.18)] transition hover:bg-neutral-800"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.08em] text-neutral-950 shadow-[0_14px_34px_rgba(0,0,0,0.28)] transition hover:bg-white/90"
                 >
                   <span>Book this item for ₹{BOOKING_ADVANCE_AMOUNT}</span>
                 </Link>
               ) : (
-                <PptButton fullWidth size="lg" variant="secondary" disabled>
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.08em] text-white/40"
+                >
                   {unavailableCtaLabel}
-                </PptButton>
+                </button>
               )}
-              <p className="flex items-center justify-center gap-2 text-center text-xs font-semibold uppercase tracking-[0.1em] text-neutral-500">
+              <p className="flex items-center justify-center gap-2 text-center text-xs font-semibold uppercase tracking-[0.1em] text-white/48">
                 <MessageCircle size={14} aria-hidden="true" />
                 Chat with seller after booking
               </p>
@@ -782,6 +869,126 @@ function Theme3ProductDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+function Theme3DarkFooter({
+  store,
+  storeSlug,
+}: {
+  store: StorefrontThemeProps["store"];
+  storeSlug: string;
+}) {
+  const contact = getStoreContactInfo(store);
+  const currentYear = new Date().getFullYear();
+  const policyLinks = getStorePolicyLinks(store);
+  const aboutText = store.tagline || store.bio || "Fresh drops with verified booking.";
+
+  return (
+    <footer className="w-full overflow-hidden border-t border-white/10 bg-[#050507] text-sm leading-6 text-white/58">
+      <div className="mx-auto w-full max-w-6xl border-b border-white/10 px-4 py-6 sm:px-5">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
+          About
+        </p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="break-words text-4xl font-black tracking-[-0.06em] text-white">
+              {contact.displayName}
+            </h2>
+            <p className="mt-3 max-w-sm break-words font-medium text-white/58">
+              {aboutText}
+            </p>
+            {contact.ownerName ? (
+              <p className="mt-2 break-words text-sm font-medium text-white/58">
+                Contact: {contact.ownerName}
+              </p>
+            ) : null}
+          </div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/34">
+            (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
+          </p>
+        </div>
+      </div>
+
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-9 sm:px-5 lg:grid-cols-[1.1fr_0.9fr_1fr]">
+        <section className="min-w-0">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
+            Contact
+          </h3>
+          <div className="mt-3 grid gap-2">
+            {contact.whatsappUrl ? (
+              <a
+                href={contact.whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 font-bold text-white"
+              >
+                <PptBrandIcon type="whatsapp" size={16} />
+                <span className="truncate">WhatsApp</span>
+              </a>
+            ) : null}
+            {contact.supportPhone ? (
+              contact.supportPhoneHref ? (
+                <a href={contact.supportPhoneHref} className="break-words text-white/58">
+                  {contact.supportPhone}
+                </a>
+              ) : (
+                <span className="break-words text-white/58">{contact.supportPhone}</span>
+              )
+            ) : null}
+            {contact.supportEmail ? (
+              contact.supportEmailHref ? (
+                <a href={contact.supportEmailHref} className="break-words text-white/58">
+                  {contact.supportEmail}
+                </a>
+              ) : (
+                <span className="break-words text-white/58">{contact.supportEmail}</span>
+              )
+            ) : null}
+            {contact.instagramUrl ? (
+              <a
+                href={contact.instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 text-white/58 hover:text-white"
+              >
+                <PptBrandIcon type="instagram" size={16} />
+                <span className="truncate">{contact.instagramLabel}</span>
+              </a>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="min-w-0">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
+            Policies
+          </h3>
+          <nav className="mt-3 grid gap-2">
+            {policyLinks.map((policy) => (
+              <Link
+                key={policy.type}
+                to={`/${storeSlug}/policies/${policy.type}`}
+                className="w-fit max-w-full break-words font-bold text-white/70 hover:text-white"
+              >
+                {policy.label}
+              </Link>
+            ))}
+          </nav>
+        </section>
+
+        <section className="min-w-0">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
+            PayPerTap booking
+          </h3>
+          <Link
+            to={`/${storeSlug}/policies/booking`}
+            className="mt-3 block w-fit max-w-full break-words font-bold text-white/70 hover:text-white"
+          >
+            Booking Policy / PayPerTap Booking Terms
+          </Link>
+        </section>
+      </div>
+    </footer>
   );
 }
 
@@ -922,6 +1129,7 @@ export default function Theme3({
   store,
   storeSlug,
 }: StorefrontThemeProps) {
+  const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<StorefrontProduct | null>(null);
   const [activeCollection, setActiveCollection] = useState(ALL_COLLECTIONS);
   const [searchQuery, setSearchQuery] = useState("");
@@ -974,20 +1182,30 @@ export default function Theme3({
   const selectedProductFallbackIndex = selectedProduct
     ? getProductFallbackIndex(selectedProduct)
     : 0;
+  const handleProductSelect = (product: StorefrontProduct) => {
+    if (isOwnerPreview) {
+      setSelectedProduct(product);
+      return;
+    }
+
+    const productId = getProductId(product);
+    if (productId) {
+      navigate(`/${storeSlug}/product/${productId}`);
+    }
+  };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-neutral-100 text-neutral-950">
+    <main className="min-h-screen overflow-x-hidden bg-[#070709] text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-3 py-4 sm:px-5 sm:py-6">
-        <Theme3Hero store={store} />
-        <Theme3MiniInfoBar />
-        <PaymentTrustStrip variant="theme3" />
+        <Theme3DropHero store={store} />
+        <PaymentTrustStrip showTrustRows={false} variant="theme3" />
         <Theme3ProductGrid
           collections={collections}
           getProductFallbackIndex={getProductFallbackIndex}
           isProductSaved={wishlist.isWishlisted}
           onCollectionChange={setActiveCollection}
           onSearchChange={setSearchQuery}
-          onSelect={setSelectedProduct}
+          onSelect={handleProductSelect}
           onToggleProductSaved={wishlist.toggleWishlistItem}
           onToggleSavedView={() => setShowSavedOnly((current) => !current)}
           products={displayedProducts}
@@ -998,9 +1216,9 @@ export default function Theme3({
           totalProductCount={visibleProducts.length}
         />
       </div>
-      <Theme3Footer store={store} storeSlug={storeSlug} />
+      <Theme3DarkFooter store={store} storeSlug={storeSlug} />
 
-      {selectedProduct ? (
+      {isOwnerPreview && selectedProduct ? (
         <Theme3ProductDetail
           fallbackIndex={selectedProductFallbackIndex}
           isSaved={wishlist.isWishlisted(selectedProduct, selectedProductFallbackIndex)}

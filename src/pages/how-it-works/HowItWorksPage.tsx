@@ -1,5 +1,8 @@
+import { ArrowRight, CheckCircle2, IndianRupee, MessageCircle, MousePointerClick } from "lucide-react";
+
 import { ComparisonTable } from "../../components/marketing/ComparisonTable";
 import { CTASection } from "../../components/marketing/CTASection";
+import { FAQBlock } from "../../components/marketing/FAQBlock";
 import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
@@ -7,14 +10,47 @@ import { StepList } from "../../components/marketing/StepList";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
+import { marketingFaqs } from "../faq/faqContent";
+
+const buyerFlow = [
+  {
+    icon: <MousePointerClick size={18} aria-hidden="true" />,
+    title: "Opens link",
+    copy: "Buyer opens the seller's store or product link from Instagram or WhatsApp.",
+  },
+  {
+    icon: <IndianRupee size={18} aria-hidden="true" />,
+    title: "Pays Rs. 20",
+    copy: "Buyer pays the fixed booking via PayPerTap to reserve the item.",
+  },
+  {
+    icon: <MessageCircle size={18} aria-hidden="true" />,
+    title: "Sends details",
+    copy: "The WhatsApp message carries product and buyer context for the seller.",
+  },
+  {
+    icon: <CheckCircle2 size={18} aria-hidden="true" />,
+    title: "Pays seller directly",
+    copy: "The remaining amount is paid directly to the seller on WhatsApp, UPI, COD, or the seller's process.",
+  },
+];
+
+const howItWorksFaqs = marketingFaqs.filter((item) =>
+  [
+    "What happens after a buyer books?",
+    "Can I use PayPerTap with WhatsApp Business?",
+    "Can sellers use UPI, Google Pay, PhonePe, or COD for the remaining amount?",
+    "What does PayPerTap not handle in Phase 1?",
+  ].includes(item.question),
+);
 
 export function HowItWorksPage() {
   return (
     <MarketingLayout>
       <Seo
         canonicalPath="/how-it-works"
-        title="How PayPerTap Works"
-        description="Learn how PayPerTap helps Instagram and WhatsApp sellers use a fixed Rs. 20 verified booking flow."
+        title="How PayPerTap Works for Instagram and WhatsApp Sellers"
+        description="Learn the PayPerTap seller and buyer flow: create a store, share links, buyer pays Rs. 20 booking, then continues to WhatsApp."
         jsonLd={[
           breadcrumbListSchema([
             { name: "Home", path: "/" },
@@ -24,43 +60,47 @@ export function HowItWorksPage() {
       />
       <SectionHeader
         eyebrow="How it works"
-        h1="From product link to WhatsApp confirmation"
-        subtitle="PayPerTap keeps the buyer journey clear: browse, book with Rs. 20, then continue with the seller on WhatsApp."
+        h1="How PayPerTap works."
+        subtitle="PayPerTap helps sellers create a store, add products, share links, collect a Rs. 20 booking signal from buyers, and continue the remaining confirmation directly on WhatsApp."
       />
-      <MarketingSection>
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="Seller flow"
+        intro="A clean sequence for sellers who already run their business through Instagram, WhatsApp, UPI, and COD: create store, add products, share links, receive booking, hand off to WhatsApp, and collect the remaining amount directly."
+      >
         <StepList />
       </MarketingSection>
+
       <MarketingSection
-        title="Seller flow and buyer flow"
-        intro="The seller stays in control of products and fulfillment, while the buyer gets a clearer booking path before WhatsApp."
+        className="ppt-core-page-section"
+        title="Buyer flow"
+        intro="The buyer gets a clear reservation path before the WhatsApp conversation starts."
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <MarketingCard>
-            <h2 className="text-2xl font-medium tracking-[-0.04em] text-neutral-950">
-              Seller flow
-            </h2>
-            <ol className="mt-4 grid gap-3 text-sm leading-6 text-neutral-600">
-              <li>1. Create a storefront and add products.</li>
-              <li>2. Share the store link on Instagram or WhatsApp.</li>
-              <li>3. Receive buyer context after the fixed Rs. 20 booking.</li>
-              <li>4. Confirm delivery and collect remaining payment directly.</li>
-            </ol>
-          </MarketingCard>
-          <MarketingCard>
-            <h2 className="text-2xl font-medium tracking-[-0.04em] text-neutral-950">
-              Buyer flow
-            </h2>
-            <ol className="mt-4 grid gap-3 text-sm leading-6 text-neutral-600">
-              <li>1. Open the seller's PayPerTap storefront.</li>
-              <li>2. Choose a product and pay the fixed Rs. 20 booking fee.</li>
-              <li>3. Continue to WhatsApp with order details prefilled.</li>
-              <li>4. Pay the remaining amount directly to the seller.</li>
-            </ol>
-          </MarketingCard>
+        <div className="ppt-buyer-flow-grid grid gap-4 md:grid-cols-4">
+          {buyerFlow.map((step, index) => (
+            <MarketingCard className="ppt-core-step-card" key={step.title}>
+              <div className="ppt-core-step-index">{String(index + 1).padStart(2, "0")}</div>
+              <div className="ppt-core-icon-tile mb-5">{step.icon}</div>
+              <h2 className="text-lg font-bold tracking-[-0.02em] text-neutral-950">
+                {step.title}
+              </h2>
+              <p className="ppt-home-copy mt-3 text-sm leading-6 text-neutral-600">
+                {step.copy}
+              </p>
+            </MarketingCard>
+          ))}
         </div>
       </MarketingSection>
-      <MarketingSection title="PayPerTap does not replace your seller workflow">
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="PayPerTap does not replace your seller workflow"
+        intro="It adds a verified booking layer before WhatsApp, while the seller remains responsible for the product, delivery, and remaining payment."
+      >
         <ComparisonTable />
+      </MarketingSection>
+      <MarketingSection className="ppt-core-page-section" title="How it works FAQ">
+        <FAQBlock items={howItWorksFaqs} />
       </MarketingSection>
       <CTASection />
     </MarketingLayout>

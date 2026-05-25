@@ -3318,3 +3318,1897 @@
     min-height: 104px;
   }
 }
+
+/* Homepage visual polish pass: premium product launch feel and mobile-safe mockups. */
+.ppt-marketing-shell {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(124, 58, 237, 0.075), transparent 24rem),
+    radial-gradient(circle at 86% 16%, rgba(29, 255, 138, 0.08), transparent 18rem),
+    linear-gradient(180deg, #fbf8ee, #f7f2e6 48%, #fffaf0);
+}
+
+.ppt-hero {
+  padding: 18px 16px 64px;
+}
+
+.ppt-hero-shell {
+  min-height: 650px;
+  gap: clamp(28px, 4vw, 58px);
+  grid-template-columns: minmax(0, 0.9fr) minmax(430px, 1.1fr);
+}
+
+.ppt-hero-title {
+  max-width: 680px;
+  font-size: clamp(58px, 6vw, 82px);
+  letter-spacing: 0;
+}
+
+.ppt-hero-visual {
+  min-height: 650px;
+  padding: 10px 0;
+  overflow: visible;
+}
+
+.ppt-phone-stage {
+  min-height: 620px;
+}
+
+.ppt-phone {
+  width: clamp(270px, 24vw, 302px);
+  max-height: 640px;
+  aspect-ratio: 9 / 19.5;
+  padding: 9px;
+  border-radius: 42px;
+}
+
+.ppt-phone-screen {
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: 9 / 19.5;
+}
+
+.ppt-store-ui {
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
+  padding: 46px 14px 14px;
+}
+
+.ppt-store-hero-card {
+  padding: 13px;
+}
+
+.ppt-store-hero-card strong {
+  font-size: 18px;
+}
+
+.ppt-store-product-media {
+  position: relative;
+  height: clamp(58px, 6vw, 76px);
+  overflow: hidden;
+  background: #e9dfd0;
+}
+
+.ppt-store-product-media img,
+.ppt-storefront-product-media img,
+.ppt-use-case-card > img,
+.ppt-home-dashboard-row img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ppt-store-product-media svg {
+  position: relative;
+  z-index: 1;
+  border-radius: 999px;
+  background: rgba(7, 7, 7, 0.58);
+  padding: 3px;
+}
+
+.ppt-store-booking-strip svg,
+.ppt-hero-trust-point svg {
+  color: var(--ppt-green);
+}
+
+.ppt-hero-float-card {
+  width: min(184px, 26vw);
+  min-height: 78px;
+  border-color: rgba(255, 255, 255, 0.82);
+  border-radius: 20px;
+  padding: 11px;
+  box-shadow: 0 24px 62px rgba(7, 7, 7, 0.13);
+}
+
+.ppt-hero-float-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: var(--ppt-black);
+  color: var(--ppt-green);
+}
+
+.ppt-hero-float-card p {
+  font-size: 12.5px;
+}
+
+.ppt-hero-float-card span {
+  color: rgba(7, 7, 7, 0.54);
+  font-size: 11px;
+}
+
+.ppt-hero-float-card--booking {
+  top: 74px;
+  left: -8px;
+}
+
+.ppt-hero-float-card--buyer {
+  top: 158px;
+  right: -4px;
+}
+
+.ppt-hero-float-card--whatsapp {
+  right: 4px;
+  bottom: 150px;
+}
+
+.ppt-hero-float-card--remaining {
+  bottom: 62px;
+  left: 2px;
+}
+
+.ppt-problem-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}
+
+.ppt-problem-grid {
+  gap: 12px;
+}
+
+.ppt-problem-card {
+  min-height: 156px;
+  padding: 18px;
+}
+
+.ppt-problem-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--ppt-black);
+  color: var(--ppt-green);
+}
+
+.ppt-problem-card p {
+  margin: 14px 0 6px;
+  font-size: 16px;
+}
+
+.ppt-problem-card span {
+  font-size: 13.5px;
+  line-height: 1.48;
+}
+
+.ppt-mechanism-panel {
+  padding: 16px;
+}
+
+.ppt-mechanism-flow {
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.ppt-mechanism-step {
+  min-height: 198px;
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.ppt-mechanism-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+
+.ppt-mechanism-step p {
+  margin-top: 18px;
+  font-size: 16px;
+}
+
+.ppt-mechanism-step span {
+  font-size: 13px;
+  line-height: 1.48;
+}
+
+.ppt-mechanism-step-wrap:not(:last-child)::after {
+  top: 48px;
+  background: linear-gradient(90deg, rgba(7, 7, 7, 0.34), rgba(29, 255, 138, 0.92));
+}
+
+.ppt-mechanism-step-wrap:not(:last-child)::before {
+  top: 44px;
+}
+
+.ppt-home-dashboard-panel {
+  padding: 16px;
+}
+
+.ppt-home-dashboard-window {
+  min-height: 0;
+  overflow: hidden;
+  border-color: rgba(7, 7, 7, 0.08);
+  background: rgba(246, 242, 232, 0.74);
+}
+
+.ppt-home-dashboard-app {
+  min-height: 520px;
+}
+
+.ppt-home-dashboard-sidebar {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ppt-home-dashboard-main {
+  background:
+    radial-gradient(circle at 92% 6%, rgba(29, 255, 138, 0.07), transparent 28%),
+    rgba(255, 255, 255, 0.34);
+}
+
+.ppt-home-dashboard-row em {
+  background: rgba(7, 7, 7, 0.92);
+  color: var(--ppt-green);
+}
+
+.ppt-home-dashboard-leads {
+  align-content: start;
+}
+
+.ppt-use-case-card {
+  min-height: 0;
+  grid-template-rows: 150px minmax(0, 1fr);
+}
+
+.ppt-use-case-copy {
+  padding: 18px;
+}
+
+.ppt-use-case-card p {
+  font-size: 17px;
+}
+
+.ppt-use-case-card span,
+.ppt-use-case-card strong {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .ppt-hero-shell {
+    grid-template-columns: minmax(0, 0.9fr) minmax(380px, 1fr);
+  }
+
+  .ppt-phone {
+    width: clamp(260px, 25vw, 286px);
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1180px) {
+  .ppt-hero-visual {
+    display: grid;
+    min-height: 0;
+    align-content: center;
+    gap: 14px;
+  }
+
+  .ppt-phone-stage {
+    min-height: 590px;
+  }
+
+  .ppt-hero-float-cards {
+    position: static;
+    display: grid;
+    width: min(100%, 500px);
+    margin: 0 auto;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-hero-float-card,
+  .ppt-hero-float-card--booking,
+  .ppt-hero-float-card--buyer,
+  .ppt-hero-float-card--whatsapp,
+  .ppt-hero-float-card--remaining {
+    position: relative;
+    inset: auto;
+    width: auto;
+    min-height: 76px;
+    transform: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .ppt-hero {
+    padding-top: 12px;
+    padding-bottom: 48px;
+  }
+
+  .ppt-hero-shell {
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-hero-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .ppt-hero-actions {
+    justify-content: center;
+  }
+
+  .ppt-hero-visual {
+    display: grid;
+    min-height: 0;
+    gap: 14px;
+    padding: 0;
+  }
+
+  .ppt-phone-stage {
+    min-height: clamp(470px, 72vw, 560px);
+  }
+
+  .ppt-phone {
+    width: clamp(220px, 44vw, 258px);
+    max-height: 520px;
+    transform: perspective(900px) rotateY(-4deg) rotateX(3deg);
+  }
+
+  .ppt-hero-float-cards {
+    position: static;
+    display: grid;
+    width: min(100%, 620px);
+    margin: 0 auto;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-hero-float-card,
+  .ppt-hero-float-card--booking,
+  .ppt-hero-float-card--buyer,
+  .ppt-hero-float-card--whatsapp,
+  .ppt-hero-float-card--remaining {
+    position: relative;
+    inset: auto;
+    width: auto;
+    min-height: 74px;
+    transform: none;
+  }
+
+  .ppt-problem-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-dm-stack {
+    display: none;
+  }
+
+  .ppt-mechanism-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-mechanism-step-wrap:not(:last-child)::after {
+    top: auto;
+    bottom: -13px;
+    left: 28px;
+    width: 1px;
+    height: 14px;
+    background: linear-gradient(180deg, rgba(7, 7, 7, 0.32), rgba(29, 255, 138, 0.92));
+  }
+
+  .ppt-mechanism-step-wrap:not(:last-child)::before {
+    top: auto;
+    bottom: -15px;
+    left: 25px;
+    transform: rotate(135deg);
+  }
+
+  .ppt-mechanism-step {
+    display: grid;
+    min-height: 0;
+    align-items: start;
+    gap: 6px 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ppt-mechanism-index {
+    grid-column: 2;
+  }
+
+  .ppt-mechanism-icon {
+    grid-row: 1 / span 3;
+  }
+
+  .ppt-mechanism-step p {
+    margin: 0;
+  }
+
+  .ppt-mechanism-note {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ppt-home-dashboard-app {
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-home-dashboard-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(7, 7, 7, 0.08);
+    padding: 12px;
+  }
+
+  .ppt-home-dashboard-sidebar strong,
+  .ppt-home-dashboard-sidebar span {
+    white-space: nowrap;
+  }
+
+  .ppt-home-dashboard-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .ppt-hero-title {
+    font-size: clamp(38px, 11vw, 48px);
+  }
+
+  .ppt-hero-subtitle {
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+
+  .ppt-hero-trust-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-hero-trust-point {
+    justify-content: center;
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+
+  .ppt-phone-stage {
+    min-height: clamp(450px, 122vw, 520px);
+  }
+
+  .ppt-phone {
+    width: clamp(210px, 62vw, 240px);
+    max-height: 500px;
+    padding: 7px;
+  }
+
+  .ppt-store-ui {
+    gap: 7px;
+    padding: 39px 9px 10px;
+  }
+
+  .ppt-store-topbar,
+  .ppt-store-search,
+  .ppt-store-booking-strip {
+    padding: 8px;
+  }
+
+  .ppt-store-hero-card {
+    min-height: 72px;
+    border-radius: 18px;
+    padding: 10px;
+  }
+
+  .ppt-store-hero-card strong {
+    max-width: 135px;
+    font-size: 14px;
+  }
+
+  .ppt-store-hero-metric {
+    width: 39px;
+    height: 39px;
+    font-size: 11px;
+  }
+
+  .ppt-store-product {
+    border-radius: 14px;
+    padding: 6px;
+  }
+
+  .ppt-store-product-media {
+    height: 50px;
+    border-radius: 11px;
+    padding: 5px;
+  }
+
+  .ppt-store-product p {
+    margin-top: 6px;
+    font-size: 10.5px;
+  }
+
+  .ppt-store-product span {
+    font-size: 10px;
+  }
+
+  .ppt-store-booking-strip strong {
+    font-size: 10.5px;
+  }
+
+  .ppt-store-booking-strip span {
+    font-size: 9.5px;
+  }
+
+  .ppt-hero-float-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-hero-float-card {
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .ppt-hero-float-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .ppt-hero-float-card p {
+    margin-right: 16px;
+    font-size: 11.5px;
+    line-height: 1.18;
+  }
+
+  .ppt-hero-float-card span {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+
+  .ppt-problem-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-problem-card {
+    min-height: 0;
+    padding: 14px;
+  }
+
+  .ppt-problem-card p {
+    font-size: 14px;
+  }
+
+  .ppt-problem-card span {
+    font-size: 12.5px;
+  }
+
+  .ppt-storefront-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-use-case-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-use-case-card {
+    grid-template-rows: 128px auto;
+  }
+
+  .ppt-home-dashboard-panel {
+    padding: 10px;
+  }
+
+  .ppt-home-dashboard-browserbar {
+    min-height: 42px;
+    padding: 0 12px;
+  }
+
+  .ppt-home-dashboard-main {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .ppt-home-dashboard-topline,
+  .ppt-home-dashboard-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ppt-home-dashboard-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-home-dashboard-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .ppt-home-dashboard-row img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .ppt-home-dashboard-row em {
+    grid-column: 2;
+    width: fit-content;
+    padding: 6px 9px;
+  }
+}
+
+@media (max-width: 430px) {
+  .ppt-hero {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ppt-primary-link,
+  .ppt-secondary-link {
+    width: 100%;
+  }
+
+  .ppt-phone-stage {
+    min-height: 462px;
+  }
+
+  .ppt-phone {
+    width: min(224px, 64vw);
+    max-height: 486px;
+  }
+
+  .ppt-hero-float-cards {
+    gap: 8px;
+  }
+
+  .ppt-problem-grid {
+    gap: 10px;
+  }
+
+  .ppt-problem-card {
+    padding: 12px;
+  }
+
+  .ppt-problem-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Core public marketing pages: pricing, process, company, FAQ, and legal polish. */
+.ppt-page-hero {
+  padding-top: clamp(34px, 5vw, 72px);
+  padding-bottom: clamp(34px, 5vw, 70px);
+}
+
+.ppt-page-hero::after {
+  position: absolute;
+  right: max(16px, calc((100vw - 1280px) / 2));
+  bottom: 24px;
+  width: min(360px, 32vw);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(7, 7, 7, 0.18), transparent);
+  content: "";
+}
+
+.ppt-page-hero-glow {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.ppt-page-title {
+  max-width: 980px;
+  color: var(--ppt-black);
+  letter-spacing: 0;
+}
+
+.ppt-page-subtitle {
+  color: rgba(7, 7, 7, 0.58);
+}
+
+.ppt-core-page-section {
+  padding-top: clamp(24px, 4vw, 56px);
+  padding-bottom: clamp(24px, 4vw, 56px);
+}
+
+.ppt-core-icon-tile {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(7, 7, 7, 0.88);
+  border-radius: 15px;
+  background: var(--ppt-black);
+  color: var(--ppt-green);
+  box-shadow: 0 16px 36px rgba(7, 7, 7, 0.16);
+}
+
+.ppt-core-card-row,
+.ppt-contact-mail-card,
+.ppt-founder-link-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.ppt-pricing-hero-card {
+  min-height: 100%;
+  border-color: rgba(7, 7, 7, 0.08);
+  background:
+    radial-gradient(circle at 84% 18%, rgba(29, 255, 138, 0.13), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(246, 242, 232, 0.68));
+}
+
+.ppt-core-list-card {
+  min-height: 100%;
+}
+
+.ppt-core-check-row {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+  color: rgba(7, 7, 7, 0.68);
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ppt-core-check-row svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--ppt-green);
+  filter: drop-shadow(0 0 10px rgba(29, 255, 138, 0.18));
+}
+
+.ppt-core-stepper,
+.ppt-buyer-flow-grid {
+  position: relative;
+}
+
+.ppt-core-step-card {
+  position: relative;
+  min-height: 214px;
+  padding: 18px;
+}
+
+.ppt-core-step-card::after {
+  position: absolute;
+  top: 40px;
+  right: -18px;
+  z-index: 2;
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(7, 7, 7, 0.24), rgba(29, 255, 138, 0.86));
+  content: "";
+}
+
+.ppt-core-step-card:last-child::after {
+  display: none;
+}
+
+.ppt-core-step-index {
+  margin-bottom: 12px;
+  color: rgba(7, 7, 7, 0.42);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.ppt-core-comparison {
+  border-color: rgba(7, 7, 7, 0.08);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: var(--ppt-shadow-soft);
+}
+
+.ppt-core-comparison-head {
+  border-color: rgba(7, 7, 7, 0.08);
+  background: rgba(7, 7, 7, 0.92);
+  color: rgba(251, 248, 238, 0.74);
+}
+
+.ppt-core-comparison-row {
+  border-color: rgba(7, 7, 7, 0.06);
+}
+
+.ppt-about-lead-card {
+  min-height: 100%;
+}
+
+.ppt-core-mini-card {
+  display: flex;
+  min-height: 96px;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+
+.ppt-core-mini-card svg {
+  flex: 0 0 auto;
+  color: var(--ppt-green);
+}
+
+.ppt-core-mini-card strong {
+  color: var(--ppt-black);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.ppt-founder-link-card {
+  justify-content: space-between;
+}
+
+.ppt-founder-photo-shell,
+.ppt-founder-portrait {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(29, 255, 138, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.58);
+  box-shadow: var(--ppt-shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ppt-founder-portrait > div {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.82), transparent 30%),
+    linear-gradient(145deg, rgba(246, 242, 232, 0.94), rgba(255, 255, 255, 0.72));
+}
+
+.ppt-founder-initial {
+  background: var(--ppt-black);
+  color: var(--ppt-green);
+  box-shadow: 0 18px 42px rgba(7, 7, 7, 0.2);
+}
+
+.ppt-founder-quote-card {
+  background:
+    radial-gradient(circle at 92% 10%, rgba(29, 255, 138, 0.1), transparent 30%),
+    rgba(255, 255, 255, 0.6);
+}
+
+.ppt-founder-mission-card {
+  max-width: 940px;
+}
+
+.ppt-soft-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(7, 7, 7, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 10px 14px;
+  color: rgba(7, 7, 7, 0.58);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(7, 7, 7, 0.06);
+}
+
+.ppt-contact-card {
+  min-height: 206px;
+}
+
+.ppt-contact-mail-card {
+  align-items: center;
+}
+
+.ppt-faq-category-grid {
+  grid-template-columns: 1fr;
+}
+
+.ppt-faq-category-card {
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.ppt-faq-category-card .ppt-faq-item {
+  box-shadow: none;
+}
+
+.ppt-legal-card {
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.ppt-legal-card h2 {
+  font-weight: 900;
+}
+
+.ppt-core-cta-section {
+  padding-top: clamp(32px, 5vw, 72px);
+}
+
+.ppt-footer > div {
+  border-radius: 30px;
+}
+
+.ppt-footer p.text-xs {
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 1180px) {
+  .ppt-core-step-card::after {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .ppt-page-hero {
+    padding-top: 28px;
+  }
+
+  .ppt-page-title {
+    font-size: clamp(42px, 8vw, 64px);
+  }
+
+  .ppt-core-card-row,
+  .ppt-contact-mail-card,
+  .ppt-founder-link-card {
+    flex-direction: column;
+  }
+
+  .ppt-core-stepper,
+  .ppt-buyer-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-core-step-card {
+    min-height: 0;
+    display: grid;
+    gap: 6px 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ppt-core-step-card .ppt-core-step-index {
+    grid-column: 2;
+    margin-bottom: 0;
+  }
+
+  .ppt-core-step-card .ppt-core-icon-tile {
+    grid-row: 1 / span 3;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .ppt-page-hero {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .ppt-page-hero::after {
+    display: none;
+  }
+
+  .ppt-page-title {
+    font-size: clamp(38px, 11vw, 48px);
+    line-height: 1.02;
+  }
+
+  .ppt-page-subtitle {
+    max-width: 100%;
+    font-size: 15.5px;
+    line-height: 1.58;
+  }
+
+  .ppt-core-page-section {
+    padding-top: 24px;
+    padding-bottom: 30px;
+  }
+
+  .ppt-marketing-card {
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .ppt-pricing-hero-card p.text-6xl {
+    font-size: 58px;
+  }
+
+  .ppt-core-comparison {
+    overflow-x: auto;
+  }
+
+  .ppt-core-comparison-head,
+  .ppt-core-comparison-row {
+    min-width: 620px;
+  }
+
+  .ppt-core-mini-card {
+    min-height: 74px;
+  }
+
+  .ppt-contact-mail-card h2 {
+    font-size: clamp(25px, 7vw, 34px);
+    overflow-wrap: anywhere;
+  }
+
+  .ppt-faq-item {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 430px) {
+  .ppt-page-hero {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ppt-core-icon-tile {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+  }
+
+  .ppt-core-step-card {
+    padding: 14px;
+  }
+
+  .ppt-core-step-card h2,
+  .ppt-core-step-card h3 {
+    font-size: 16px;
+  }
+
+  .ppt-core-step-card p,
+  .ppt-core-check-row,
+  .ppt-legal-card p {
+    font-size: 13px;
+  }
+
+  .ppt-soft-status-pill {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* SEO cluster landing pages: feature, use-case, and comparison routes. */
+.ppt-seo-hero {
+  padding-top: clamp(34px, 5vw, 72px);
+  padding-bottom: clamp(34px, 5vw, 74px);
+}
+
+.ppt-seo-hero::before {
+  position: absolute;
+  inset: 8% auto auto 52%;
+  width: min(360px, 34vw);
+  height: min(360px, 34vw);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(29, 255, 138, 0.11), transparent 68%);
+  pointer-events: none;
+  content: "";
+}
+
+.ppt-seo-summary-card,
+.ppt-seo-visual-card,
+.ppt-seo-usecase-visual,
+.ppt-comparison-visual-card,
+.ppt-related-link {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.5)),
+    rgba(255, 255, 255, 0.58);
+  box-shadow: var(--ppt-shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ppt-seo-visual-card,
+.ppt-comparison-visual-card {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: 30px;
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.ppt-seo-visual-card::before,
+.ppt-comparison-visual-card::before {
+  position: absolute;
+  inset: auto -20% -30% 20%;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(29, 255, 138, 0.12), transparent 68%);
+  pointer-events: none;
+  content: "";
+}
+
+.ppt-seo-visual-card > *,
+.ppt-comparison-visual-card > * {
+  position: relative;
+}
+
+.ppt-seo-visual-card h2,
+.ppt-comparison-visual-card h2 {
+  margin-top: 18px;
+  color: var(--ppt-black);
+  font-size: clamp(28px, 3vw, 38px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.ppt-seo-visual-label {
+  margin-top: 22px;
+  color: rgba(7, 7, 7, 0.45);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ppt-seo-receipt-rows,
+.ppt-seo-lead-card {
+  display: grid;
+  margin-top: 22px;
+  gap: 10px;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr);
+}
+
+.ppt-seo-receipt-rows span,
+.ppt-seo-lead-card span {
+  color: rgba(7, 7, 7, 0.48);
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ppt-seo-receipt-rows strong,
+.ppt-seo-lead-card strong {
+  min-width: 0;
+  color: var(--ppt-black);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ppt-seo-status {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(29, 255, 138, 0.2);
+  padding: 5px 9px;
+}
+
+.ppt-seo-store-link,
+.ppt-seo-link-preview {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(7, 7, 7, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 14px;
+  color: var(--ppt-black);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.ppt-seo-link-preview {
+  display: grid;
+  margin-top: 22px;
+}
+
+.ppt-seo-link-preview span {
+  color: rgba(7, 7, 7, 0.48);
+  font-size: 12px;
+}
+
+.ppt-seo-link-preview strong {
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.ppt-seo-product-grid {
+  display: grid;
+  margin-top: 18px;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ppt-seo-product-grid div div {
+  height: 86px;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(7, 7, 7, 0.08), transparent),
+    radial-gradient(circle at 70% 20%, rgba(29, 255, 138, 0.22), transparent 34%),
+    #efe7da;
+}
+
+.ppt-seo-product-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ppt-black);
+  font-size: 13px;
+}
+
+.ppt-seo-message-bubble {
+  display: grid;
+  margin-top: 22px;
+  gap: 8px;
+  border-radius: 22px;
+  background: rgba(7, 7, 7, 0.92);
+  padding: 16px;
+}
+
+.ppt-seo-message-bubble p {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  color: rgba(251, 248, 238, 0.84);
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ppt-seo-message-bubble p:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ppt-seo-order-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  border: 1px solid rgba(7, 7, 7, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 13px;
+}
+
+.ppt-seo-order-row svg {
+  color: var(--ppt-green);
+}
+
+.ppt-seo-order-row span {
+  color: rgba(7, 7, 7, 0.58);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ppt-seo-order-row strong {
+  border-radius: 999px;
+  background: rgba(7, 7, 7, 0.92);
+  padding: 6px 9px;
+  color: var(--ppt-green);
+  font-size: 11px;
+}
+
+.ppt-seo-usecase-visual {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border-radius: 30px;
+}
+
+.ppt-seo-usecase-visual img {
+  width: 100%;
+  height: 100%;
+  min-height: 430px;
+  object-fit: cover;
+}
+
+.ppt-seo-usecase-visual::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 32%, rgba(7, 7, 7, 0.62));
+  content: "";
+}
+
+.ppt-seo-usecase-proof {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 22px;
+  background: rgba(251, 248, 238, 0.88);
+  padding: 14px;
+  box-shadow: 0 20px 50px rgba(7, 7, 7, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ppt-seo-usecase-proof strong,
+.ppt-seo-usecase-proof span {
+  display: block;
+}
+
+.ppt-seo-usecase-proof strong {
+  color: var(--ppt-black);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.ppt-seo-usecase-proof span {
+  margin-top: 3px;
+  color: rgba(7, 7, 7, 0.58);
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.ppt-seo-lead-copy {
+  max-width: 920px;
+}
+
+.ppt-seo-step-grid .ppt-core-step-card {
+  min-height: 202px;
+}
+
+.ppt-seo-benefit-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ppt-seo-benefit-card svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--ppt-green);
+}
+
+.ppt-seo-example-card {
+  border-color: rgba(7, 7, 7, 0.08);
+  background:
+    radial-gradient(circle at 94% 8%, rgba(29, 255, 138, 0.08), transparent 28%),
+    rgba(255, 255, 255, 0.62);
+}
+
+.ppt-comparison-visual-row {
+  display: grid;
+  margin-top: 16px;
+  gap: 8px;
+  border: 1px solid rgba(7, 7, 7, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 15px;
+}
+
+.ppt-comparison-visual-row span {
+  color: rgba(7, 7, 7, 0.46);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ppt-comparison-visual-row strong {
+  color: var(--ppt-black);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.ppt-comparison-visual-row.is-paypertap {
+  border-color: rgba(29, 255, 138, 0.42);
+  background: rgba(29, 255, 138, 0.09);
+}
+
+.ppt-seo-comparison-table {
+  border-color: rgba(7, 7, 7, 0.08);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: var(--ppt-shadow-soft);
+}
+
+.ppt-seo-comparison-head {
+  border-color: rgba(7, 7, 7, 0.08);
+  background: rgba(7, 7, 7, 0.92);
+  color: rgba(251, 248, 238, 0.74);
+}
+
+.ppt-seo-comparison-row {
+  border-color: rgba(7, 7, 7, 0.06);
+}
+
+.ppt-compare-hub-card {
+  min-height: 100%;
+}
+
+.ppt-compare-best-for {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: rgba(7, 7, 7, 0.62);
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ppt-compare-best-for svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--ppt-green);
+}
+
+.ppt-related-link {
+  display: block;
+  min-height: 104px;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ppt-related-link svg {
+  color: var(--ppt-green);
+}
+
+.ppt-related-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(29, 255, 138, 0.52);
+  box-shadow: 0 20px 42px rgba(7, 7, 7, 0.1);
+}
+
+@media (max-width: 980px) {
+  .ppt-seo-hero {
+    padding-top: 28px;
+  }
+
+  .ppt-seo-hero::before {
+    inset: auto 0 12% auto;
+    width: 260px;
+    height: 260px;
+  }
+
+  .ppt-seo-visual-card,
+  .ppt-comparison-visual-card,
+  .ppt-seo-usecase-visual {
+    min-height: 340px;
+  }
+
+  .ppt-seo-usecase-visual img {
+    min-height: 340px;
+  }
+
+  .ppt-seo-step-grid,
+  .ppt-comparison-best-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .ppt-seo-summary-card {
+    padding: 16px;
+  }
+
+  .ppt-seo-summary-card p:last-child {
+    font-size: 15.5px;
+    line-height: 1.58;
+  }
+
+  .ppt-seo-visual-card,
+  .ppt-comparison-visual-card {
+    min-height: 0;
+    border-radius: 24px;
+    padding: 18px;
+  }
+
+  .ppt-seo-visual-card h2,
+  .ppt-comparison-visual-card h2 {
+    font-size: 28px;
+  }
+
+  .ppt-seo-receipt-rows,
+  .ppt-seo-lead-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ppt-seo-product-grid {
+    gap: 10px;
+  }
+
+  .ppt-seo-product-grid div div {
+    height: 70px;
+  }
+
+  .ppt-seo-order-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ppt-seo-order-row strong {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .ppt-seo-usecase-visual,
+  .ppt-seo-usecase-visual img {
+    min-height: 300px;
+  }
+
+  .ppt-seo-usecase-proof {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    padding: 12px;
+  }
+
+  .ppt-seo-comparison-table {
+    overflow-x: auto;
+  }
+
+  .ppt-seo-comparison-head,
+  .ppt-seo-comparison-row {
+    min-width: 620px;
+  }
+}
+
+@media (max-width: 430px) {
+  .ppt-seo-hero {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ppt-seo-usecase-proof {
+    align-items: flex-start;
+  }
+
+  .ppt-seo-usecase-proof .ppt-core-icon-tile {
+    display: none;
+  }
+
+  .ppt-seo-benefit-card {
+    gap: 10px;
+  }
+}
+
+/* Last-pass storefront preview fixes. These intentionally live at the end of the
+   file because the homepage stylesheet has several historical responsive passes. */
+.ppt-storefront-product {
+  min-width: 0;
+  grid-template-columns: 1fr;
+}
+
+.ppt-storefront-product-media {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
+
+.ppt-storefront-product-copy,
+.ppt-storefront-product p,
+.ppt-storefront-product span,
+.ppt-storefront-product strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ppt-storefront-product strong {
+  width: 100%;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .ppt-phone {
+    width: clamp(246px, 72vw, 286px);
+  }
+
+  .ppt-store-product-media {
+    height: 62px;
+  }
+
+  .ppt-storefront-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ppt-storefront-product {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .ppt-storefront-product strong {
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 430px) {
+  .ppt-phone {
+    width: clamp(238px, 74vw, 270px);
+  }
+
+  .ppt-store-product-media {
+    height: 58px;
+  }
+}
+
+/* Mobile hero mockup containment: keep the phone straight, centered, and fully readable. */
+@media (max-width: 760px) {
+  .ppt-hero-visual {
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: 4px 0 0;
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(251, 248, 238, 0) 0%, rgba(251, 248, 238, 0.82) 54%, rgba(251, 248, 238, 0.9) 100%);
+  }
+
+  .ppt-phone-glow {
+    width: min(280px, 74vw);
+    height: min(280px, 74vw);
+    background: radial-gradient(circle, rgba(29, 255, 138, 0.08), transparent 68%);
+    filter: blur(18px);
+    opacity: 0.42;
+  }
+
+  .ppt-phone-stage {
+    min-height: clamp(500px, 126vw, 540px);
+    width: 100%;
+    place-items: center;
+  }
+
+  .ppt-phone {
+    display: grid;
+    width: clamp(220px, 59vw, 248px);
+    max-height: none;
+    aspect-ratio: auto;
+    margin-inline: auto;
+    padding: 7px;
+    border-radius: 38px;
+    transform: none !important;
+  }
+
+  .ppt-phone-screen {
+    height: auto;
+    min-height: 0;
+    border-radius: 30px;
+  }
+
+  .ppt-store-ui {
+    height: 100%;
+    min-height: 0;
+    gap: 7px;
+    padding: 39px 10px 10px;
+  }
+
+  .ppt-store-topbar {
+    border-radius: 16px;
+    padding: 9px 10px;
+  }
+
+  .ppt-store-topbar strong {
+    font-size: 14px;
+  }
+
+  .ppt-store-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .ppt-store-hero-card {
+    min-height: 70px;
+    border-radius: 18px;
+    padding: 10px;
+  }
+
+  .ppt-store-hero-card strong {
+    max-width: 132px;
+    font-size: 14px;
+    line-height: 1.06;
+  }
+
+  .ppt-store-hero-metric {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    font-size: 11px;
+  }
+
+  .ppt-store-search {
+    padding: 8px 10px;
+  }
+
+  .ppt-store-tabs {
+    gap: 5px;
+  }
+
+  .ppt-store-tabs span {
+    min-height: 27px;
+    font-size: 10.5px;
+  }
+
+  .ppt-store-grid {
+    gap: 7px;
+  }
+
+  .ppt-store-product {
+    border-radius: 14px;
+    padding: 6px;
+  }
+
+  .ppt-store-product-media {
+    height: 48px;
+    border-radius: 10px;
+  }
+
+  .ppt-store-product p {
+    margin-top: 5px;
+    font-size: 10.2px;
+  }
+
+  .ppt-store-product span {
+    font-size: 9.5px;
+  }
+
+  .ppt-store-booking-strip,
+  .ppt-store-whatsapp {
+    display: none;
+  }
+
+  .ppt-hero-float-card {
+    border-color: rgba(7, 7, 7, 0.07);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88)),
+      #fffdf6;
+    box-shadow: 0 18px 44px rgba(7, 7, 7, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+@media (max-width: 430px) {
+  .ppt-phone-stage {
+    min-height: clamp(518px, 136vw, 540px);
+  }
+
+  .ppt-phone {
+    width: clamp(232px, 62vw, 238px);
+  }
+}
+
+/* Performance pass: keep the same visual language with less scroll repaint cost. */
+.ppt-marketing-shell::before,
+.ppt-marketing-shell::after {
+  position: absolute;
+}
+
+.ppt-marketing-shell::before {
+  background-size:
+    112px 112px,
+    112px 112px,
+    24px 24px;
+  opacity: 0.34;
+}
+
+.ppt-marketing-shell::after {
+  opacity: 0.54;
+}
+
+.ppt-home-glass,
+.ppt-faq-item,
+.ppt-cta-panel,
+.ppt-footer > div,
+.ppt-seo-summary-card,
+.ppt-seo-visual-card,
+.ppt-seo-usecase-visual,
+.ppt-comparison-visual-card,
+.ppt-related-link {
+  box-shadow: 0 16px 42px rgba(7, 7, 7, 0.075);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ppt-marketing-pill,
+.ppt-social-badge,
+.ppt-store-topbar,
+.ppt-store-hero-card,
+.ppt-store-search,
+.ppt-store-booking-strip,
+.ppt-store-whatsapp,
+.ppt-dm-phone,
+.ppt-capability-card,
+.ppt-seo-usecase-proof {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.ppt-phone-glow,
+.ppt-dm-stack::before {
+  filter: blur(12px);
+}
+
+.ppt-phone {
+  box-shadow:
+    0 30px 72px rgba(7, 7, 7, 0.2),
+    0 10px 26px rgba(7, 7, 7, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  will-change: transform;
+}
+
+.ppt-hero-float-card {
+  box-shadow: 0 16px 42px rgba(7, 7, 7, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ppt-primary-link,
+.ppt-secondary-link,
+.ppt-link-pill,
+.ppt-capability-card {
+  transition-property: transform, background, border-color, color;
+}
+
+.ppt-store-product-media,
+.ppt-storefront-product-media,
+.ppt-use-case-card > img,
+.ppt-home-dashboard-row img,
+.ppt-seo-usecase-visual img,
+.ppt-capability-store-ui img {
+  aspect-ratio: 1 / 1;
+}
+
+.ppt-storefront-product-media,
+.ppt-use-case-card > img,
+.ppt-seo-usecase-visual img {
+  aspect-ratio: 3 / 2;
+}
+
+@media (max-width: 760px) {
+  .ppt-marketing-shell::before {
+    opacity: 0.18;
+  }
+
+  .ppt-marketing-shell::after {
+    display: none;
+  }
+
+  .ppt-home-glass,
+  .ppt-faq-item,
+  .ppt-cta-panel,
+  .ppt-footer > div,
+  .ppt-marketing-pill,
+  .ppt-social-badge,
+  .ppt-store-topbar,
+  .ppt-store-hero-card,
+  .ppt-store-search,
+  .ppt-store-booking-strip,
+  .ppt-store-whatsapp,
+  .ppt-dm-phone,
+  .ppt-capability-card,
+  .ppt-hero-float-card,
+  .ppt-seo-summary-card,
+  .ppt-seo-visual-card,
+  .ppt-seo-usecase-visual,
+  .ppt-comparison-visual-card,
+  .ppt-related-link,
+  .ppt-seo-usecase-proof {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .ppt-phone-glow,
+  .ppt-dm-stack::before {
+    filter: none;
+    opacity: 0.26;
+  }
+
+  .ppt-phone {
+    box-shadow:
+      0 18px 42px rgba(7, 7, 7, 0.17),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    will-change: auto;
+  }
+
+  .ppt-hero-float-card {
+    box-shadow: 0 10px 24px rgba(7, 7, 7, 0.07);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ppt-phone {
+    will-change: auto;
+  }
+}

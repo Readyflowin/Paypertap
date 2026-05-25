@@ -1,5 +1,15 @@
-import type { StorefrontProduct } from "./themes/types";
+import type { StorefrontProduct, StorefrontStore } from "./themes/types";
 import type { ProductImage } from "@/types/firestore";
+
+type FlexibleStore = StorefrontStore & {
+  bannerImageUrl?: unknown;
+  bannerUrl?: unknown;
+  coverImageUrl?: unknown;
+  coverUrl?: unknown;
+  headerImageUrl?: unknown;
+  heroImage?: unknown;
+  heroUrl?: unknown;
+};
 
 type FlexibleProduct = StorefrontProduct & {
   imageUrl?: unknown;
@@ -98,4 +108,19 @@ export function getProductGridImageUrl(product: StorefrontProduct) {
 
 export function getProductDetailImageUrls(product: StorefrontProduct) {
   return getProductImageUrls(product, false);
+}
+
+export function getStoreHeroImageUrl(store: StorefrontStore) {
+  const flexibleStore = store as FlexibleStore;
+
+  return (
+    normalizePublicImageUrl(store.heroImageUrl) ||
+    normalizePublicImageUrl(flexibleStore.heroUrl) ||
+    normalizePublicImageUrl(flexibleStore.heroImage) ||
+    normalizePublicImageUrl(flexibleStore.coverImageUrl) ||
+    normalizePublicImageUrl(flexibleStore.coverUrl) ||
+    normalizePublicImageUrl(flexibleStore.bannerImageUrl) ||
+    normalizePublicImageUrl(flexibleStore.bannerUrl) ||
+    normalizePublicImageUrl(flexibleStore.headerImageUrl)
+  );
 }

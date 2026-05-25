@@ -12,14 +12,17 @@ export const sellerLinks = [
   { label: "WhatsApp sellers", to: "/for/whatsapp-sellers" },
   { label: "Thrift sellers", to: "/for/thrift-sellers" },
   { label: "Boutique owners", to: "/for/boutiques" },
+  { label: "Handmade sellers", to: "/for/handmade-sellers" },
+  { label: "Student sellers", to: "/for/student-sellers" },
 ];
 
 export const companyLinks = [
-  ...headerLinks.map((item) => ({
-    ...item,
-    label: item.to === "/founder" ? "Founder of PayPerTap" : item.label,
-  })),
+  { label: "About", to: "/about" },
+  { label: "Founder of PayPerTap", to: "/founder" },
   { label: "Contact", to: "/contact" },
+  ...headerLinks
+    .filter((item) => item.to === "/pricing" || item.to === "/faq")
+    .map((item) => ({ ...item })),
 ];
 
 export const legalLinks = [

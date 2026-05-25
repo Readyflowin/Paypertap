@@ -17,7 +17,7 @@ export function HomeFounderBlock() {
           </p>
         </div>
         <Link to="/founder" className="ppt-link-pill">
-          Meet the founder <ArrowRight size={15} aria-hidden="true" />
+          Founder of PayPerTap <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </MarketingCard>
     </MarketingSection>

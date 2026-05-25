@@ -73,7 +73,7 @@ test("seller can onboard and buyer can complete a demo booking", async ({ page }
   await page.getByLabel("City").fill("Bengaluru");
   await page.getByLabel("Pincode").fill("560001");
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: /Pay .* Advance/ }).click();
+  await page.getByRole("button", { name: /Pay .* reserve/ }).click();
 
   await expect(page).toHaveURL(new RegExp(`/${storeSlug}/booking-success/`), {
     timeout: 45000,

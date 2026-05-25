@@ -10,11 +10,13 @@ export type RelatedLink = {
 
 export type SeoPageContent = {
   benefits: string[];
+  bestFor?: string[];
   description: string;
   example: string;
   faqs: FaqItem[];
   h1: string;
   howItWorks: string[];
+  notBestFor?: string[];
   path: string;
   related: RelatedLink[];
   summary: string;

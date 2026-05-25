@@ -29,14 +29,16 @@ export function LegalPage({
         ]}
       />
       <SectionHeader eyebrow="Legal" h1={h1} subtitle={description} />
-      <MarketingSection>
-        <div className="grid gap-4">
+      <MarketingSection className="ppt-core-page-section">
+        <div className="ppt-legal-article mx-auto grid max-w-4xl gap-4">
           {sections.map((section) => (
-            <MarketingCard key={section.title}>
+            <MarketingCard className="ppt-legal-card" key={section.title}>
               <h2 className="text-xl font-semibold tracking-[-0.03em] text-neutral-950">
                 {section.title}
               </h2>
-              <p className="mt-3 text-sm leading-7 text-neutral-600">{section.body}</p>
+              <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+                {section.body}
+              </p>
             </MarketingCard>
           ))}
         </div>

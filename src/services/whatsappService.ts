@@ -80,7 +80,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
     `Product: ${input.productTitle}`,
     `Product link: ${productUrl}`,
     `Product price: ₹${input.productPrice}`,
-    `Advance paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
+    `PayPerTap booking fee: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
     `Remaining amount: ₹${input.sellerCollectAmount}`,
     "",
     "My details:",
@@ -107,7 +107,7 @@ export function buildSellerPaymentCollectionMessage(
   const base = [
     `Hi ${input.buyerName}, thanks for booking ${input.productTitle} from our PayPerTap store.`,
     "",
-    `Your ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT} booking advance is recorded.`,
+    `Your ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT} booking via PayPerTap is recorded.`,
     `Remaining amount: ₹${input.sellerCollectAmount}.`,
     "Please confirm payment/delivery details here.",
     "",
