@@ -183,6 +183,8 @@ export default function AuthPage() {
           <PptField
             label="Email"
             type="email"
+            name="email"
+            autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
@@ -193,6 +195,8 @@ export default function AuthPage() {
           <PptField
             label="Password"
             type="password"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Minimum 6 characters"

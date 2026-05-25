@@ -4,6 +4,7 @@ import { AtSign, ImageIcon, Phone, Store, UploadCloud } from "lucide-react";
 
 import { PptBadge, PptButton, PptField, PptNotice, PptTapLoader } from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
+import { assertValidImageFile } from "../lib/imageCompression";
 import { completeStoreOnboarding } from "../services/sellerService";
 import { uploadImageToR2 } from "../services/uploadService";
 
@@ -123,16 +124,25 @@ export default function StoreOnboardingPage() {
             </div>
             <strong>Store logo</strong>
             <p>
-              {logoFileName ? `${logoFileName} selected.` : "JPEG, PNG, WebP, or GIF up to 5MB."}
+              {logoFileName ? `${logoFileName} selected.` : "JPEG, PNG, or WebP. Compressed before upload."}
             </p>
             <label className="inline-flex">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  setLogoFile(file);
-                  setLogoFileName(file?.name || "");
+                  try {
+                    const file = event.target.files?.[0] || null;
+                    if (file) assertValidImageFile(file);
+                    setLogoFile(file);
+                    setLogoFileName(file?.name || "");
+                    setError("");
+                  } catch (err) {
+                    event.target.value = "";
+                    setLogoFile(null);
+                    setLogoFileName("");
+                    setError(err instanceof Error ? err.message : "Please choose a valid logo image.");
+                  }
                 }}
                 className="sr-only"
               />

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import type { User } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import {
@@ -28,8 +36,18 @@ import {
   type PptTone,
 } from "@/components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
+import {
+  assertValidImageFile,
+  assertValidImageFiles,
+  MAX_PRODUCT_IMAGE_COUNT,
+} from "../lib/imageCompression";
+import {
+  COMPATIBILITY_COLLECTION_NAME,
+  getCollectionNameKey,
+  isCompatibilityCollectionName,
+  normalizeCollectionName,
+} from "../lib/collections";
 import { formatINR } from "../lib/money";
-import { STORE_THEME_DEFAULTS } from "../lib/storeTheme";
 import {
   cancelOrReleaseBooking,
   getCheckoutSessionsBySellerId,
@@ -44,14 +62,28 @@ import {
   updateSellerProduct,
 } from "../services/productService";
 import {
+  createStoreCollection,
+  deleteStoreCollection,
+  listStoreCollections,
+  updateStoreCollection,
+} from "../services/collectionService";
+import {
   getSellerByUid,
   prepareSellerAfterAuth,
 } from "../services/sellerService";
 import {
   getStoreById,
   updateStoreCustomization,
+  updateStoreTheme,
   updateStorePublishStatus,
 } from "../services/storeService";
+import { ThemeRenderer } from "../storefront/ThemeRenderer";
+import {
+  DEFAULT_STOREFRONT_THEME_ID,
+  isStorefrontThemeId,
+  storefrontThemeRegistry,
+} from "../storefront/themes/registry";
+import type { StorefrontThemeId } from "../storefront/themes/types";
 import { uploadImageToR2 } from "../services/uploadService";
 import {
   buildBookingWhatsAppUrl,
@@ -70,6 +102,7 @@ import type {
   ProductStatus,
   Seller,
   Store,
+  StoreCollection,
 } from "../types/firestore";
 
 const sidebarItems = [
@@ -154,6 +187,18 @@ function getShortDate(value: unknown): string {
 function getStoreInstagramProfile(store?: Store | null): string {
   if (!store) return "";
   return store.instagramUrl || (store.instagramHandle ? `@${store.instagramHandle}` : "");
+}
+
+function getSelectedStorefrontThemeId(store?: Store | null): StorefrontThemeId {
+  if (isStorefrontThemeId(store?.selectedThemeId)) {
+    return store.selectedThemeId;
+  }
+
+  if (isStorefrontThemeId(store?.themeId)) {
+    return store.themeId;
+  }
+
+  return DEFAULT_STOREFRONT_THEME_ID;
 }
 
 function getCheckoutStatusTone(status: CheckoutSession["status"]): PptTone {
@@ -241,6 +286,7 @@ export default function DashboardPage() {
   const [seller, setSeller] = useState<Seller | null>(null);
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [collections, setCollections] = useState<StoreCollection[]>([]);
   const [bookings, setBookings] = useState<CheckoutSession[]>([]);
   const [activeTab, setActiveTab] = useState<DashboardTab>("Overview");
   const [loading, setLoading] = useState(true);
@@ -280,15 +326,25 @@ export default function DashboardPage() {
         const [productData, bookingData] = storeData
           ? await Promise.all([
               getSellerProductsForStore(user.uid, storeData.storeId),
-              getCheckoutSessionsBySellerId(user.uid, storeData.storeId),
+              getCheckoutSessionsBySellerId(user.uid, storeData.storeId).catch((bookingError) => {
+                console.warn("Bookings unavailable:", bookingError);
+                return [];
+              }),
             ])
           : [[], []];
+        const collectionData = storeData
+          ? await listStoreCollections(storeData.storeId, productData).catch((collectionError) => {
+              console.warn("Collections unavailable:", collectionError);
+              return [];
+            })
+          : [];
 
         if (cancelled) return;
 
         setSeller(sellerData);
         setStore(storeData);
         setProducts(productData);
+        setCollections(collectionData);
         setBookings(bookingData);
       } catch (err) {
         console.error("Dashboard load failed:", err);
@@ -337,10 +393,21 @@ export default function DashboardPage() {
 
     const [productData, bookingData] = await Promise.all([
       getSellerProductsForStore(user.uid, store.storeId),
-      getCheckoutSessionsBySellerId(user.uid, store.storeId),
+      getCheckoutSessionsBySellerId(user.uid, store.storeId).catch((bookingError) => {
+        console.warn("Bookings unavailable:", bookingError);
+        return [];
+      }),
     ]);
+    const collectionData = await listStoreCollections(
+      store.storeId,
+      productData
+    ).catch((collectionError) => {
+      console.warn("Collections unavailable:", collectionError);
+      return collections;
+    });
 
     setProducts(productData);
+    setCollections(collectionData);
     setBookings(bookingData);
   }
 
@@ -522,8 +589,11 @@ export default function DashboardPage() {
 
             {activeTab === "Products" ? (
               <ProductsTab
+                collections={collections}
+                onCollectionsChanged={setCollections}
                 onProductCreated={handleProductCreated}
                 onProductUpdated={handleProductUpdated}
+                onProductsChanged={setProducts}
                 products={products}
                 store={store}
                 user={user}
@@ -549,8 +619,10 @@ export default function DashboardPage() {
 
             {activeTab === "Store" ? (
               <StoreTab
+                collections={collections}
                 onTogglePublish={handleTogglePublish}
                 onStoreUpdated={(updatedStore) => setStore(updatedStore)}
+                products={products}
                 publishing={publishing}
                 store={store}
                 storeLink={storeLink}
@@ -1250,7 +1322,12 @@ function RecentProductsCard({
               <article className="ppt-dashboard-row" key={product.productId || product.id}>
                 <div className="ppt-dashboard-product-thumb">
                   {imageUrl ? (
-                    <img src={imageUrl} alt={product.title} />
+                    <img
+                      src={imageUrl}
+                      alt={product.title}
+                      decoding="async"
+                      loading="lazy"
+                    />
                   ) : (
                     <PackageOpen size={18} aria-hidden="true" />
                   )}
@@ -1290,45 +1367,157 @@ function getProductStatusBadge(
   return { label: "Open", tone: "success" };
 }
 
+function getSelectedProductImageFiles(fileList: FileList | null) {
+  const files = Array.from(fileList ?? []);
+  assertValidImageFiles(files, MAX_PRODUCT_IMAGE_COUNT);
+  return files;
+}
+
+const NO_COLLECTION_VALUE = "__no_collection__";
+const LEGACY_COLLECTION_PREFIX = "__legacy__:";
+
+function getProductCollectionLabel(product: Product): string {
+  const collectionName = normalizeCollectionName(product.collectionName);
+  const categoryName = normalizeCollectionName(product.categoryName);
+  const category = normalizeCollectionName(product.category);
+
+  if (collectionName) return collectionName;
+  if (categoryName) return categoryName;
+  if (category && !isCompatibilityCollectionName(category)) return category;
+
+  return "";
+}
+
+function findCollectionByProduct(
+  product: Product,
+  collections: StoreCollection[]
+): StoreCollection | undefined {
+  if (product.collectionId) {
+    const byId = collections.find(
+      (collection) => collection.collectionId === product.collectionId
+    );
+    if (byId) return byId;
+  }
+
+  const collectionLabel = getCollectionNameKey(getProductCollectionLabel(product));
+  return collectionLabel
+    ? collections.find(
+        (collection) => getCollectionNameKey(collection.name) === collectionLabel
+      )
+    : undefined;
+}
+
+function getInitialCollectionSelection(
+  product: Product | null,
+  collections: StoreCollection[]
+): string {
+  if (!product) return NO_COLLECTION_VALUE;
+
+  const managedCollection = findCollectionByProduct(product, collections);
+  if (managedCollection) return managedCollection.collectionId;
+
+  const legacyLabel = getProductCollectionLabel(product);
+  return legacyLabel
+    ? `${LEGACY_COLLECTION_PREFIX}${legacyLabel}`
+    : NO_COLLECTION_VALUE;
+}
+
+function resolveCollectionSelection(
+  selection: string,
+  collections: StoreCollection[]
+): { collectionId: string; collectionName: string } {
+  if (!selection || selection === NO_COLLECTION_VALUE) {
+    return { collectionId: "", collectionName: "" };
+  }
+
+  if (selection.startsWith(LEGACY_COLLECTION_PREFIX)) {
+    return {
+      collectionId: "",
+      collectionName: selection.slice(LEGACY_COLLECTION_PREFIX.length),
+    };
+  }
+
+  const collection = collections.find(
+    (item) => item.collectionId === selection
+  );
+
+  return {
+    collectionId: collection?.collectionId || "",
+    collectionName: collection?.name || "",
+  };
+}
+
+function getCollectionProductCount(
+  collection: StoreCollection,
+  products: Product[]
+): number {
+  const collectionName = getCollectionNameKey(collection.name);
+
+  return products.filter((product) => {
+    if (product.collectionId === collection.collectionId) return true;
+    return getCollectionNameKey(getProductCollectionLabel(product)) === collectionName;
+  }).length;
+}
+
 function ProductsTab({
+  collections,
+  onCollectionsChanged,
   onProductUpdated,
+  onProductsChanged,
   products,
   user,
   store,
   onProductCreated,
 }: {
+  collections: StoreCollection[];
+  onCollectionsChanged: (collections: StoreCollection[]) => void;
   products: Product[] | null | undefined;
   user: User | null;
   store: Store | null;
   onProductCreated: (product: Product) => void;
   onProductUpdated: (product: Product) => void;
+  onProductsChanged: (products: Product[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [collectionSelection, setCollectionSelection] = useState(NO_COLLECTION_VALUE);
   const [inventoryQuantity, setInventoryQuantity] = useState("1");
   const [status, setStatus] = useState<ProductStatus>("open");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const addProductFormRef = useRef<HTMLFormElement>(null);
+  const addProductTitleRef = useRef<HTMLInputElement>(null);
   const safeProducts = Array.isArray(products) ? products : [];
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl("");
+    if (!showForm) return;
+
+    window.requestAnimationFrame(() => {
+      addProductFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      addProductTitleRef.current?.focus({ preventScroll: true });
+    });
+  }, [showForm]);
+
+  useEffect(() => {
+    if (imageFiles.length === 0) {
+      setImagePreviewUrls([]);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(objectUrl);
+    const objectUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(objectUrls);
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile]);
+    return () => objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+  }, [imageFiles]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1341,14 +1530,20 @@ function ProductsTab({
     try {
       setSaving(true);
       setError("");
+      const selectedCollection = resolveCollectionSelection(
+        collectionSelection,
+        collections
+      );
 
       const product = await createSellerProduct(user, store.storeId, {
         title,
         price: Number(price),
         description,
-        category,
+        category: selectedCollection.collectionName || COMPATIBILITY_COLLECTION_NAME,
+        collectionId: selectedCollection.collectionId,
+        collectionName: selectedCollection.collectionName,
         inventoryQuantity: Number(inventoryQuantity),
-        imageFile,
+        imageFiles,
         status,
       });
 
@@ -1356,10 +1551,10 @@ function ProductsTab({
       setTitle("");
       setPrice("");
       setDescription("");
-      setCategory("");
+      setCollectionSelection(NO_COLLECTION_VALUE);
       setInventoryQuantity("1");
       setStatus("open");
-      setImageFile(null);
+      setImageFiles([]);
       setImageFileName("");
       setShowForm(false);
     } catch (err) {
@@ -1382,7 +1577,10 @@ function ProductsTab({
           </div>
           <button
             type="button"
-            onClick={() => setShowForm((isOpen) => !isOpen)}
+            onClick={() => {
+              setEditingProduct(null);
+              setShowForm((isOpen) => !isOpen);
+            }}
             className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
           >
             {showForm ? "Close" : "Add product"}
@@ -1390,9 +1588,19 @@ function ProductsTab({
         </div>
 
         {showForm ? (
-          <form onSubmit={handleSubmit} className="mt-5 grid gap-4 border-t border-gray-100 pt-5">
+          <form
+            ref={addProductFormRef}
+            onSubmit={handleSubmit}
+            className="mt-5 scroll-mt-6 grid gap-4 border-t border-gray-100 pt-5"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Title" required value={title} onChange={setTitle} />
+              <Field
+                inputRef={addProductTitleRef}
+                label="Title"
+                required
+                value={title}
+                onChange={setTitle}
+              />
               <Field
                 label="Price"
                 min="21"
@@ -1412,7 +1620,12 @@ function ProductsTab({
                 value={inventoryQuantity}
                 onChange={setInventoryQuantity}
               />
-              <Field label="Category" value={category} onChange={setCategory} placeholder="General" />
+              <CollectionSelect
+                collections={collections}
+                label="Collection"
+                value={collectionSelection}
+                onChange={setCollectionSelection}
+              />
               <label className="text-sm font-medium text-gray-800">
                 Status
                 <select
@@ -1440,30 +1653,46 @@ function ProductsTab({
             </label>
 
             <div>
-              <label className="text-sm font-medium text-gray-800">Image</label>
+              <label className="text-sm font-medium text-gray-800">Images</label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
                 onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  setImageFile(file);
-                  setImageFileName(file?.name || "");
+                  try {
+                    const files = getSelectedProductImageFiles(event.target.files);
+                    setImageFiles(files);
+                    setImageFileName(files.map((file) => file.name).join(", "));
+                    setError("");
+                  } catch (err) {
+                    event.target.value = "";
+                    setImageFiles([]);
+                    setImageFileName("");
+                    setError(err instanceof Error ? err.message : "Please choose valid images.");
+                  }
                 }}
                 className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
               />
-              {imagePreviewUrl ? (
-                <div className="mt-3 max-w-xs overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Selected product preview"
-                    className="h-40 w-full object-cover"
-                  />
+              {imagePreviewUrls.length ? (
+                <div className="mt-3 grid max-w-md grid-cols-3 gap-2">
+                  {imagePreviewUrls.map((imagePreviewUrl, index) => (
+                    <div
+                      className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+                      key={imagePreviewUrl}
+                    >
+                      <img
+                        src={imagePreviewUrl}
+                        alt={`Selected product preview ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
                 </div>
               ) : null}
               <p className="mt-2 text-xs text-gray-500">
                 {imageFileName
                   ? `${imageFileName} selected.`
-                  : "JPEG, PNG, WebP, or GIF up to 5MB."}
+                  : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
               </p>
             </div>
 
@@ -1475,7 +1704,7 @@ function ProductsTab({
                 disabled={saving}
                 className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving && imageFile ? "Uploading image..." : saving ? "Saving product..." : "Save product"}
+                {saving && imageFiles.length ? "Uploading images..." : saving ? "Saving product..." : "Save product"}
               </button>
             </div>
           </form>
@@ -1488,11 +1717,20 @@ function ProductsTab({
               onProductUpdated(product);
               setEditingProduct(null);
             }}
+            collections={collections}
             product={editingProduct}
             user={user}
           />
         ) : null}
       </div>
+
+      <CollectionsManager
+        collections={collections}
+        onCollectionsChanged={onCollectionsChanged}
+        onProductsChanged={onProductsChanged}
+        products={safeProducts}
+        store={store}
+      />
 
       <div className="rounded-2xl border border-gray-200 bg-white">
         {safeProducts.length === 0 ? (
@@ -1502,7 +1740,11 @@ function ProductsTab({
             {safeProducts.map((product) => (
               <ProductRow
                 key={product.id || product.productId}
-                onEdit={() => setEditingProduct(product)}
+                collections={collections}
+                onEdit={() => {
+                  setShowForm(false);
+                  setEditingProduct(product);
+                }}
                 product={product}
               />
             ))}
@@ -1513,12 +1755,317 @@ function ProductsTab({
   );
 }
 
+function CollectionSelect({
+  collections,
+  label,
+  legacyLabel,
+  onChange,
+  value,
+}: {
+  collections: StoreCollection[];
+  label: string;
+  legacyLabel?: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const normalizedLegacyLabel = normalizeCollectionName(legacyLabel);
+  const legacyMatchesManaged = collections.some(
+    (collection) =>
+      getCollectionNameKey(collection.name) === getCollectionNameKey(normalizedLegacyLabel)
+  );
+  const showLegacyOption =
+    normalizedLegacyLabel && !legacyMatchesManaged && value.startsWith(LEGACY_COLLECTION_PREFIX);
+
+  return (
+    <label className="text-sm font-medium text-gray-800">
+      {label}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
+      >
+        <option value={NO_COLLECTION_VALUE}>No collection</option>
+        {showLegacyOption ? (
+          <option value={`${LEGACY_COLLECTION_PREFIX}${normalizedLegacyLabel}`}>
+            {normalizedLegacyLabel} (legacy)
+          </option>
+        ) : null}
+        {collections.map((collection) => (
+          <option key={collection.collectionId} value={collection.collectionId}>
+            {collection.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function CollectionsManager({
+  collections,
+  onCollectionsChanged,
+  onProductsChanged,
+  products,
+  store,
+}: {
+  collections: StoreCollection[];
+  onCollectionsChanged: (collections: StoreCollection[]) => void;
+  onProductsChanged: (products: Product[]) => void;
+  products: Product[];
+  store: Store | null;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [editingCollectionId, setEditingCollectionId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const editingCollection = collections.find(
+    (collection) => collection.collectionId === editingCollectionId
+  );
+
+  useEffect(() => {
+    if (!editingCollection) {
+      setName("");
+      setDescription("");
+      return;
+    }
+
+    setName(editingCollection.name);
+    setDescription(editingCollection.description || "");
+  }, [editingCollection]);
+
+  function resetForm() {
+    setEditingCollectionId("");
+    setName("");
+    setDescription("");
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!store?.storeId) {
+      setError("Store setup is not ready yet.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      if (editingCollection) {
+        const updatedCollection = await updateStoreCollection(
+          store.storeId,
+          editingCollection.collectionId,
+          { name, description }
+        );
+        onCollectionsChanged(
+          collections.map((collection) =>
+            collection.collectionId === updatedCollection.collectionId
+              ? {
+                  ...collection,
+                  ...updatedCollection,
+                  productCount: getCollectionProductCount(
+                    updatedCollection,
+                    products
+                  ),
+                }
+              : collection
+          )
+        );
+        onProductsChanged(
+          products.map((product) =>
+            product.collectionId === updatedCollection.collectionId
+              ? {
+                  ...product,
+                  category: updatedCollection.name,
+                  collectionName: updatedCollection.name,
+                }
+              : product
+          )
+        );
+        setSuccess("Collection updated.");
+      } else {
+        const createdCollection = await createStoreCollection(store.storeId, {
+          name,
+          description,
+        });
+        onCollectionsChanged(
+          [...collections, { ...createdCollection, productCount: 0 }].sort(
+            (a, b) => a.name.localeCompare(b.name)
+          )
+        );
+        setSuccess("Collection created.");
+      }
+
+      resetForm();
+    } catch (err) {
+      console.error("Collection save failed:", err);
+      setError(err instanceof Error ? err.message : "Could not save collection.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(collectionToDelete: StoreCollection) {
+    if (!store?.storeId) return;
+
+    const confirmed = window.confirm(
+      `Delete "${collectionToDelete.name}"? Products will stay in your store and become uncategorized.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+      await deleteStoreCollection(store.storeId, collectionToDelete.collectionId);
+      onCollectionsChanged(
+        collections.filter(
+          (collection) => collection.collectionId !== collectionToDelete.collectionId
+        )
+      );
+      onProductsChanged(
+        products.map((product) =>
+          product.collectionId === collectionToDelete.collectionId
+            ? {
+                ...product,
+                category: COMPATIBILITY_COLLECTION_NAME,
+                collectionId: "",
+                collectionName: "",
+              }
+            : product
+        )
+      );
+      if (editingCollectionId === collectionToDelete.collectionId) resetForm();
+      setSuccess("Collection deleted. Products were not deleted.");
+    } catch (err) {
+      console.error("Collection delete failed:", err);
+      setError(err instanceof Error ? err.message : "Could not delete collection.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Collections</h2>
+          <p className="mt-1 text-sm leading-6 text-gray-500">
+            Group products into storefront filters like New Arrivals, T-Shirts, or Sale.
+          </p>
+        </div>
+        <PptBadge tone="neutral">{collections.length} managed</PptBadge>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-5 grid gap-3 border-t border-gray-100 pt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+        <Field
+          label="Collection name"
+          placeholder="New Arrivals"
+          required
+          value={name}
+          onChange={setName}
+        />
+        <Field
+          label="Description"
+          placeholder="Optional internal note"
+          value={description}
+          onChange={setDescription}
+        />
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {saving
+              ? "Saving..."
+              : editingCollection
+                ? "Save collection"
+                : "Create collection"}
+          </button>
+          {editingCollection ? (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+            >
+              Cancel
+            </button>
+          ) : null}
+        </div>
+      </form>
+
+      {error ? <ErrorBox message={error} /> : null}
+      {success ? (
+        <PptNotice tone="success" title="Collections updated" className="mt-3">
+          {success}
+        </PptNotice>
+      ) : null}
+
+      <div className="mt-5 rounded-2xl border border-gray-100">
+        {collections.length === 0 ? (
+          <EmptyState
+            title="No managed collections yet"
+            message="Create a collection, then assign products from the product form."
+          />
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {collections.map((collection) => (
+              <article
+                key={collection.collectionId}
+                className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              >
+                <div className="min-w-0">
+                  <h3 className="break-words text-sm font-semibold text-gray-950">
+                    {collection.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {collection.description || "No description"} -{" "}
+                    {getCollectionProductCount(collection, products)} assigned
+                    product
+                    {getCollectionProductCount(collection, products) === 1
+                      ? ""
+                      : "s"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => setEditingCollectionId(collection.collectionId)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void handleDelete(collection)}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function EditProductForm({
+  collections,
   onCancel,
   onSaved,
   product,
   user,
 }: {
+  collections: StoreCollection[];
   onCancel: () => void;
   onSaved: (product: Product) => void;
   product: Product;
@@ -1527,16 +2074,20 @@ function EditProductForm({
   const [title, setTitle] = useState(product.title);
   const [price, setPrice] = useState(String(product.price));
   const [description, setDescription] = useState(product.description || "");
-  const [category, setCategory] = useState(product.category || "");
+  const [collectionSelection, setCollectionSelection] = useState(
+    getInitialCollectionSelection(product, collections)
+  );
   const [inventoryQuantity, setInventoryQuantity] = useState(
     String(product.inventoryQuantity)
   );
   const [status, setStatus] = useState<ProductStatus>(product.status);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
-  const [imagePreviewUrl, setImagePreviewUrl] = useState(getProductImage(product));
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([getProductImage(product)].filter(Boolean));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const editFormRef = useRef<HTMLFormElement>(null);
+  const editTitleRef = useRef<HTMLInputElement>(null);
   const reservedQuantity = Number(product.reservedQuantity || 0);
   const soldQuantity = Number(product.soldQuantity || 0);
   const minimumTrackedInventory = reservedQuantity + soldQuantity;
@@ -1545,16 +2096,26 @@ function EditProductForm({
   const openingWithoutStock = status === "open" && formAvailableQuantity <= 0;
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl(getProductImage(product));
+    if (imageFiles.length === 0) {
+      setImagePreviewUrls([getProductImage(product)].filter(Boolean));
       return;
     }
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(objectUrl);
+    const objectUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(objectUrls);
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile, product]);
+    return () => objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+  }, [imageFiles, product]);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      editFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      editTitleRef.current?.focus({ preventScroll: true });
+    });
+  }, [product.id, product.productId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1567,6 +2128,10 @@ function EditProductForm({
     try {
       setSaving(true);
       setError("");
+      const selectedCollection = resolveCollectionSelection(
+        collectionSelection,
+        collections
+      );
       const requestedInventory = Number(inventoryQuantity);
       const nextInventoryQuantity =
         status === "open" && requestedInventory <= minimumTrackedInventory
@@ -1577,10 +2142,12 @@ function EditProductForm({
         title,
         price: Number(price),
         description,
-        category,
+        category: selectedCollection.collectionName || COMPATIBILITY_COLLECTION_NAME,
+        collectionId: selectedCollection.collectionId,
+        collectionName: selectedCollection.collectionName,
         inventoryQuantity: nextInventoryQuantity,
         status,
-        imageFile,
+        imageFiles,
       });
 
       onSaved(updatedProduct);
@@ -1593,9 +2160,20 @@ function EditProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-5 grid gap-4 border-t border-gray-100 pt-5">
+    <form
+      ref={editFormRef}
+      onSubmit={handleSubmit}
+      className="mt-5 scroll-mt-6 grid gap-4 border-t border-gray-100 pt-5"
+    >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold tracking-tight">Edit product</h3>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Edit mode
+          </p>
+          <h3 className="mt-1 break-words text-base font-semibold tracking-tight">
+            Editing: {product.title}
+          </h3>
+        </div>
         <button
           type="button"
           onClick={onCancel}
@@ -1606,7 +2184,13 @@ function EditProductForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Title" required value={title} onChange={setTitle} />
+        <Field
+          inputRef={editTitleRef}
+          label="Title"
+          required
+          value={title}
+          onChange={setTitle}
+        />
         <Field
           label="Price"
           min="21"
@@ -1626,7 +2210,13 @@ function EditProductForm({
           value={inventoryQuantity}
           onChange={setInventoryQuantity}
         />
-        <Field label="Category" value={category} onChange={setCategory} placeholder="General" />
+        <CollectionSelect
+          collections={collections}
+          label="Collection"
+          legacyLabel={getProductCollectionLabel(product)}
+          value={collectionSelection}
+          onChange={setCollectionSelection}
+        />
         <label className="text-sm font-medium text-gray-800">
           Status
           <select
@@ -1670,32 +2260,48 @@ function EditProductForm({
       </label>
 
       <div>
-        <label className="text-sm font-medium text-gray-800">Replace image</label>
+        <label className="text-sm font-medium text-gray-800">Replace images</label>
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
           onChange={(event) => {
-            const file = event.target.files?.[0] || null;
-            setImageFile(file);
-            setImageFileName(file?.name || "");
+            try {
+              const files = getSelectedProductImageFiles(event.target.files);
+              setImageFiles(files);
+              setImageFileName(files.map((file) => file.name).join(", "));
+              setError("");
+            } catch (err) {
+              event.target.value = "";
+              setImageFiles([]);
+              setImageFileName("");
+              setError(err instanceof Error ? err.message : "Please choose valid images.");
+            }
           }}
           className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
         />
-        {imagePreviewUrl ? (
-          <div className="mt-3 max-w-xs overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
-            <img
-              src={imagePreviewUrl}
-              alt="Product preview"
-              className="h-40 w-full object-cover"
-            />
+        {imagePreviewUrls.length ? (
+          <div className="mt-3 grid max-w-md grid-cols-3 gap-2">
+            {imagePreviewUrls.map((imagePreviewUrl, index) => (
+              <div
+                className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+                key={imagePreviewUrl}
+              >
+                <img
+                  src={imagePreviewUrl}
+                  alt={`Product preview ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
           </div>
         ) : null}
         <p className="mt-2 text-xs text-gray-500">
           {imageFileName
             ? `${imageFileName} selected.`
-            : imagePreviewUrl
+            : imagePreviewUrls.length
               ? "Current image will be preserved unless you choose a new one."
-              : "JPEG, PNG, WebP, or GIF up to 5MB."}
+              : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
         </p>
       </div>
 
@@ -1707,7 +2313,7 @@ function EditProductForm({
           disabled={saving}
           className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving && imageFile ? "Uploading image..." : saving ? "Saving changes..." : "Save changes"}
+          {saving && imageFiles.length ? "Uploading images..." : saving ? "Saving changes..." : "Save changes"}
         </button>
       </div>
     </form>
@@ -1715,29 +2321,42 @@ function EditProductForm({
 }
 
 function ProductRow({
+  collections,
   onEdit,
   product,
 }: {
+  collections: StoreCollection[];
   onEdit: () => void;
   product: Product;
 }) {
   const imageUrl = getProductImage(product);
   const availableQuantity = getAvailableQuantity(product);
+  const managedCollection = findCollectionByProduct(product, collections);
+  const collectionLabel =
+    managedCollection?.name || getProductCollectionLabel(product) || "Uncategorized";
 
   return (
-    <div className="grid gap-4 p-4 lg:grid-cols-[72px_1fr_auto] lg:items-center">
+    <div className="grid min-w-0 gap-4 p-4 lg:grid-cols-[72px_minmax(0,1fr)_auto] lg:items-center">
       <div className="h-18 w-18 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
         {imageUrl ? (
-          <img src={imageUrl} alt={product.title} className="h-full w-full object-cover" />
+          <img
+            src={imageUrl}
+            alt={product.title}
+            decoding="async"
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-gray-400">
             No image
           </div>
         )}
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold text-gray-950">{product.title}</p>
+          <p className="min-w-0 break-words text-sm font-semibold text-gray-950">
+            {product.title}
+          </p>
           <StatusBadge label={product.status} />
           <button
             type="button"
@@ -1747,9 +2366,18 @@ function ProductRow({
             Edit
           </button>
         </div>
-        <p className="mt-1 text-xs text-gray-500">
-          {product.category || "General"} - {product.description || "No description"}
-        </p>
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+          <span className="max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+            {collectionLabel}
+          </span>
+        </div>
+        {product.description ? (
+          <p className="mt-2 line-clamp-2 min-w-0 break-words text-xs leading-5 text-gray-500">
+            {product.description}
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-gray-400">No description</p>
+        )}
         <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-3 lg:max-w-xl">
           <Metric label="Inventory" value={String(product.inventoryQuantity)} />
           <Metric label="Reserved" value={String(product.reservedQuantity)} />
@@ -2159,6 +2787,8 @@ function CustomerRow({
 }
 
 function StoreTab({
+  collections,
+  products,
   store,
   storeSlug,
   storeLink,
@@ -2166,6 +2796,8 @@ function StoreTab({
   onTogglePublish,
   onStoreUpdated,
 }: {
+  collections: StoreCollection[];
+  products: Product[];
   store: Store | null;
   storeSlug: string;
   storeLink: string;
@@ -2177,53 +2809,40 @@ function StoreTab({
   const [bio, setBio] = useState(store?.bio || "");
   const [whatsappPhone, setWhatsappPhone] = useState(store?.whatsappPhone || store?.phone || "");
   const [instagramProfile, setInstagramProfile] = useState(getStoreInstagramProfile(store));
+  const [ownerName, setOwnerName] = useState(store?.ownerName || "");
+  const [supportEmail, setSupportEmail] = useState(store?.supportEmail || "");
+  const [supportPhone, setSupportPhone] = useState(store?.supportPhone || "");
+  const [returnsPolicyType, setReturnsPolicyType] = useState<
+    NonNullable<Store["returnsPolicyType"]>
+  >(store?.returnsPolicyType || "exchange_only");
+  const [returnsPolicyNotes, setReturnsPolicyNotes] = useState(
+    store?.returnsPolicyNotes || ""
+  );
   const [heroHeading, setHeroHeading] = useState(store?.heroHeading || "");
   const [heroSubtitle, setHeroSubtitle] = useState(store?.heroSubtitle || "");
-  const [themeStyle, setThemeStyle] = useState(store?.themeStyle || "clean-minimal");
-  const [fontStyle, setFontStyle] = useState(store?.fontStyle || "clean-sans");
-  const [backgroundColor, setBackgroundColor] = useState(
-    store?.backgroundColor || STORE_THEME_DEFAULTS.backgroundColor
-  );
-  const [textColor, setTextColor] = useState(
-    store?.textColor || STORE_THEME_DEFAULTS.textColor
-  );
-  const [cardColor, setCardColor] = useState(
-    store?.cardColor || STORE_THEME_DEFAULTS.cardColor
-  );
-  const [primaryColor, setPrimaryColor] = useState(
-    store?.primaryColor || STORE_THEME_DEFAULTS.primaryColor
-  );
-  const [accentColor, setAccentColor] = useState(
-    store?.accentColor || STORE_THEME_DEFAULTS.accentColor
-  );
-  const [buttonColor, setButtonColor] = useState(
-    store?.buttonColor || STORE_THEME_DEFAULTS.buttonColor
-  );
-  const [buttonTextColor, setButtonTextColor] = useState(
-    store?.buttonTextColor || STORE_THEME_DEFAULTS.buttonTextColor
-  );
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoFileName, setLogoFileName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [previewThemeId, setPreviewThemeId] = useState<StorefrontThemeId | null>(null);
+  const [themeSavingId, setThemeSavingId] = useState<StorefrontThemeId | null>(null);
+  const [themeSavedMessage, setThemeSavedMessage] = useState("");
+  const [themeError, setThemeError] = useState("");
+  const selectedThemeId = getSelectedStorefrontThemeId(store);
 
   useEffect(() => {
     setStoreName(store?.storeName || "");
     setBio(store?.bio || "");
     setWhatsappPhone(store?.whatsappPhone || store?.phone || "");
     setInstagramProfile(getStoreInstagramProfile(store));
+    setOwnerName(store?.ownerName || "");
+    setSupportEmail(store?.supportEmail || "");
+    setSupportPhone(store?.supportPhone || "");
+    setReturnsPolicyType(store?.returnsPolicyType || "exchange_only");
+    setReturnsPolicyNotes(store?.returnsPolicyNotes || "");
     setHeroHeading(store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
-    setThemeStyle(store?.themeStyle || "clean-minimal");
-    setFontStyle(store?.fontStyle || "clean-sans");
-    setBackgroundColor(store?.backgroundColor || STORE_THEME_DEFAULTS.backgroundColor);
-    setTextColor(store?.textColor || STORE_THEME_DEFAULTS.textColor);
-    setCardColor(store?.cardColor || STORE_THEME_DEFAULTS.cardColor);
-    setPrimaryColor(store?.primaryColor || STORE_THEME_DEFAULTS.primaryColor);
-    setAccentColor(store?.accentColor || STORE_THEME_DEFAULTS.accentColor);
-    setButtonColor(store?.buttonColor || STORE_THEME_DEFAULTS.buttonColor);
-    setButtonTextColor(store?.buttonTextColor || STORE_THEME_DEFAULTS.buttonTextColor);
   }, [store]);
 
   async function handleSaveStore(event: FormEvent<HTMLFormElement>) {
@@ -2244,22 +2863,16 @@ function StoreTab({
       const updatedFields = await updateStoreCustomization(store.storeId, {
         storeName,
         bio,
-        tagline: bio,
         whatsappPhone,
-        whatsappNumber: whatsappPhone,
         phone: store.phone || whatsappPhone,
         instagramProfile,
+        ownerName,
+        supportEmail,
+        supportPhone,
+        returnsPolicyType,
+        returnsPolicyNotes,
         heroHeading,
         heroSubtitle,
-        themeStyle,
-        fontStyle,
-        backgroundColor,
-        textColor,
-        cardColor,
-        primaryColor,
-        accentColor,
-        buttonColor,
-        buttonTextColor,
         logoUrl: uploadedLogo?.url,
         logoKey: uploadedLogo?.key,
       });
@@ -2269,22 +2882,16 @@ function StoreTab({
         ...updatedFields,
         storeName,
         bio,
-        tagline: bio,
         whatsappPhone,
-        whatsappNumber: whatsappPhone,
+        ownerName,
+        supportEmail,
+        supportPhone,
+        returnsPolicyType,
+        returnsPolicyNotes,
         instagramUrl: String(updatedFields.instagramUrl || ""),
         instagramHandle: String(updatedFields.instagramHandle || ""),
         heroHeading,
         heroSubtitle,
-        themeStyle,
-        fontStyle,
-        backgroundColor,
-        textColor,
-        cardColor,
-        primaryColor,
-        accentColor,
-        buttonColor,
-        buttonTextColor,
         logoUrl: uploadedLogo?.url || store.logoUrl,
         logoKey: uploadedLogo?.key || store.logoKey,
       });
@@ -2299,20 +2906,37 @@ function StoreTab({
     }
   }
 
-  const previewHeroHeading =
-    heroHeading || STORE_THEME_DEFAULTS.heroHeading;
-  const previewHeroSubtitle =
-    heroSubtitle || STORE_THEME_DEFAULTS.heroSubtitle;
-  const previewTagline = bio || STORE_THEME_DEFAULTS.tagline;
+  async function handleApplyTheme(themeId: StorefrontThemeId) {
+    if (!store?.storeId || !isStorefrontThemeId(themeId)) return;
+
+    try {
+      setThemeSavingId(themeId);
+      setThemeSavedMessage("");
+      setThemeError("");
+
+      const updatedFields = await updateStoreTheme(store.storeId, themeId);
+
+      onStoreUpdated({
+        ...store,
+        ...updatedFields,
+      });
+      setPreviewThemeId(null);
+      setThemeSavedMessage("Theme applied. Your public storefront will use it now.");
+    } catch (err) {
+      console.error("Theme update failed:", err);
+      setThemeError(err instanceof Error ? err.message : "Could not apply this theme.");
+    } finally {
+      setThemeSavingId(null);
+    }
+  }
 
   return (
     <section className="space-y-4">
       <form onSubmit={handleSaveStore} className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <PptBadge tone="primary">Store appearance</PptBadge>
-            <h2 className="mt-2 text-lg font-semibold tracking-tight">Customize your storefront</h2>
-            <p className="mt-1 text-sm text-gray-500">Control your public store identity, hero, theme, and colors.</p>
+            <h2 className="text-lg font-semibold tracking-tight">Store</h2>
+            <p className="mt-1 text-sm text-gray-500">Customize your public storefront and trust signals.</p>
           </div>
           <div className="grid gap-2 sm:flex sm:items-center">
             <PptButton
@@ -2333,7 +2957,13 @@ function StoreTab({
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
             <div className="h-32 w-32 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
               {store?.logoUrl ? (
-                <img src={store.logoUrl} alt={store.storeName} className="h-full w-full object-cover" />
+                <img
+                  src={store.logoUrl}
+                  alt={store.storeName}
+                  decoding="async"
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-gray-400">
                   No logo
@@ -2344,48 +2974,53 @@ function StoreTab({
               Logo upload
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  setLogoFile(file);
-                  setLogoFileName(file?.name || "");
+                  try {
+                    const file = event.target.files?.[0] || null;
+                    if (file) assertValidImageFile(file);
+                    setLogoFile(file);
+                    setLogoFileName(file?.name || "");
+                    setError("");
+                  } catch (err) {
+                    event.target.value = "";
+                    setLogoFile(null);
+                    setLogoFileName("");
+                    setError(err instanceof Error ? err.message : "Please choose a valid logo image.");
+                  }
                 }}
                 className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-gray-950 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
               />
             </label>
             <p className="mt-2 text-xs text-gray-500">
-              {logoFileName || "JPEG, PNG, WebP, or GIF up to 5MB."}
+              {logoFileName || "JPEG, PNG, or WebP. The logo is compressed before upload."}
             </p>
 
-            <div
-              className="mt-4 rounded-2xl border p-4"
-              style={{
-                background: cardColor,
-                borderColor: `${accentColor}66`,
-                color: textColor,
-              }}
-            >
+            <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-3">
-                <div
-                  className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl text-sm font-semibold text-white"
-                  style={{ background: primaryColor }}
-                >
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gray-950 text-sm font-semibold text-white">
                   {store?.logoUrl ? (
-                    <img src={store.logoUrl} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={store.logoUrl}
+                      alt=""
+                      decoding="async"
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <StoreIcon size={18} />
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{storeName || "Store name"}</p>
-                  <p className="line-clamp-1 text-xs opacity-70">{previewTagline}</p>
+                  <p className="truncate text-sm font-semibold text-gray-950">{storeName || "Store name"}</p>
+                  <p className="line-clamp-1 text-xs text-gray-500">{bio || "Store tagline"}</p>
                 </div>
               </div>
-              <h3 className="mt-4 text-lg font-semibold tracking-tight">
-                {previewHeroHeading}
+              <h3 className="mt-4 text-lg font-semibold tracking-tight text-gray-950">
+                {heroHeading || "Fresh drops are live"}
               </h3>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 opacity-70">
-                {previewHeroSubtitle}
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
+                {heroSubtitle || "Reserve with ₹20 and confirm the rest on WhatsApp."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <PptBadge tone={store?.isPublished ? "success" : "warning"}>
@@ -2397,13 +3032,6 @@ function StoreTab({
                   </PptBadge>
                 ) : null}
               </div>
-              <button
-                type="button"
-                className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-medium"
-                style={{ background: buttonColor, color: buttonTextColor }}
-              >
-                Button preview
-              </button>
             </div>
           </div>
 
@@ -2419,52 +3047,71 @@ function StoreTab({
               onChange={setInstagramProfile}
               placeholder="https://instagram.com/yourstore or @yourstore"
             />
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-semibold text-gray-950">
+                  Contact and storefront policies
+                </h3>
+                <p className="text-xs leading-5 text-gray-500">
+                  We'll generate a simple storefront policy from this. You can edit detailed policy text later.
+                </p>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Store owner/contact name"
+                  value={ownerName}
+                  onChange={setOwnerName}
+                  placeholder="Aditya"
+                />
+                <Field
+                  label="Support email"
+                  value={supportEmail}
+                  onChange={setSupportEmail}
+                  placeholder="support@yourstore.com"
+                />
+                <Field
+                  label="Support phone"
+                  value={supportPhone}
+                  onChange={setSupportPhone}
+                  placeholder={whatsappPhone || "Defaults to WhatsApp number"}
+                />
+                <label className="text-sm font-medium text-gray-800">
+                  Returns policy
+                  <select
+                    value={returnsPolicyType}
+                    onChange={(event) =>
+                      setReturnsPolicyType(
+                        event.target.value as NonNullable<Store["returnsPolicyType"]>
+                      )
+                    }
+                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
+                  >
+                    <option value="returns_accepted">Accept returns</option>
+                    <option value="exchange_only">Exchange only</option>
+                    <option value="no_returns">No returns</option>
+                  </select>
+                </label>
+              </div>
+              <label className="mt-4 block text-sm font-medium text-gray-800">
+                Returns policy notes
+                <textarea
+                  value={returnsPolicyNotes}
+                  onChange={(event) => setReturnsPolicyNotes(event.target.value)}
+                  placeholder="Optional note buyers should know before booking"
+                  rows={3}
+                  className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
+                />
+              </label>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Hero heading" value={heroHeading} onChange={setHeroHeading} placeholder="Fresh drops are live" />
               <Field label="Hero subtitle" value={heroSubtitle} onChange={setHeroSubtitle} placeholder="Reserve with ₹20. Confirm the rest on WhatsApp." />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="text-sm font-medium text-gray-800">
-                Theme style
-                <select
-                  value={themeStyle}
-                  onChange={(event) => setThemeStyle(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
-                >
-                  <option value="soft-boutique">Soft Boutique</option>
-                  <option value="dark-drop">Dark Drop</option>
-                  <option value="clean-minimal">Clean Minimal</option>
-                  <option value="streetwear-pop">Streetwear Pop</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium text-gray-800">
-                Font style
-                <select
-                  value={fontStyle}
-                  onChange={(event) => setFontStyle(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
-                >
-                  <option value="clean-sans">Clean Sans</option>
-                  <option value="boutique-serif">Boutique Serif</option>
-                  <option value="bold-street">Bold Street</option>
-                  <option value="minimal-modern">Minimal Modern</option>
-                </select>
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <ColorField label="Store background" value={backgroundColor} onChange={setBackgroundColor} />
-              <ColorField label="Text color" value={textColor} onChange={setTextColor} />
-              <ColorField label="Card color" value={cardColor} onChange={setCardColor} />
-              <ColorField label="Primary color" value={primaryColor} onChange={setPrimaryColor} />
-              <ColorField label="Accent color" value={accentColor} onChange={setAccentColor} />
-              <ColorField label="Button color" value={buttonColor} onChange={setButtonColor} />
-              <ColorField label="Button text" value={buttonTextColor} onChange={setButtonTextColor} />
             </div>
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <InfoRow label="Slug" value={storeSlug || "Not set"} />
               <InfoRow label="Public link" value={storeLink || "Not set"} />
               <InfoRow label="Booking advance" value={formatINR(store?.bookingAdvanceAmount || 20)} />
-              <InfoRow label="Theme" value={store?.themeId || "minimal-clean"} />
+              <InfoRow label="Theme" value={storefrontThemeRegistry[selectedThemeId].name} />
             </div>
           </div>
         </div>
@@ -2475,8 +3122,297 @@ function StoreTab({
         {error ? <ErrorBox message={error} /> : null}
       </form>
 
+      <ThemeSelector
+        collections={collections}
+        currentThemeId={selectedThemeId}
+        error={themeError}
+        onApplyTheme={handleApplyTheme}
+        onPreviewTheme={setPreviewThemeId}
+        products={products}
+        savingThemeId={themeSavingId}
+        store={store}
+        storeSlug={storeSlug}
+        successMessage={themeSavedMessage}
+      />
+
+      {previewThemeId && store ? (
+        <ThemePreviewModal
+          onApply={() => handleApplyTheme(previewThemeId)}
+          onClose={() => setPreviewThemeId(null)}
+          products={products}
+          collections={collections}
+          saving={themeSavingId === previewThemeId}
+          store={store}
+          storeSlug={storeSlug}
+          themeId={previewThemeId}
+        />
+      ) : null}
+
       <QuickReplies />
     </section>
+  );
+}
+
+function ThemeSelector({
+  collections,
+  currentThemeId,
+  error,
+  onApplyTheme,
+  onPreviewTheme,
+  products,
+  savingThemeId,
+  store,
+  storeSlug,
+  successMessage,
+}: {
+  collections: StoreCollection[];
+  currentThemeId: StorefrontThemeId;
+  error: string;
+  onApplyTheme: (themeId: StorefrontThemeId) => void;
+  onPreviewTheme: (themeId: StorefrontThemeId) => void;
+  products: Product[];
+  savingThemeId: StorefrontThemeId | null;
+  store: Store | null;
+  storeSlug: string;
+  successMessage: string;
+}) {
+  const themes = Object.values(storefrontThemeRegistry);
+
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Store theme</h2>
+          <p className="mt-1 text-sm leading-6 text-gray-500">
+            Preview your storefront themes and apply the one that fits your brand.
+          </p>
+        </div>
+        <PptBadge tone="primary">
+          Current: {storefrontThemeRegistry[currentThemeId].previewLabel}
+        </PptBadge>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-3">
+        {themes.map((theme) => {
+          const isSelected = theme.id === currentThemeId;
+          const isSaving = savingThemeId === theme.id;
+
+          return (
+            <article
+              key={theme.id}
+              className={`flex min-w-0 flex-col rounded-2xl border p-4 ${
+                isSelected
+                  ? "border-gray-950 bg-gray-50"
+                  : "border-gray-200 bg-white"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                    {theme.previewLabel}
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-gray-950">
+                    {theme.name}
+                  </h3>
+                </div>
+                {isSelected ? <PptBadge tone="success">Selected</PptBadge> : null}
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gray-950">
+                <div
+                  className={
+                    theme.id === "theme1"
+                      ? "h-24 bg-white p-3"
+                      : theme.id === "theme2"
+                        ? "h-24 bg-[#f5eee6] p-3"
+                        : "h-24 bg-neutral-950 p-3"
+                  }
+                >
+                  <div
+                    className={
+                      theme.id === "theme3"
+                        ? "h-full rounded-xl border border-white/18 bg-white/8"
+                        : "h-full rounded-xl border border-gray-200 bg-white"
+                    }
+                  >
+                    <div
+                      className={
+                        theme.id === "theme3"
+                          ? "mx-3 mt-3 h-3 w-20 rounded-full bg-white"
+                          : "mx-3 mt-3 h-3 w-20 rounded-full bg-gray-950"
+                      }
+                    />
+                    <div
+                      className={
+                        theme.id === "theme2"
+                          ? "mx-3 mt-3 h-8 rounded-xl bg-[#e8ded2]"
+                          : theme.id === "theme3"
+                            ? "mx-3 mt-3 grid grid-cols-2 gap-2"
+                            : "mx-3 mt-3 grid grid-cols-2 gap-2"
+                      }
+                    >
+                      <span
+                        className={
+                          theme.id === "theme3"
+                            ? "h-8 rounded-lg bg-white/20"
+                            : "h-8 rounded-lg bg-gray-100"
+                        }
+                      />
+                      <span
+                        className={
+                          theme.id === "theme3"
+                            ? "h-8 rounded-lg bg-white/20"
+                            : "h-8 rounded-lg bg-gray-100"
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-4 min-h-12 text-sm leading-6 text-gray-500">
+                {theme.description}
+              </p>
+
+              <div className="mt-auto grid gap-2 pt-4">
+                <PptButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onPreviewTheme(theme.id)}
+                  disabled={!store?.storeId}
+                >
+                  Preview
+                </PptButton>
+                <PptButton
+                  type="button"
+                  variant={isSelected ? "secondary" : "primary"}
+                  loading={isSaving}
+                  disabled={!store?.storeId || isSaving || isSelected}
+                  onClick={() => onApplyTheme(theme.id)}
+                >
+                  {isSelected ? "Current theme" : "Use this theme"}
+                </PptButton>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {!store?.storeId ? (
+        <PptNotice tone="warning" title="Store not ready" className="mt-4">
+          Finish store setup before applying a storefront theme.
+        </PptNotice>
+      ) : null}
+      <p className="mt-4 text-xs leading-5 text-gray-500">
+        Preview uses your current store data and {products.length} product
+        {products.length === 1 ? "" : "s"} across {collections.length} collection
+        {collections.length === 1 ? "" : "s"}. It does not save until you apply a theme.
+      </p>
+      {successMessage ? (
+        <PptNotice tone="success" title="Theme saved" className="mt-4">
+          {successMessage}
+        </PptNotice>
+      ) : null}
+      {error ? <ErrorBox message={error} /> : null}
+    </section>
+  );
+}
+
+function ThemePreviewModal({
+  collections,
+  onApply,
+  onClose,
+  products,
+  saving,
+  store,
+  storeSlug,
+  themeId,
+}: {
+  collections: StoreCollection[];
+  onApply: () => void;
+  onClose: () => void;
+  products: Product[];
+  saving: boolean;
+  store: Store;
+  storeSlug: string;
+  themeId: StorefrontThemeId;
+}) {
+  const theme = storefrontThemeRegistry[themeId];
+  const previewStore: Store = {
+    ...store,
+    selectedThemeId: themeId,
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/58 px-3 py-4 backdrop-blur-sm">
+      <section
+        aria-label={`${theme.name} preview`}
+        aria-modal="true"
+        role="dialog"
+        className="mx-auto grid w-full max-w-5xl gap-5 rounded-[28px] bg-white p-4 shadow-2xl lg:grid-cols-[minmax(0,1fr)_320px]"
+      >
+        <div className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <PptBadge tone="primary">Preview only</PptBadge>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-gray-950">
+                {theme.name}
+              </h2>
+            </div>
+            <PptButton type="button" variant="secondary" onClick={onClose}>
+              Close
+            </PptButton>
+          </div>
+
+          <div className="mx-auto aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-[34px] border-[10px] border-gray-950 bg-gray-950 shadow-[0_24px_70px_rgba(17,24,39,0.28)]">
+            <div
+              className="h-full w-full overflow-y-auto overscroll-contain rounded-[22px] bg-white"
+              onClickCapture={(event) => {
+                const target = event.target as HTMLElement;
+                const interactiveElement = target.closest("a, button");
+
+                if (interactiveElement) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }
+              }}
+            >
+              <ThemeRenderer
+                collections={collections}
+                isOwnerPreview
+                products={products}
+                selectedThemeId={themeId}
+                store={previewStore}
+                storeSlug={storeSlug || store.storeSlug || store.storeId}
+              />
+            </div>
+          </div>
+        </div>
+
+        <aside className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+            Theme preview
+          </p>
+          <h3 className="mt-2 text-lg font-semibold tracking-tight text-gray-950">
+            {theme.previewLabel}
+          </h3>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            {theme.description}
+          </p>
+          <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-600">
+            This is a preview. Your public storefront will not change until you apply this theme.
+          </div>
+          <div className="mt-5 grid gap-2">
+            <PptButton type="button" loading={saving} disabled={saving} onClick={onApply}>
+              Apply this theme
+            </PptButton>
+            <PptButton type="button" variant="secondary" onClick={onClose}>
+              Keep current theme
+            </PptButton>
+          </div>
+        </aside>
+      </section>
+    </div>
   );
 }
 
@@ -2588,6 +3524,7 @@ function ErrorBox({ message }: { message: string }) {
 }
 
 function Field({
+  inputRef,
   label,
   min,
   onChange,
@@ -2596,6 +3533,7 @@ function Field({
   type = "text",
   value,
 }: {
+  inputRef?: RefObject<HTMLInputElement | null>;
   label: string;
   min?: string;
   onChange: (value: string) => void;
@@ -2608,6 +3546,7 @@ function Field({
     <label className="text-sm font-medium text-gray-800">
       {label}
       <input
+        ref={inputRef}
         min={min}
         placeholder={placeholder}
         required={required}
@@ -2617,33 +3556,6 @@ function Field({
         onChange={(event) => onChange(event.target.value)}
         className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
       />
-    </label>
-  );
-}
-
-function ColorField({
-  label,
-  onChange,
-  value,
-}: {
-  label: string;
-  onChange: (value: string) => void;
-  value: string;
-}) {
-  return (
-    <label className="text-sm font-medium text-gray-800">
-      {label}
-      <div className="mt-2 flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-2 py-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-11 shrink-0 rounded-lg border border-gray-200 bg-white p-1"
-        />
-        <span className="min-w-0 font-mono text-xs uppercase text-gray-500">
-          {value}
-        </span>
-      </div>
     </label>
   );
 }

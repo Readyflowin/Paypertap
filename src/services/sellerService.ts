@@ -34,8 +34,11 @@ type FirstProductInput = {
   price?: number;
   description?: string;
   category?: string;
+  collectionId?: string;
+  collectionName?: string;
   inventoryQuantity?: number;
   imageFile?: File | null;
+  imageFiles?: File[];
 };
 
 type ProductOnboardingInput = {
@@ -381,8 +384,10 @@ export async function completeProductOnboarding(
     hasPrice ||
     Boolean(product?.description?.trim()) ||
     Boolean(product?.category?.trim()) ||
+    Boolean(product?.collectionName?.trim()) ||
     product?.inventoryQuantity !== undefined ||
-    Boolean(product?.imageFile);
+    Boolean(product?.imageFile) ||
+    Boolean(product?.imageFiles?.length);
 
   if (hasProductInput) {
     if (!title) {
@@ -397,11 +402,13 @@ export async function completeProductOnboarding(
       title,
       description: product?.description?.trim() || "",
       price,
-      category: product?.category?.trim() || "General",
+      category: product?.category?.trim() || product?.collectionName?.trim() || "General",
+      collectionId: product?.collectionId?.trim() || "",
+      collectionName: product?.collectionName?.trim() || product?.category?.trim() || "",
       inventoryQuantity: product?.inventoryQuantity
         ? toPositiveInt(product.inventoryQuantity, "Inventory quantity")
         : 1,
-      imageFile: product?.imageFile || null,
+      imageFiles: product?.imageFiles || (product?.imageFile ? [product.imageFile] : []),
       status: "open",
     });
   }

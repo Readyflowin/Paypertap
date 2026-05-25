@@ -29,12 +29,6 @@ import {
   getProductUnavailableLabel,
   isProductBookable,
 } from "@/lib/productAvailability";
-import {
-  getStoreFontClass,
-  getStoreInstagramUrl,
-  getStoreThemeClass,
-  getStoreThemeStyle,
-} from "@/lib/storeTheme";
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
 import type { Product, Store } from "@/types/firestore";
@@ -48,8 +42,24 @@ type PageState = {
 };
 
 function getProductImage(product: Product): string {
-  const image = product.images?.find((item) => item.thumbUrl || item.url || item.mediumUrl);
-  return image?.thumbUrl || image?.url || image?.mediumUrl || "";
+  const image = product.images?.find((item) => item.url || item.mediumUrl || item.thumbUrl);
+  return image?.url || image?.mediumUrl || image?.thumbUrl || "";
+}
+
+function getStoreInstagramUrl(store: Store): string {
+  const maybeStore = store as Store & {
+    instagramUrl?: string;
+    instagramHandle?: string;
+    instagram?: string;
+    socialLinks?: { instagram?: string };
+  };
+
+  if (maybeStore.instagramUrl) return maybeStore.instagramUrl;
+  if (maybeStore.instagramHandle) {
+    return `https://instagram.com/${maybeStore.instagramHandle.replace(/^@+/, "")}`;
+  }
+
+  return maybeStore.instagram || maybeStore.socialLinks?.instagram || "";
 }
 
 function getInitials(name: string) {
@@ -73,7 +83,7 @@ function getStatusBadge(product: Product, isReserved: boolean): { label: string;
 
 function ProductDetailLoading() {
   return (
-    <main className="pds-page min-h-screen px-4 py-6 sm:py-10">
+    <main className="pds-page min-h-screen overflow-x-hidden px-4 py-6 sm:py-10">
       <section className="pds-container">
         <div className="flex min-h-[35vh] items-center justify-center">
           <PptTapLoader title="Loading product..." description="Checking availability and booking details." />
@@ -103,6 +113,8 @@ function StoreMiniBlock({
           <img
             src={store.logoUrl}
             alt={`${store.storeName} logo`}
+            decoding="async"
+            loading="lazy"
             className="h-12 w-12 rounded-[18px] border border-[var(--pds-border)] object-cover"
           />
         ) : (
@@ -226,7 +238,7 @@ export default function ProductDetailPage() {
 
   if (state.error || !state.store || !state.product) {
     return (
-      <main className="pds-page grid min-h-screen place-items-center px-4 py-8">
+      <main className="pds-page grid min-h-screen place-items-center overflow-x-hidden px-4 py-8">
         <PptEmptyState
           title="Product not available"
           description="This product may be sold out or unpublished."
@@ -253,12 +265,9 @@ export default function ProductDetailPage() {
   const unavailableLabel = getProductUnavailableLabel(product);
 
   return (
-    <main
-      className={`pds-page ppt-public-store-page min-h-screen px-4 py-6 sm:py-10 ${getStoreThemeClass(store)} ${getStoreFontClass(store)}`}
-      style={getStoreThemeStyle(store)}
-    >
+    <main className="pds-page min-h-screen overflow-x-hidden px-4 py-6 sm:py-10">
       <section className="mx-auto w-full max-w-5xl">
-        <div className="mx-auto max-w-[460px] lg:max-w-none">
+        <div className="mx-auto max-w-[460px] min-w-0 lg:max-w-none">
           <Link
             to={`/${storeSlug}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-[var(--pds-muted)] transition hover:text-[var(--pds-primary)]"
@@ -267,13 +276,16 @@ export default function ProductDetailPage() {
             Back to store
           </Link>
 
-          <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_0.86fr] lg:items-start">
+          <div className="mt-5 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.86fr)] lg:items-start">
             <section className="pds-panel overflow-hidden p-3">
               <div className="aspect-[4/5] overflow-hidden rounded-[28px] bg-[linear-gradient(145deg,#f4f1ff,#fff)]">
                 {imageUrl ? (
                   <img
                     src={imageUrl}
                     alt={product.images?.[0]?.alt || product.title}
+                    decoding="async"
+                    fetchPriority="high"
+                    loading="eager"
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -285,7 +297,7 @@ export default function ProductDetailPage() {
               </div>
             </section>
 
-            <div className="space-y-5 lg:sticky lg:top-6">
+            <div className="min-w-0 space-y-5 lg:sticky lg:top-6">
               <section className="pds-panel">
                 {isOwnerPreview ? (
                   <div className="mb-4">
@@ -300,14 +312,14 @@ export default function ProductDetailPage() {
                   <PptBadge tone={statusBadge.tone}>{statusBadge.label}</PptBadge>
                 </div>
 
-                <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-[-0.05em] text-[var(--pds-text)]">
+                <h1 className="mt-4 break-words text-4xl font-semibold leading-tight tracking-[-0.05em] text-[var(--pds-text)]">
                   {product.title}
                 </h1>
                 <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[var(--pds-text)]">
                   {formatINR(product.price)}
                 </p>
                 {product.description ? (
-                  <p className="mt-4 text-sm leading-6 text-[var(--pds-muted)]">
+                  <p className="mt-4 break-words text-sm leading-6 text-[var(--pds-muted)]">
                     {product.description}
                   </p>
                 ) : null}

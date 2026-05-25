@@ -11,18 +11,23 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { COMPATIBILITY_COLLECTION_NAME } from "../lib/collections";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
+import { MAX_PRODUCT_IMAGE_COUNT } from "../lib/imageCompression";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
-import { uploadProductImage } from "./uploadService";
+import { uploadProductImages } from "./uploadService";
 
 type CreateSellerProductInput = {
   title: string;
   description?: string;
   price: number;
   category?: string;
+  collectionId?: string;
+  collectionName?: string;
   status?: ProductStatus;
   inventoryQuantity?: number;
   imageFile?: File | null;
+  imageFiles?: File[];
 };
 
 export type UpdateSellerProductInput = {
@@ -30,9 +35,12 @@ export type UpdateSellerProductInput = {
   description?: string;
   price: number;
   category?: string;
+  collectionId?: string;
+  collectionName?: string;
   status: ProductStatus;
   inventoryQuantity: number;
   imageFile?: File | null;
+  imageFiles?: File[];
 };
 
 function toPositiveInt(value: number, fieldName: string) {
@@ -71,6 +79,23 @@ function normalizeProduct(productDoc: {
     reservedQuantity: Number(data.reservedQuantity || 0),
     soldQuantity: Number(data.soldQuantity || 0),
   };
+}
+
+function getProductImageFiles(input: {
+  imageFile?: File | null;
+  imageFiles?: File[];
+}) {
+  const files = input.imageFiles?.length
+    ? input.imageFiles
+    : input.imageFile
+      ? [input.imageFile]
+      : [];
+
+  if (files.length > MAX_PRODUCT_IMAGE_COUNT) {
+    throw new Error(`Please choose up to ${MAX_PRODUCT_IMAGE_COUNT} product images.`);
+  }
+
+  return files;
 }
 
 export async function getProductById(productId: string): Promise<Product | null> {
@@ -173,12 +198,12 @@ export async function createSellerProduct(
     input.inventoryQuantity ?? 1,
     "Inventory quantity"
   );
-  let productImage: ProductImage | null = null;
-
-  if (input.imageFile) {
-    productImage = await uploadProductImage(input.imageFile, title);
-  }
-  const images: ProductImage[] = productImage ? [productImage] : [];
+  const collectionId = input.collectionId?.trim() || "";
+  const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
+  const imageFiles = getProductImageFiles(input);
+  const images: ProductImage[] = imageFiles.length
+    ? await uploadProductImages(imageFiles, title)
+    : [];
   const sortOrder = Date.now();
 
   const productData = {
@@ -190,7 +215,9 @@ export async function createSellerProduct(
     price,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     sellerCollectAmount: getSellerCollectAmount(price),
-    category: input.category?.trim() || "General",
+    category: input.category?.trim() || collectionName || COMPATIBILITY_COLLECTION_NAME,
+    collectionId,
+    collectionName,
     images,
     status: input.status || "open",
     isFeatured: false,
@@ -252,17 +279,22 @@ export async function updateSellerProduct(
   }
 
   let images: ProductImage[] = product.images || [];
+  const collectionId = input.collectionId?.trim() || "";
+  const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
 
-  if (input.imageFile) {
-    const image = await uploadProductImage(input.imageFile, title);
-    images = image ? [image] : images;
+  const imageFiles = getProductImageFiles(input);
+
+  if (imageFiles.length) {
+    images = await uploadProductImages(imageFiles, title);
   }
 
   const productRef = doc(db, "products", product.productId || product.id);
   const updatePayload = {
     title,
     description: input.description?.trim() || "",
-    category: input.category?.trim() || "General",
+    category: input.category?.trim() || collectionName || COMPATIBILITY_COLLECTION_NAME,
+    collectionId,
+    collectionName,
     price,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     sellerCollectAmount: getSellerCollectAmount(price),
@@ -277,6 +309,7 @@ export async function updateSellerProduct(
   return {
     ...product,
     ...updatePayload,
+    collectionId,
     updatedAt: undefined,
   };
 }

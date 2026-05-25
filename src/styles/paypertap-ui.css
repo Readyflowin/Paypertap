@@ -232,63 +232,6 @@
             linear-gradient(135deg, #11101a 0%, #27165e 54%, #5b35f5 100%);
         }
 
-        .ppt-public-store-page.pds-page {
-          color: var(--store-text);
-          background:
-            radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--store-primary) 10%, transparent), transparent 32%),
-            radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--store-accent) 8%, transparent), transparent 28%),
-            linear-gradient(180deg, var(--store-bg) 0%, color-mix(in srgb, var(--store-bg) 82%, #fff) 100%);
-        }
-
-        .ppt-public-store-page .pds-panel,
-        .ppt-public-store-page .pds-product-card,
-        .ppt-public-store-page .pds-price-card,
-        .ppt-public-store-page .pds-empty-card {
-          color: var(--store-text);
-          background: color-mix(in srgb, var(--store-card) 92%, #fff);
-          border-color: color-mix(in srgb, var(--store-text) 12%, transparent);
-        }
-
-        .ppt-public-store-page .pds-product-image,
-        .ppt-public-store-page .pds-price-breakdown,
-        .ppt-public-store-page .pds-checkout-line {
-          background:
-            radial-gradient(circle at 55% 24%, color-mix(in srgb, var(--store-primary) 13%, transparent), transparent 30%),
-            linear-gradient(145deg, color-mix(in srgb, var(--store-card) 82%, #fff), var(--store-card));
-        }
-
-        .ppt-public-store-page .pds-button-primary {
-          color: var(--store-button-text) !important;
-          background: linear-gradient(135deg, var(--store-button), var(--store-primary));
-          box-shadow: 0 13px 28px color-mix(in srgb, var(--store-button) 22%, transparent);
-        }
-
-        .ppt-public-store-page .pds-button-soft,
-        .ppt-public-store-page .pds-product-price span,
-        .ppt-public-store-page a:hover {
-          color: var(--store-primary);
-        }
-
-        .ppt-public-store-page .pds-store-hero-card {
-          box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 24px 60px color-mix(in srgb, var(--store-primary) 18%, transparent);
-        }
-
-        .ppt-store-font-clean-sans {
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        .ppt-store-font-boutique-serif {
-          font-family: Georgia, "Times New Roman", serif;
-        }
-
-        .ppt-store-font-bold-street {
-          font-family: Impact, Haettenschweiler, "Arial Black", system-ui, sans-serif;
-        }
-
-        .ppt-store-font-minimal-modern {
-          font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
         .pds-section {
           margin-top: 34px;
         }
@@ -2374,33 +2317,60 @@
             padding: 30px 14px 70px;
           }
 
-          .ppt-store-product-grid {
-            grid-template-columns: 1fr !important;
-          }
-
           .ppt-store-product-grid .pds-product-card {
-            border-radius: 24px;
+            border-radius: 18px;
           }
 
           .ppt-store-product-grid .pds-product-image {
-            min-height: 265px;
-            aspect-ratio: 4 / 4.6;
+            min-height: 0;
+            aspect-ratio: 4 / 5;
           }
 
-          .pds-product-body {
-            padding: 16px;
+          .ppt-store-product-grid .pds-product-body {
+            padding: 10px;
           }
 
-          .pds-product-body h3 {
-            font-size: 22px;
+          .ppt-store-product-grid .pds-product-meta {
+            gap: 6px;
           }
 
-          .pds-product-price {
+          .ppt-store-product-grid .pds-product-meta > span {
+            font-size: 10px;
+            letter-spacing: .05em;
+          }
+
+          .ppt-store-product-grid .pds-product-body h3 {
+            margin-top: 9px;
+            font-size: 15px;
+            line-height: 1.16;
+            letter-spacing: -.02em;
+          }
+
+          .ppt-store-product-grid .pds-product-body p {
+            display: none;
+          }
+
+          .ppt-store-product-grid .pds-product-price {
             align-items: flex-start;
+            flex-direction: column;
+            gap: 2px;
+            margin: 10px 0;
           }
 
-          .pds-product-price strong {
-            font-size: 25px;
+          .ppt-store-product-grid .pds-product-price strong {
+            font-size: 18px;
+          }
+
+          .ppt-store-product-grid .pds-product-price span {
+            font-size: 11px;
+            text-align: left;
+          }
+
+          .ppt-store-product-grid .pds-button {
+            min-height: 38px;
+            padding-inline: 10px;
+            font-size: 12px;
+            white-space: normal;
           }
 
           .pds-hero h1 {

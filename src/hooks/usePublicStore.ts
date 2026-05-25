@@ -43,7 +43,7 @@ export function usePublicStore(storeId: string): UsePublicStoreState {
 
         console.error("Failed to load public store:", err);
         setData(null);
-        setError("Store not found");
+        setError("Unable to load this storefront right now");
       } finally {
         if (!cancelled) {
           setLoading(false);

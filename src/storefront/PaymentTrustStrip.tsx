@@ -1,0 +1,147 @@
+import { ShieldCheck } from "lucide-react";
+
+import googlePayLogo from "@/assets/payment/google-pay-logo.svg";
+import phonePeLogo from "@/assets/payment/phonepe-logo.svg";
+import upiLogo from "@/assets/payment/upi-logo.svg";
+import { PptBrandIcon } from "@/components/ui";
+import { BOOKING_ADVANCE_AMOUNT } from "@/lib/money";
+
+type PaymentTrustVariant = "theme1" | "theme2" | "theme3";
+
+type PaymentTrustStripProps = {
+  compact?: boolean;
+  variant: PaymentTrustVariant;
+};
+
+const variantClasses: Record<
+  PaymentTrustVariant,
+  {
+    shell: string;
+    label: string;
+    badge: string;
+    logoBadge: string;
+    iconBadge: string;
+  }
+> = {
+  theme1: {
+    shell:
+      "border-neutral-200 bg-white text-neutral-600 shadow-[0_12px_32px_rgba(17,18,23,0.04)]",
+    label: "text-neutral-950",
+    badge: "border-neutral-200 bg-neutral-50 text-neutral-700",
+    logoBadge: "border-neutral-200 bg-white",
+    iconBadge: "bg-neutral-950 text-white",
+  },
+  theme2: {
+    shell:
+      "border-[#e7ded4] bg-[#fffaf4] text-[#6f6257] shadow-[0_14px_38px_rgba(78,61,43,0.05)]",
+    label: "text-[#171411]",
+    badge: "border-[#dfd3c6] bg-white/72 text-[#53473d]",
+    logoBadge: "border-[#dfd3c6] bg-white/82",
+    iconBadge: "bg-[#171411] text-[#fffaf4]",
+  },
+  theme3: {
+    shell:
+      "border-neutral-800 bg-neutral-950 text-white/68 shadow-[0_18px_44px_rgba(10,10,12,0.16)]",
+    label: "text-white",
+    badge: "border-white/12 bg-white/8 text-white/72",
+    logoBadge: "border-white/14 bg-white",
+    iconBadge: "bg-white text-neutral-950",
+  },
+};
+
+const paymentLogos = [
+  { alt: "UPI accepted by seller", src: upiLogo },
+  { alt: "Google Pay accepted by seller", src: googlePayLogo },
+  { alt: "PhonePe accepted by seller", src: phonePeLogo },
+];
+
+export function PaymentTrustStrip({
+  compact = false,
+  variant,
+}: PaymentTrustStripProps) {
+  const classes = variantClasses[variant];
+
+  return (
+    <section
+      aria-label="Payment and booking trust"
+      className={`min-w-0 rounded-[24px] border ${classes.shell} ${
+        compact ? "p-3" : "p-4"
+      }`}
+    >
+      <div
+        className={`flex min-w-0 flex-col gap-3 ${
+          compact ? "" : "sm:flex-row sm:items-center sm:justify-between"
+        }`}
+      >
+        <div className="min-w-0">
+          <p
+            className={`text-xs font-semibold uppercase tracking-[0.14em] ${classes.label}`}
+          >
+            Seller payment options
+          </p>
+          <p className="mt-1 text-xs leading-5">
+            Seller may accept UPI, Google Pay, and PhonePe for the remaining
+            amount.
+          </p>
+        </div>
+
+        <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
+          {paymentLogos.map((logo) => (
+            <span
+              key={logo.alt}
+              className={`inline-flex h-10 min-w-[78px] shrink-0 items-center justify-center rounded-full border px-3 ${classes.logoBadge}`}
+            >
+              <img
+                src={logo.src}
+                alt={logo.alt}
+                decoding="async"
+                loading="lazy"
+                draggable={false}
+                className="block max-h-6 w-auto max-w-[96px] object-contain"
+              />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className={`mt-3 grid gap-2 ${
+          compact ? "" : "min-[560px]:grid-cols-3"
+        }`}
+      >
+        <div
+          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
+        >
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+          >
+            <ShieldCheck size={14} aria-hidden="true" />
+          </span>
+          <span className="min-w-0 whitespace-normal break-words">
+            ₹{BOOKING_ADVANCE_AMOUNT} booking via PayPerTap
+          </span>
+        </div>
+        <div
+          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
+        >
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+          >
+            <PptBrandIcon type="whatsapp" size={15} />
+          </span>
+          <span className="min-w-0 whitespace-normal break-words">
+            Seller confirms on WhatsApp
+          </span>
+        </div>
+        <div
+          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
+        >
+          <span className="shrink-0 font-semibold">₹</span>
+          <span className="min-w-0 whitespace-normal break-words">
+            Remaining amount paid directly to seller
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}

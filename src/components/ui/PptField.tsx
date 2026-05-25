@@ -16,6 +16,7 @@ export type PptFieldProps = {
   step?: string | number;
   minLength?: number;
   required?: boolean;
+  autoComplete?: string;
   className?: string;
 };
 
@@ -34,6 +35,7 @@ export function PptField({
   step,
   minLength,
   required,
+  autoComplete,
   className,
 }: PptFieldProps) {
   return (
@@ -48,6 +50,7 @@ export function PptField({
             value={value}
             onChange={onChange}
             name={name}
+            autoComplete={autoComplete}
             required={required}
           />
         ) : (
@@ -60,6 +63,7 @@ export function PptField({
             min={min}
             step={step}
             minLength={minLength}
+            autoComplete={autoComplete}
             required={required}
           />
         )}

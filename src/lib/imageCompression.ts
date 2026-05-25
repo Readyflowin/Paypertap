@@ -1,128 +1,209 @@
-import type { ProductImage } from "../types/firestore";
-
-type CompressImageOptions = {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
-  outputType?: string;
+export type ImageCompressionPreset = {
+  maxLongestSide: number;
+  quality: number;
+  outputType: "image/webp";
+  suffix: string;
 };
 
-const MAX_ORIGINAL_BYTES = 8 * 1024 * 1024;
-const MAX_COMPRESSED_DATA_URL_BYTES = 900 * 1024;
-const TOO_LARGE_MESSAGE = "Image is too large. Please choose a smaller image.";
+export const IMAGE_COMPRESSION_PRESETS = {
+  productMain: {
+    maxLongestSide: 1400,
+    quality: 0.8,
+    outputType: "image/webp",
+    suffix: "main",
+  },
+  productThumbnail: {
+    maxLongestSide: 600,
+    quality: 0.74,
+    outputType: "image/webp",
+    suffix: "thumb",
+  },
+  storeLogo: {
+    maxLongestSide: 512,
+    quality: 0.82,
+    outputType: "image/webp",
+    suffix: "logo",
+  },
+  storefrontBanner: {
+    maxLongestSide: 1800,
+    quality: 0.8,
+    outputType: "image/webp",
+    suffix: "banner",
+  },
+} satisfies Record<string, ImageCompressionPreset>;
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+const allowedImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp"]);
+export const MAX_PRODUCT_IMAGE_COUNT = 3;
 
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
+export function isAllowedImageFile(file: File): boolean {
+  if (allowedImageMimeTypes.has(file.type)) return true;
 
-      reject(new Error("Image could not be processed. You can continue without an image."));
-    };
-
-    reader.onerror = () => {
-      reject(new Error("Image could not be processed. You can continue without an image."));
-    };
-
-    reader.readAsDataURL(file);
-  });
+  const extension = getFileExtension(file.name);
+  return allowedImageExtensions.has(extension);
 }
 
-function loadImage(dataUrl: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-
-    image.onload = () => resolve(image);
-    image.onerror = () => {
-      reject(new Error("Image could not be processed. You can continue without an image."));
-    };
-    image.src = dataUrl;
-  });
+export function assertValidImageFile(file: File) {
+  if (!isAllowedImageFile(file)) {
+    throw new Error("Please choose a JPEG, PNG, or WebP image.");
+  }
 }
 
-function getDataUrlBytes(dataUrl: string): number {
-  return Math.ceil((dataUrl.length * 3) / 4);
+export function assertValidImageFiles(files: File[], maxCount = MAX_PRODUCT_IMAGE_COUNT) {
+  if (files.length > maxCount) {
+    throw new Error(`Please choose up to ${maxCount} product images.`);
+  }
+
+  files.forEach(assertValidImageFile);
 }
 
-export async function compressImageFile(
+export async function compressImage(
   file: File,
-  {
-    maxWidth = 1200,
-    maxHeight = 1200,
-    quality = 0.72,
-    outputType = "image/jpeg",
-  }: CompressImageOptions = {}
-): Promise<string> {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Please choose a valid image file.");
-  }
-
-  if (file.size > MAX_ORIGINAL_BYTES) {
-    throw new Error(TOO_LARGE_MESSAGE);
-  }
-
+  preset: ImageCompressionPreset
+): Promise<File> {
   try {
-    const sourceDataUrl = await readFileAsDataUrl(file);
-    const image = await loadImage(sourceDataUrl);
-    const ratio = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
-    const width = Math.max(1, Math.round(image.width * ratio));
-    const height = Math.max(1, Math.round(image.height * ratio));
+    assertValidImageFile(file);
+
+    const source = await loadImageSource(file);
+    const { width, height } = getTargetSize(
+      source.width,
+      source.height,
+      preset.maxLongestSide
+    );
     const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      throw new Error("Image could not be processed. You can continue without an image.");
-    }
-
     canvas.width = width;
     canvas.height = height;
-    context.drawImage(image, 0, 0, width, height);
 
-    const compressedDataUrl = canvas.toDataURL(outputType, quality);
+    const context = canvas.getContext("2d", {
+      alpha: true,
+    });
 
-    if (getDataUrlBytes(compressedDataUrl) > MAX_COMPRESSED_DATA_URL_BYTES) {
-      throw new Error(TOO_LARGE_MESSAGE);
+    if (!context) {
+      throw new Error("Canvas compression is not available in this browser.");
     }
 
-    return compressedDataUrl;
+    context.drawImage(source.image, 0, 0, width, height);
+    source.dispose();
+
+    const blob = await canvasToBlob(canvas, preset.outputType, preset.quality);
+    const mimeType = blob.type || preset.outputType;
+
+    return new File([blob], getCompressedFilename(file.name, preset.suffix, mimeType), {
+      type: mimeType,
+      lastModified: Date.now(),
+    });
   } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-
-    throw new Error("Image could not be processed. You can continue without an image.");
+    console.warn("Image compression failed; uploading original image instead.", error);
+    return file;
   }
 }
 
-export async function compressImagePair(
-  file: File,
-  alt: string
-): Promise<ProductImage> {
-  const [mediumDataUrl, thumbDataUrl] = await Promise.all([
-    compressImageFile(file, {
-      maxWidth: 1200,
-      maxHeight: 1200,
-      quality: 0.72,
-      outputType: "image/jpeg",
-    }),
-    compressImageFile(file, {
-      maxWidth: 500,
-      maxHeight: 500,
-      quality: 0.68,
-      outputType: "image/jpeg",
-    }),
-  ]);
+export function compressProductImageSet(file: File) {
+  return Promise.all([
+    compressImage(file, IMAGE_COMPRESSION_PRESETS.productMain),
+    compressImage(file, IMAGE_COMPRESSION_PRESETS.productThumbnail),
+  ]).then(([mainFile, thumbnailFile]) => ({
+    mainFile,
+    thumbnailFile,
+  }));
+}
+
+export function compressLogoImage(file: File) {
+  return compressImage(file, IMAGE_COMPRESSION_PRESETS.storeLogo);
+}
+
+export function compressStorefrontImage(file: File) {
+  return compressImage(file, IMAGE_COMPRESSION_PRESETS.storefrontBanner);
+}
+
+function getFileExtension(filename: string) {
+  return filename.split(".").pop()?.toLowerCase().trim() || "";
+}
+
+function getCompressedFilename(filename: string, suffix: string, mimeType: string) {
+  const extension = mimeType === "image/webp" ? "webp" : getFileExtension(filename) || "jpg";
+  const baseName =
+    filename
+      .replace(/\.[^.]+$/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "image";
+
+  return `${baseName}-${suffix}.${extension}`;
+}
+
+function getTargetSize(width: number, height: number, maxLongestSide: number) {
+  const longestSide = Math.max(width, height);
+
+  if (longestSide <= maxLongestSide) {
+    return {
+      width,
+      height,
+    };
+  }
+
+  const scale = maxLongestSide / longestSide;
 
   return {
-    url: mediumDataUrl,
-    mediumUrl: mediumDataUrl,
-    thumbUrl: thumbDataUrl,
-    alt,
-    key: "",
-    sortOrder: 0,
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
   };
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Could not compress image."));
+          return;
+        }
+
+        resolve(blob);
+      },
+      type,
+      quality
+    );
+  });
+}
+
+async function loadImageSource(file: File): Promise<{
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  dispose: () => void;
+}> {
+  if ("createImageBitmap" in window) {
+    const bitmap = await createImageBitmap(file, {
+      imageOrientation: "from-image",
+    });
+
+    return {
+      image: bitmap,
+      width: bitmap.width,
+      height: bitmap.height,
+      dispose: () => bitmap.close(),
+    };
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("Could not read image file."));
+      element.src = objectUrl;
+    });
+
+    return {
+      image,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      dispose: () => URL.revokeObjectURL(objectUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
 }

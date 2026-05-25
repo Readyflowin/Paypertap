@@ -29,20 +29,15 @@ export type Store = {
   logoKey?: string;
   heroImageUrl?: string;
   themeId: string;
-  backgroundColor?: string;
-  textColor?: string;
-  cardColor?: string;
-  primaryColor?: string;
+  primaryColor: string;
   secondaryColor: string;
-  accentColor?: string;
-  buttonColor?: string;
-  buttonTextColor?: string;
+  accentColor: string;
   colors?: {
     primaryColor: string;
     secondaryColor: string;
     accentColor: string;
   };
-  fontStyle?: string;
+  fontStyle: string;
   isPublished: boolean;
   bookingAdvanceAmount?: number;
   phone?: string;
@@ -50,9 +45,15 @@ export type Store = {
   whatsappNumber?: string;
   instagramUrl?: string;
   instagramHandle?: string;
+  ownerName?: string;
+  supportEmail?: string;
+  supportPhone?: string;
+  returnsPolicyType?: "returns_accepted" | "exchange_only" | "no_returns";
+  returnsPolicyNotes?: string;
   heroHeading?: string;
   heroSubtitle?: string;
   themeStyle?: "soft-boutique" | "dark-drop" | "clean-minimal" | string;
+  selectedThemeId?: string;
   emailEvents?: {
     storeCreatedSentAt?: unknown;
   };
@@ -101,6 +102,7 @@ export type ProductImage = {
   thumbUrl: string;
   alt: string;
   key: string;
+  thumbKey?: string;
   sortOrder: number;
   mediumUrl?: string;
 };
@@ -116,6 +118,9 @@ export type Product = {
   bookingAdvanceAmount: number;
   sellerCollectAmount: number;
   category: string;
+  categoryName?: string;
+  collectionId?: string;
+  collectionName?: string;
   images?: ProductImage[];
   status: ProductStatus;
   isFeatured: boolean;
@@ -128,6 +133,18 @@ export type Product = {
   emailEvents?: {
     productAddedSentAt?: unknown;
   };
+  createdAt?: unknown;
+  updatedAt?: unknown;
+};
+
+export type StoreCollection = {
+  id: string;
+  collectionId: string;
+  storeId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  productCount?: number;
   createdAt?: unknown;
   updatedAt?: unknown;
 };

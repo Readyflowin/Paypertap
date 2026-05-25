@@ -1,0 +1,122 @@
+import { motion } from "framer-motion";
+import { Heart, Search, ShieldCheck } from "lucide-react";
+
+import { WhatsAppIcon } from "./HeroBadge";
+
+const products = [
+  {
+    alt: "Vintage denim jacket on a hanger",
+    image:
+      "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=420&q=80",
+    name: "Denim jacket",
+    price: "₹1,499",
+  },
+  {
+    alt: "Neutral linen clothing flatlay",
+    image:
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=420&q=80",
+    name: "Linen co-ord",
+    price: "₹899",
+  },
+  {
+    alt: "Handmade tote bag and accessories",
+    image:
+      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=420&q=80",
+    name: "Handmade bag",
+    price: "₹649",
+  },
+  {
+    alt: "Minimal jewellery on a boutique tray",
+    image:
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=420&q=80",
+    name: "Drop earrings",
+    price: "₹399",
+  },
+];
+
+export function HeroPhoneMockup() {
+  return (
+    <motion.div
+      className="ppt-phone-stage"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.16, duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="ppt-phone-glow" />
+
+      <motion.div
+        className="ppt-phone"
+        animate={{ y: [0, -5, 0] }}
+        transition={{ duration: 7.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <div className="ppt-phone-notch">
+          <div />
+          <span />
+        </div>
+
+        <div className="ppt-phone-screen">
+          <div className="ppt-phone-screen-bg" />
+          <div className="ppt-store-ui">
+            <div className="ppt-store-topbar">
+              <div>
+                <span>PayPerTap store</span>
+                <strong>aditya.thrift</strong>
+              </div>
+              <div className="ppt-store-avatar">P</div>
+            </div>
+
+            <div className="ppt-store-hero-card">
+              <div className="ppt-store-hero-copy">
+                <span>New drop</span>
+                <strong>Reserved through verified bookings</strong>
+              </div>
+              <div className="ppt-store-hero-metric">₹20</div>
+            </div>
+
+            <div className="ppt-store-search">
+              <Search size={14} strokeWidth={2.2} />
+              <span>Search products</span>
+            </div>
+
+            <div className="ppt-store-tabs">
+              <span className="is-active">All</span>
+              <span>Thrift</span>
+              <span>Handmade</span>
+            </div>
+
+            <div className="ppt-store-grid">
+              {products.map((product, index) => (
+                <div className="ppt-store-product" key={product.name}>
+                  <div className="ppt-store-product-media">
+                    <img
+                      src={product.image}
+                      alt={product.alt}
+                      loading={index < 2 ? "eager" : "lazy"}
+                      decoding="async"
+                    />
+                    <Heart size={13} strokeWidth={2.4} />
+                  </div>
+                  <p>{product.name}</p>
+                  <span>{product.price}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="ppt-store-booking-strip">
+              <ShieldCheck size={16} strokeWidth={2.2} />
+              <div>
+                <strong>₹20 booking via PayPerTap</strong>
+                <span>Remaining amount paid directly to seller</span>
+              </div>
+            </div>
+
+            <div className="ppt-store-whatsapp">
+              <WhatsAppIcon size={17} />
+              <span>Continue to WhatsApp</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}

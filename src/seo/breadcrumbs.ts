@@ -1,0 +1,1 @@
+export { breadcrumbListSchema } from "./schema";

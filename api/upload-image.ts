@@ -12,8 +12,9 @@ export const config = {
   },
 };
 
-const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxFileSize = 5 * 1024 * 1024;
+const publicImageCacheControl = "public, max-age=31536000, immutable";
 
 type UploadedFile = {
   filepath: string;
@@ -97,7 +98,6 @@ function getExtensionForMimeType(mimetype: string) {
   if (mimetype === "image/jpeg") return ".jpg";
   if (mimetype === "image/png") return ".png";
   if (mimetype === "image/webp") return ".webp";
-  if (mimetype === "image/gif") return ".gif";
   return "";
 }
 
@@ -185,7 +185,7 @@ export default async function handler(req: any, res: any) {
     if (!allowedMimeTypes.has(mimetype)) {
       return sendJson(res, 400, {
         success: false,
-        error: "Only JPEG, PNG, WebP, and GIF images are allowed.",
+        error: "Only JPEG, PNG, and WebP images are allowed.",
       });
     }
 
@@ -215,6 +215,7 @@ export default async function handler(req: any, res: any) {
         Bucket: bucketName,
         Key: key,
         Body: body,
+        CacheControl: publicImageCacheControl,
         ContentType: mimetype,
       }),
     );
@@ -225,6 +226,7 @@ export default async function handler(req: any, res: any) {
       success: true,
       key,
       url,
+      cacheControl: publicImageCacheControl,
       warning: url ? undefined : "CLOUDFLARE_R2_PUBLIC_BASE_URL is not configured.",
     });
   } catch (error) {

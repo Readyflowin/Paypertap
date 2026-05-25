@@ -7,6 +7,7 @@ export type PptSelectFieldProps = {
   value?: string;
   onChange?: ChangeEventHandler<HTMLSelectElement>;
   options: string[];
+  getOptionLabel?: (option: string) => string;
   className?: string;
 };
 
@@ -15,6 +16,7 @@ export function PptSelectField({
   value,
   onChange,
   options,
+  getOptionLabel,
   className,
 }: PptSelectFieldProps) {
   return (
@@ -24,7 +26,7 @@ export function PptSelectField({
         <select value={value} onChange={onChange}>
           {options.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {getOptionLabel ? getOptionLabel(option) : option}
             </option>
           ))}
         </select>

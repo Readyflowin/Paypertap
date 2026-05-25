@@ -1,16 +1,26 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ImageIcon, Package, Tags, UploadCloud, WalletCards } from "lucide-react";
+import { ImageIcon, Package, UploadCloud, WalletCards } from "lucide-react";
 
 import {
   PptBadge,
   PptButton,
   PptField,
   PptNotice,
+  PptSelectField,
   PptTapLoader,
 } from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
-import { completeProductOnboarding } from "../services/sellerService";
+import {
+  assertValidImageFiles,
+  MAX_PRODUCT_IMAGE_COUNT,
+} from "../lib/imageCompression";
+import {
+  completeProductOnboarding,
+  getSellerByUid,
+} from "../services/sellerService";
+import { listStoreCollections } from "../services/collectionService";
+import type { StoreCollection } from "../types/firestore";
 
 export default function ProductOnboardingPage() {
   const navigate = useNavigate();
@@ -19,10 +29,11 @@ export default function ProductOnboardingPage() {
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [collections, setCollections] = useState<StoreCollection[]>([]);
+  const [collectionId, setCollectionId] = useState("");
   const [inventoryQuantity, setInventoryQuantity] = useState("1");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [imageFileName, setImageFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,16 +45,40 @@ export default function ProductOnboardingPage() {
   }, [authLoading, navigate, user]);
 
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl("");
+    if (!user) return;
+
+    let cancelled = false;
+
+    async function loadCollections() {
+      const seller = await getSellerByUid(user.uid);
+
+      if (!seller?.storeId) return;
+
+      const storeCollections = await listStoreCollections(seller.storeId).catch(() => []);
+
+      if (!cancelled) {
+        setCollections(storeCollections);
+      }
+    }
+
+    void loadCollections();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (imageFiles.length === 0) {
+      setImagePreviewUrls([]);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(objectUrl);
+    const objectUrls = imageFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviewUrls(objectUrls);
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [imageFile]);
+    return () => objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
+  }, [imageFiles]);
 
   async function finishOnboarding(includeProduct: boolean) {
     if (!user) {
@@ -54,6 +89,9 @@ export default function ProductOnboardingPage() {
     try {
       setLoading(true);
       setError("");
+      const selectedCollection = collections.find(
+        (collection) => collection.collectionId === collectionId
+      );
 
       const result = await completeProductOnboarding(user, {
         product: includeProduct
@@ -61,9 +99,11 @@ export default function ProductOnboardingPage() {
               title,
               price: price ? Number(price) : undefined,
               description,
-              category,
+              category: selectedCollection?.name || "General",
+              collectionId: selectedCollection?.collectionId || "",
+              collectionName: selectedCollection?.name || "",
               inventoryQuantity: inventoryQuantity ? Number(inventoryQuantity) : undefined,
-              imageFile,
+              imageFiles,
             }
           : undefined,
       });
@@ -130,13 +170,17 @@ export default function ProductOnboardingPage() {
               icon={<WalletCards size={17} />}
             />
 
-            <PptField
-              label="Category"
-              type="text"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              placeholder="Apparel"
-              icon={<Tags size={17} />}
+            <PptSelectField
+              label="Collection"
+              value={collectionId}
+              onChange={(event) => setCollectionId(event.target.value)}
+              options={["", ...collections.map((collection) => collection.collectionId)]}
+              getOptionLabel={(option) =>
+                option
+                  ? collections.find((collection) => collection.collectionId === option)?.name ||
+                    option
+                  : "No collection"
+              }
             />
 
             <PptField
@@ -161,33 +205,52 @@ export default function ProductOnboardingPage() {
             <div className="pds-upload-icon">
               <UploadCloud size={22} />
             </div>
-            <strong>Product image</strong>
+            <strong>Product images</strong>
             <p>
-              {imageFileName ? `${imageFileName} selected.` : "JPEG, PNG, WebP, or GIF up to 5MB."}
+              {imageFileName
+                ? `${imageFileName} selected.`
+                : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
             </p>
             <label className="inline-flex">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
                 onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  setImageFile(file);
-                  setImageFileName(file?.name || "");
+                  try {
+                    const files = Array.from(event.target.files ?? []);
+                    assertValidImageFiles(files, MAX_PRODUCT_IMAGE_COUNT);
+                    setImageFiles(files);
+                    setImageFileName(files.map((file) => file.name).join(", "));
+                    setError("");
+                  } catch (err) {
+                    event.target.value = "";
+                    setImageFiles([]);
+                    setImageFileName("");
+                    setError(err instanceof Error ? err.message : "Please choose valid images.");
+                  }
                 }}
                 className="sr-only"
               />
               <span className="pds-button pds-button-secondary pds-button-md pds-button-rounded-lg">
                 <ImageIcon size={16} />
-                <span>Choose image</span>
+                <span>Choose images</span>
               </span>
             </label>
-            {imagePreviewUrl ? (
-              <div className="mt-4 overflow-hidden rounded-[22px] border border-[var(--pds-border)] bg-white">
-                <img
-                  src={imagePreviewUrl}
-                  alt="Selected product preview"
-                  className="h-56 w-full object-cover"
-                />
+            {imagePreviewUrls.length ? (
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {imagePreviewUrls.map((imagePreviewUrl, index) => (
+                  <div
+                    className="aspect-square overflow-hidden rounded-[18px] border border-[var(--pds-border)] bg-white"
+                    key={imagePreviewUrl}
+                  >
+                    <img
+                      src={imagePreviewUrl}
+                      alt={`Selected product preview ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -209,8 +272,8 @@ export default function ProductOnboardingPage() {
               Skip product for now
             </PptButton>
             <PptButton type="submit" loading={loading} disabled={loading} fullWidth>
-              {loading && imageFile
-                ? "Uploading image..."
+              {loading && imageFiles.length
+                ? "Uploading images..."
                 : loading
                   ? "Saving product..."
                   : "Save product and continue"}

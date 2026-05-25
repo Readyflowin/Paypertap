@@ -1,4 +1,5 @@
-import type { Product, Store, Theme } from "../types/firestore";
+import type { Product, Store, StoreCollection, Theme } from "../types/firestore";
+import { listStoreCollections } from "./collectionService";
 import {
   getPublicProductsByStoreId,
   getSellerProductsForStore,
@@ -10,6 +11,7 @@ export type PublicStoreData = {
   store: Store;
   theme: Theme | null;
   products: Product[];
+  collections: StoreCollection[];
   isOwnerPreview: boolean;
 };
 
@@ -51,11 +53,18 @@ export async function getPublicStoreData(
           return [];
         }),
   ]);
+  const collections = await listStoreCollections(store.storeId, products).catch(
+    (error) => {
+      console.warn("Failed to load store collections:", error);
+      return [];
+    }
+  );
 
   return {
     store,
     theme,
     products,
+    collections,
     isOwnerPreview,
   };
 }
