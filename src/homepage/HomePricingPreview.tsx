@@ -15,11 +15,11 @@ const pricingFacts = [
   },
   {
     icon: <Landmark size={20} strokeWidth={2.2} />,
-    title: "No seller bank settlement setup needed in Phase 1.",
+    title: "No seller bank settlement setup needed.",
   },
   {
     icon: <ShieldCheck size={20} strokeWidth={2.2} />,
-    title: "No complex payment routing or settlement KYC in Phase 1.",
+    title: "No complex payment routing or settlement KYC.",
   },
 ];
 
@@ -27,7 +27,7 @@ export function HomePricingPreview() {
   return (
     <MarketingSection
       eyebrow="Pricing clarity"
-      title="Simple because Phase 1 is a verified booking flow, not a full payment gateway."
+      title="What happens after a buyer books?"
       intro="The booking fee is fixed. The remaining product amount stays between buyer and seller."
     >
       <MarketingCard className="ppt-pricing-panel">
@@ -37,7 +37,7 @@ export function HomePricingPreview() {
           <p>PayPerTap keeps this as the platform verified-booking fee.</p>
         </div>
 
-        <div className="ppt-pricing-route" aria-label="Phase 1 payment route">
+        <div className="ppt-pricing-route" aria-label="PayPerTap payment route">
           <div>
             <span>Buyer</span>
             <strong>Books through PayPerTap</strong>

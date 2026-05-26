@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Heart,
   ImageIcon,
-  MessageCircle,
   Search,
   ShieldCheck,
   Store as StoreIcon,
@@ -183,13 +182,13 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#75695f]">
-            Reserve your item with {formatINR(BOOKING_ADVANCE_AMOUNT)}. Confirm the rest directly with the seller on WhatsApp.
+            Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)} today. Pay the remaining amount only after the seller confirms on WhatsApp.
           </p>
           <a
             href="#products"
-            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 text-sm font-medium text-[#fffaf4] transition hover:bg-[#2a241f] min-[420px]:w-fit"
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 text-sm font-medium !text-[#fffaf4] transition hover:bg-[#2a241f] min-[420px]:w-fit"
           >
-            Shop products
+            Browse the edit
           </a>
         </div>
 
@@ -204,20 +203,20 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
                   {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
-                  Platform booking recorded.
+                  Serious buyer intent recorded.
                 </p>
               </div>
             </div>
             <div className="flex min-w-0 items-start gap-3 rounded-[18px] border border-[#e7ded4] bg-[#fffaf4] p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#171411] text-[#fffaf4]">
-                <MessageCircle size={16} aria-hidden="true" />
+                <PptBrandIcon type="whatsapp" size={16} />
               </span>
               <div className="min-w-0">
                 <p className="font-medium text-[#171411]">
                   Seller confirms on WhatsApp
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
-                  Continue chat after booking.
+                  Product, buyer, and payment context stay together.
                 </p>
               </div>
             </div>
@@ -298,10 +297,13 @@ function Theme2ProductCard({
   const title = getProductTitle(product);
   const price = getProductPrice(product);
   const badge = getProductBadge(product);
-  const ctaLabel = isBookable(product) ? `Reserve ₹${BOOKING_ADVANCE_AMOUNT}` : "View item";
+  const bookable = isBookable(product);
+  const ctaLabel = bookable
+    ? `Reserve ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
+    : "View details";
 
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-[24px] border border-[#e5dbcf] bg-[#fffdf9] shadow-[0_14px_38px_rgba(78,61,43,0.06)]">
+    <article className="relative min-w-0 overflow-hidden rounded-[24px] border border-[#e5dbcf] bg-[#fffdf9] shadow-[0_14px_38px_rgba(78,61,43,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_52px_rgba(78,61,43,0.11)]">
       <button
         type="button"
         aria-label={isSaved ? "Remove saved item" : "Save item"}
@@ -344,14 +346,23 @@ function Theme2ProductCard({
           <h2 className="line-clamp-2 min-h-[40px] whitespace-normal break-words text-sm font-medium leading-5 tracking-[-0.015em] text-[#171411]">
             {title}
           </h2>
-          <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-base font-semibold tracking-[-0.035em] text-[#171411]">
+          <div className="mt-3 grid min-w-0 gap-2">
+            <p className="min-w-0 text-base font-semibold tracking-[-0.035em] text-[#171411]">
               {formatINR(price)}
             </p>
-            <span className="max-w-[78px] shrink-0 truncate rounded-full border border-[#dfd3c6] px-2 py-1 text-[10px] font-medium text-[#53473d] sm:max-w-none sm:px-3 sm:text-xs">
-              {ctaLabel}
+            <span className="w-fit max-w-full rounded-full border border-[#d9cbbb] bg-[#fff4df] px-2 py-1 text-[10px] font-semibold text-[#6a4b26]">
+              Limited Drop
             </span>
           </div>
+          <span
+            className={`mt-3 flex min-h-9 w-full items-center justify-center rounded-2xl px-2 text-center text-xs font-semibold ${
+              bookable
+                ? "bg-[#171411] text-[#fffaf4]"
+                : "border border-[#dfd3c6] bg-[#f7efe6] text-[#6f6257]"
+            }`}
+          >
+            {ctaLabel}
+          </span>
         </div>
       </button>
     </article>
@@ -752,12 +763,12 @@ function Theme2ProductDetail({
 
             <div className="mt-6 min-w-0 max-w-full rounded-[22px] border border-[#e7ded4] bg-[#fffaf4] p-4 text-sm leading-6 text-[#6f6257]">
               <strong className="block font-medium text-[#171411]">
-                Pay ₹{BOOKING_ADVANCE_AMOUNT} to reserve this item.
+                Reserve this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
               </strong>
               {sellerCollectAmount !== null
-                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
+                ? `${formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation.`
                 : "Pay the remaining amount directly to the seller."}
-              <span className="block">Seller confirms on WhatsApp after booking.</span>
+              <span className="block">WhatsApp opens with the product and buyer details ready.</span>
             </div>
 
             <div className="mt-4">
@@ -768,9 +779,9 @@ function Theme2ProductDetail({
               {bookable ? (
                 <Link
                   to={checkoutHref}
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 py-3 text-center text-sm font-medium text-[#fffaf4] shadow-[0_14px_34px_rgba(23,20,17,0.18)] transition hover:bg-[#2a241f]"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 py-3 text-center text-sm font-medium !text-[#fffaf4] shadow-[0_14px_34px_rgba(23,20,17,0.18)] transition hover:bg-[#2a241f]"
                 >
-                  <span>Reserve this item for ₹{BOOKING_ADVANCE_AMOUNT}</span>
+                  <span>Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
                 </Link>
               ) : (
                 <PptButton fullWidth size="lg" variant="secondary" disabled>
@@ -778,7 +789,7 @@ function Theme2ProductDetail({
                 </PptButton>
               )}
               <p className="flex items-center justify-center gap-2 text-center text-xs font-medium text-[#8f7f6f]">
-                <MessageCircle size={14} aria-hidden="true" />
+                <PptBrandIcon type="whatsapp" size={14} />
                 Chat with seller after booking.
               </p>
             </div>
@@ -798,9 +809,9 @@ function Theme2ProductDetail({
             {bookable ? (
               <Link
                 to={checkoutHref}
-                className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-[#171411] px-3 text-sm font-medium text-[#fffaf4] shadow-[0_12px_28px_rgba(23,20,17,0.18)]"
+                className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-[#171411] px-3 text-sm font-medium !text-[#fffaf4] shadow-[0_12px_28px_rgba(23,20,17,0.18)]"
               >
-                Reserve ₹{BOOKING_ADVANCE_AMOUNT}
+                Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
               </Link>
             ) : (
               <button

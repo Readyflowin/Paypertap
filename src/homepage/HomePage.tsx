@@ -2,7 +2,7 @@ import { CTASection } from "../components/marketing/CTASection";
 import { MarketingLayout } from "../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../seo/breadcrumbs";
 import { Seo } from "../seo/Seo";
-import { organizationSchema, websiteSchema } from "../seo/schema";
+import { organizationSchema, webApplicationSchema, websiteSchema } from "../seo/schema";
 import { HeroSection } from "./HeroSection";
 import { HomeBuyerFlow } from "./HomeBuyerFlow";
 import { HomeCapabilityRail } from "./HomeCapabilityRail";
@@ -21,10 +21,11 @@ export function HomePage() {
       <Seo
         canonicalPath="/"
         title="PayPerTap | Verified Booking Storefront for Instagram & WhatsApp Sellers"
-        description="PayPerTap helps Indian Instagram and WhatsApp sellers create a clean store link, collect a fixed Rs. 20 booking, and continue confirmation on WhatsApp."
+        description="PayPerTap helps Indian Instagram and WhatsApp sellers create verified booking storefronts, collect a fixed ₹20 buyer booking, and continue order confirmation on WhatsApp."
         jsonLd={[
           organizationSchema(),
           websiteSchema(),
+          webApplicationSchema(),
           breadcrumbListSchema([{ name: "Home", path: "/" }]),
         ]}
       />

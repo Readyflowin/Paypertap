@@ -1,12 +1,15 @@
-import { ArrowRight, HelpCircle, Mail, MessageCircle, Newspaper } from "lucide-react";
+﻿import { ArrowRight, HelpCircle, Mail, MessageCircle, Newspaper } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
+import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
+import { FAQBlock } from "../../components/marketing/FAQBlock";
+import { marketingFaqs } from "../faq/faqContent";
 
 const contactCards = [
   {
@@ -22,9 +25,22 @@ const contactCards = [
   {
     icon: <HelpCircle size={20} aria-hidden="true" />,
     title: "Product questions",
-    copy: "Ask how the Rs. 20 booking model, storefront, and Phase 1 limitations work.",
+    copy: "Ask how the ₹20 booking model, storefront, and platform limits work.",
   },
 ];
+
+const supportFaqs = marketingFaqs.filter((item) =>
+  [
+    "How does the ₹20 booking work?",
+    "Does the seller receive the ₹20?",
+    "How does WhatsApp handoff work?",
+    "Does the product become reserved after booking?",
+    "Do sellers need payout KYC in Phase 1?",
+    "Can sellers share direct product links?",
+    "Who handles returns and exchanges?",
+    "Is PayPerTap a payment gateway?",
+  ].includes(item.question),
+);
 
 export function ContactPage() {
   return (
@@ -38,8 +54,10 @@ export function ContactPage() {
       <SectionHeader
         eyebrow="Contact"
         h1="Need help with PayPerTap?"
-        subtitle="Reach out for seller support, founder or press requests, partnerships, and questions about verified booking storefronts for Instagram and WhatsApp sellers."
+        path="/contact"
+        subtitle="Use the PayPerTap contact page to ask about seller onboarding, verified booking storefronts, WhatsApp handoff, product setup, or founder and media queries. PayPerTap currently helps Instagram and WhatsApp sellers collect a fixed ₹20 booking before moving booked buyers to WhatsApp."
       />
+      <PageTrustMeta path="/contact" />
       <MarketingSection className="ppt-core-page-section">
         <div className="grid gap-4 md:grid-cols-3">
           {contactCards.map((card) => (
@@ -54,6 +72,54 @@ export function ContactPage() {
             </MarketingCard>
           ))}
         </div>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="What support questions can PayPerTap answer?"
+        intro="Start with the self-serve pages for the most common questions, or email when your question needs context."
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">How does booking work?</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              Learn how a seller shares links, a buyer books with ₹20, an item is
+              reserved, and remaining payment stays direct.
+            </p>
+            <Link to="/how-it-works" className="ppt-secondary-link mt-5">How it works</Link>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Who receives payment?</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              Review why PayPerTap keeps the fixed booking fee in Phase 1 and why
+              sellers collect the remaining amount themselves.
+            </p>
+            <Link to="/pricing" className="ppt-secondary-link mt-5">Pricing</Link>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Can I use WhatsApp Business?</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              Yes. Official{" "}
+              <a
+                href="https://whatsappbusiness.com/products/business-platform/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp Business use cases
+              </a>{" "}
+              include business messaging such as order confirmations. PayPerTap
+              prepares handoff details rather than sending replies automatically.
+            </p>
+          </MarketingCard>
+        </div>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="Common support questions"
+        intro="Many seller and buyer questions are answered immediately here; email remains available when more context is needed."
+      >
+        <FAQBlock items={supportFaqs} />
       </MarketingSection>
 
       <MarketingSection className="ppt-core-page-section">
@@ -84,6 +150,9 @@ export function ContactPage() {
               </Link>
               <Link to="/founder" className="ppt-secondary-link">
                 Founder
+              </Link>
+              <Link to="/how-it-works" className="ppt-secondary-link">
+                How it works
               </Link>
             </div>
           </div>

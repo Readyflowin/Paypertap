@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-import { Badge } from "@/components/ui";
+import { Badge, PptBrandIcon } from "../ui";
 
 import { getWhatsAppHref } from "./WhatsAppButton";
 
@@ -23,17 +23,6 @@ function InstagramIcon() {
       <path
         fill="currentColor"
         d="M7.8 2h8.4A5.8 5.8 0 0 1 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8A5.8 5.8 0 0 1 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2Zm0 2A3.8 3.8 0 0 0 4 7.8v8.4A3.8 3.8 0 0 0 7.8 20h8.4a3.8 3.8 0 0 0 3.8-3.8V7.8A3.8 3.8 0 0 0 16.2 4H7.8Zm8.7 2.3a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM12 7.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8Zm0 2a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"
-      />
-    </svg>
-  );
-}
-
-function WhatsAppIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M12.04 3.5a8.35 8.35 0 0 0-7.13 12.7l-.91 3.35 3.43-.9a8.34 8.34 0 1 0 4.61-15.15Zm0 1.5a6.84 6.84 0 1 1 0 13.68 6.8 6.8 0 0 1-3.48-.95l-.3-.18-2.02.53.54-1.97-.2-.31A6.84 6.84 0 0 1 12.04 5Z"
       />
     </svg>
   );
@@ -129,9 +118,9 @@ export function StoreIdentity({
             target="_blank"
             rel="noreferrer"
             aria-label={`Message ${storeName} on WhatsApp`}
-            className="ppt-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[var(--ppt-radius-md)] bg-[var(--ppt-whatsapp)] text-[#072d17] shadow-[0_12px_24px_rgba(37,211,102,0.18)] transition hover:-translate-y-0.5"
+            className="ppt-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[var(--ppt-radius-md)] bg-[var(--ppt-whatsapp)] text-white shadow-[0_12px_24px_rgba(37,211,102,0.18)] transition hover:-translate-y-0.5"
           >
-            <WhatsAppIcon />
+            <PptBrandIcon type="whatsapp" size={20} />
           </a>
         ) : null}
       </div>

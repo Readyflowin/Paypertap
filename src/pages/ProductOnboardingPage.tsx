@@ -144,7 +144,7 @@ export default function ProductOnboardingPage() {
         <div className="mt-6">
           <PptNotice tone="info" title="How PayPerTap booking works" icon={<WalletCards size={19} />}>
             Buyers pay ₹20 booking via PayPerTap. You collect the remaining amount on
-            WhatsApp, UPI, or COD. The Phase 1 booking fee stays fixed at ₹20.
+            WhatsApp, UPI, or COD. The PayPerTap booking fee stays fixed at ₹20.
           </PptNotice>
         </div>
 

@@ -1,5 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "./styles/paypertap-ui.css";
+@import "./homepage/homepage.css";
 
 :root {
   --ppt-bg: #f8f5ff;
@@ -193,19 +195,6 @@ a:hover {
   }
 }
 
-@keyframes ppt-button-dots {
-  0%,
-  80%,
-  100% {
-    opacity: 0.38;
-    transform: translateY(0);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(-2px);
-  }
-}
-
 .ppt-loading-pulse {
   --ppt-loader-size: 1.25rem;
   --ppt-loader-color: var(--ppt-primary);
@@ -239,26 +228,325 @@ a:hover {
   animation: ppt-dot-pulse 1.15s ease-in-out infinite;
 }
 
-.ppt-button-dots {
+.ppt-inline-loader {
   display: inline-flex;
+  min-width: 1.35rem;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  gap: 0.45rem;
+  color: currentColor;
+  line-height: 1;
 }
 
-.ppt-button-dots span {
-  width: 4px;
-  height: 4px;
+.ppt-inline-loader-mark {
+  position: relative;
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.ppt-inline-loader-mark::before {
+  position: absolute;
+  inset: 0.05rem;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.25;
+  content: "";
+}
+
+.ppt-inline-loader-mark span {
+  position: absolute;
+  width: 0.28rem;
+  height: 0.28rem;
   border-radius: 999px;
   background: currentColor;
-  animation: ppt-button-dots 0.9s ease-in-out infinite;
+  box-shadow: 0 0 0.55rem currentColor;
+  transform-origin: 0.62rem 0.62rem;
+  animation: ppt-inline-orbit 1.05s ease-in-out infinite;
 }
 
-.ppt-button-dots span:nth-child(2) {
+.ppt-inline-loader-mark span:nth-child(1) {
+  transform: rotate(0deg) translateX(0.43rem);
+}
+
+.ppt-inline-loader-mark span:nth-child(2) {
   animation-delay: 0.12s;
+  opacity: 0.72;
+  transform: rotate(120deg) translateX(0.43rem);
 }
 
-.ppt-button-dots span:nth-child(3) {
+.ppt-inline-loader-mark span:nth-child(3) {
   animation-delay: 0.24s;
+  opacity: 0.5;
+  transform: rotate(240deg) translateX(0.43rem);
+}
+
+.ppt-inline-loader-light {
+  color: #ffffff;
+}
+
+.ppt-inline-loader-dark {
+  color: #111217;
+}
+
+.ppt-inline-loader-brand {
+  color: var(--ppt-primary);
+}
+
+.ppt-inline-loader-whatsapp {
+  color: var(--ppt-whatsapp);
+}
+
+.ppt-inline-loader-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ppt-loader {
+  --ppt-loader-surface: rgba(255, 255, 255, 0.9);
+  --ppt-loader-border: rgba(113, 71, 245, 0.16);
+  --ppt-loader-text: #111217;
+  --ppt-loader-muted: #737783;
+  --ppt-loader-size: clamp(9.25rem, 38vw, 12.25rem);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(100%, 35rem);
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  overflow: hidden;
+  border: 1px solid var(--ppt-loader-border);
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(circle at 22% 16%, rgba(29, 255, 138, 0.12), transparent 32%),
+    radial-gradient(circle at 84% 20%, rgba(124, 58, 237, 0.14), transparent 34%),
+    var(--ppt-loader-surface);
+  box-shadow: 0 1.25rem 3.5rem rgba(17, 18, 23, 0.09);
+  color: var(--ppt-loader-text);
+}
+
+.ppt-loader::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), transparent 52%);
+  content: "";
+}
+
+.ppt-loader-card {
+  min-height: 14.5rem;
+  padding: 1.35rem;
+}
+
+.ppt-loader-fullPage {
+  min-height: min(100vh, 44rem);
+  width: 100%;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 48% 36%, rgba(124, 58, 237, 0.12), transparent 30%),
+    radial-gradient(circle at 58% 44%, rgba(29, 255, 138, 0.1), transparent 24%),
+    transparent;
+  box-shadow: none;
+}
+
+.ppt-loader-stage {
+  position: relative;
+  width: var(--ppt-loader-size);
+  height: var(--ppt-loader-size);
+  flex: 0 0 auto;
+}
+
+.ppt-loader-orbit-ring {
+  position: absolute;
+  inset: 1.25rem;
+  border: 1px solid rgba(113, 71, 245, 0.18);
+  border-radius: 2rem;
+  background:
+    linear-gradient(90deg, transparent 49%, rgba(113, 71, 245, 0.12) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(29, 255, 138, 0.12) 50%, transparent 51%);
+  transform: rotate(45deg);
+  animation: ppt-loader-ring-breathe 2.8s ease-in-out infinite;
+}
+
+.ppt-loader-logo-shell {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: grid;
+  width: 4.55rem;
+  height: 4.55rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 1rem 2.3rem rgba(91, 53, 245, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translate(-50%, -50%);
+  animation: ppt-loader-logo-pulse 2.4s ease-in-out infinite;
+}
+
+.ppt-loader-logo-shell img {
+  position: relative;
+  z-index: 1;
+  width: 3.35rem;
+  height: 3.35rem;
+  object-fit: contain;
+}
+
+.ppt-loader-logo-glow {
+  position: absolute;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 999px;
+  background: rgba(29, 255, 138, 0.2);
+  filter: blur(1rem);
+}
+
+.ppt-loader-node {
+  position: absolute;
+  display: inline-flex;
+  min-width: 4.6rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0.75rem 1.75rem rgba(17, 18, 23, 0.08);
+  color: #2f255f;
+  font-size: 0.68rem;
+  font-weight: 750;
+  opacity: 0.76;
+  transform: translate(-50%, -50%);
+  animation: ppt-loader-step 2.8s ease-in-out infinite;
+  animation-delay: calc(var(--ppt-loader-step) * 0.22s);
+}
+
+.ppt-loader-node svg {
+  flex: 0 0 auto;
+}
+
+.ppt-loader-node-store {
+  left: 50%;
+  top: 4%;
+}
+
+.ppt-loader-node-intent {
+  left: 96%;
+  top: 50%;
+  color: #5b35f5;
+}
+
+.ppt-loader-node-whatsapp {
+  left: 50%;
+  top: 96%;
+  color: #0b8f43;
+}
+
+.ppt-loader-node-confirm {
+  left: 4%;
+  top: 50%;
+  color: #0f766e;
+}
+
+.ppt-loader-copy {
+  min-width: 0;
+  max-width: 17rem;
+}
+
+.ppt-loader-copy strong {
+  display: block;
+  color: var(--ppt-loader-text);
+  font-size: 0.98rem;
+  font-weight: 820;
+  line-height: 1.25;
+}
+
+.ppt-loader-copy span {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ppt-loader-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+@keyframes ppt-inline-orbit {
+  0%,
+  100% {
+    opacity: 0.4;
+    scale: 0.86;
+  }
+  42% {
+    opacity: 1;
+    scale: 1.12;
+  }
+}
+
+@keyframes ppt-loader-ring-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: rotate(45deg) scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.02);
+  }
+}
+
+@keyframes ppt-loader-logo-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+}
+
+@keyframes ppt-loader-step {
+  0%,
+  100% {
+    opacity: 0.54;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  18%,
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  60% {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .ppt-loader {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .ppt-loader-card {
+    min-height: 18rem;
+    padding: 1rem;
+  }
+
+  .ppt-loader-copy {
+    max-width: 19rem;
+  }
 }
 
 .ppt-success-pop {
@@ -287,7 +575,10 @@ a:hover {
 
   .ppt-loading-pulse::before,
   .ppt-loading-pulse::after,
-  .ppt-button-dots span,
+  .ppt-inline-loader-mark span,
+  .ppt-loader-orbit-ring,
+  .ppt-loader-logo-shell,
+  .ppt-loader-node,
   .ppt-skeleton,
   .ppt-success-pop,
   .ppt-soft-slide-up {

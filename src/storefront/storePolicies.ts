@@ -124,7 +124,7 @@ export function generatePrivacyPolicy(): string {
 }
 
 export function getPayPerTapBookingExplanation(): string {
-  return "PayPerTap collects a fixed ₹20 verified-booking fee in Phase 1. The seller does not receive this ₹20. The buyer pays the remaining product amount directly to the seller on WhatsApp, UPI, or COD, and the seller confirms order and delivery on WhatsApp.";
+  return "PayPerTap collects a fixed ₹20 verified-booking fee. The seller does not receive this ₹20. The buyer pays the remaining product amount directly to the seller on WhatsApp, UPI, or COD, and the seller confirms order and delivery on WhatsApp.";
 }
 
 export function getStorePolicyLinks(store: Store) {
@@ -168,7 +168,7 @@ export function getStorePolicyContent(
       title: "PayPerTap Booking Terms",
       body: [
         getPayPerTapBookingExplanation(),
-        "This booking fee verifies buyer intent and reserves the item for seller follow-up. PayPerTap does not process the remaining product payment in Phase 1.",
+        "This booking fee verifies buyer intent and reserves the item for seller follow-up. PayPerTap does not process the remaining product payment.",
       ],
     };
   }

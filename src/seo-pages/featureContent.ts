@@ -1,24 +1,24 @@
-import { type FeatureSlug, type SeoPageContent } from "./seoPageTypes";
+﻿import { type FeatureSlug, type SeoPageContent } from "./seoPageTypes";
 
 export const featureContent: Record<FeatureSlug, SeoPageContent> = {
   "verified-booking": {
     path: "/features/verified-booking",
     title: "Verified Booking for Instagram & WhatsApp Sellers",
     description:
-      "Filter fake buyers with PayPerTap verified booking. Buyers pay Rs. 20 to reserve a product, then continue to WhatsApp for direct seller confirmation.",
+      "Add a fixed ₹20 verified booking step before WhatsApp handoff so sellers get clearer buyer intent and product context.",
     h1: "Verified booking for Instagram and WhatsApp sellers",
     summary:
-      "PayPerTap verified booking asks buyers to pay a fixed Rs. 20 booking fee before the WhatsApp handoff, so sellers can focus on more serious product enquiries.",
+      "PayPerTap verified booking asks buyers to pay a fixed ₹20 booking fee before the WhatsApp handoff, so sellers can focus on more serious product enquiries.",
     whatItIs:
-      "Verified booking is a small paid commitment before the seller holds an item or spends more time in chat. In Phase 1, the buyer pays Rs. 20 on PayPerTap, PayPerTap keeps it as the platform verified-booking fee, and the seller collects the remaining amount directly.",
+      "Verified booking is a small paid commitment before the seller holds an item or spends more time in chat. The buyer pays ₹20 on PayPerTap, PayPerTap keeps it as the platform verified-booking fee, and the seller collects the remaining amount directly.",
     howItWorks: [
       "Seller shares a store link or product link from Instagram, WhatsApp, bio, stories, status, or DMs.",
-      "Buyer reviews the product and pays the fixed Rs. 20 booking via PayPerTap.",
+      "Buyer reviews the product and pays the fixed ₹20 booking via PayPerTap.",
       "Buyer continues to WhatsApp with product, buyer, booking, and remaining amount context.",
       "Seller confirms availability, delivery, UPI, COD, or the remaining payment directly with the buyer.",
     ],
     benefits: [
-      "Helps reduce fake buyers, casual holds, and repeated 'available?' messages.",
+      "Adds a paid booking step before sellers spend more time on casual holds and repeated 'available?' messages.",
       "Creates a clearer serious-buyer filter for limited-stock products.",
       "Keeps WhatsApp, UPI, COD, and seller-buyer confirmation intact.",
       "Gives every buyer conversation product and booking context from the start.",
@@ -30,20 +30,20 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
     ],
     notBestFor: [
       "Large merchants looking for full checkout, seller payout, or split payments.",
-      "Sellers who want custom advance amounts in Phase 1.",
+      "Sellers who want custom advance amounts.",
     ],
     example:
-      "A thrift seller can post a jacket link in Instagram Stories. Instead of holding the jacket for every casual message, the seller prioritizes the buyer who completed the Rs. 20 booking and moved to WhatsApp with details ready.",
+      "A thrift seller can post a jacket link in Instagram Stories. Instead of holding the jacket for every casual message, the seller prioritizes the buyer who completed the ₹20 booking and moved to WhatsApp with details ready.",
     faqs: [
       {
-        question: "How does verified booking reduce fake buyers?",
+        question: "How does verified booking help filter casual enquiries?",
         answer:
-          "A buyer who pays Rs. 20 has taken a small commitment step. That helps filter casual messages before the seller spends more time confirming the order.",
+          "A buyer who pays ₹20 has taken a small commitment step. That gives the seller clearer intent context before spending more time confirming the order.",
       },
       {
-        question: "Does the seller receive the Rs. 20 booking fee?",
+        question: "Does the seller receive the ₹20 booking fee?",
         answer:
-          "No. In Phase 1, PayPerTap keeps the fixed Rs. 20 as the platform verified-booking fee. The seller collects the remaining amount directly from the buyer.",
+          "No. PayPerTap keeps the fixed ₹20 as the platform verified-booking fee. The seller collects the remaining amount directly from the buyer.",
       },
       {
         question: "Is verified booking useful for limited-stock products?",
@@ -52,7 +52,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       },
     ],
     related: [
-      { label: "Pricing and Rs. 20 booking", path: "/pricing" },
+      { label: "Pricing and ₹20 booking", path: "/pricing" },
       { label: "PayPerTap for thrift sellers", path: "/for/thrift-sellers" },
       { label: "Order organization", path: "/features/order-organization" },
       { label: "PayPerTap vs Linktree", path: "/compare/paypertap-vs-linktree" },
@@ -62,17 +62,17 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
     path: "/features/link-in-bio-storefront",
     title: "Link-in-Bio Storefront for Product Sellers",
     description:
-      "Create a product-first Instagram bio storefront with product links, Rs. 20 verified booking, and WhatsApp handoff.",
+      "Create a product-first Instagram bio storefront with product links, ₹20 verified booking, and WhatsApp handoff.",
     h1: "Link-in-bio storefront for product sellers",
     summary:
-      "PayPerTap gives Instagram and WhatsApp sellers a clean store link that shows products, starts a Rs. 20 booking flow, and sends serious buyers to WhatsApp.",
+      "PayPerTap gives Instagram and WhatsApp sellers a clean store link that shows products, starts a ₹20 booking flow, and sends serious buyers to WhatsApp.",
     whatItIs:
       "A link-in-bio storefront is more than a list of links. For product sellers, it should show products, prices, booking context, and the next WhatsApp step. PayPerTap is built for sellers who want that product-first flow without building a full ecommerce website.",
     howItWorks: [
       "Seller adds products, images, prices, and useful details.",
       "Seller shares the store link in Instagram bio, stories, DMs, WhatsApp chats, groups, or status.",
       "Buyer browses products and chooses the item they want to reserve.",
-      "PayPerTap starts the fixed Rs. 20 booking and WhatsApp handoff flow.",
+      "PayPerTap starts the fixed ₹20 booking and WhatsApp handoff flow.",
     ],
     benefits: [
       "Replaces screenshots, highlights, and repeated price replies with one store link.",
@@ -95,7 +95,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       {
         question: "How is PayPerTap different from a generic bio link tool?",
         answer:
-          "Generic bio link tools are useful for linking to many pages. PayPerTap is built for product sellers who need product browsing, Rs. 20 verified booking, and WhatsApp handoff.",
+          "Generic bio link tools are useful for linking to many pages. PayPerTap is built for product sellers who need product browsing, ₹20 verified booking, and WhatsApp handoff.",
       },
       {
         question: "Can I share individual product links too?",
@@ -119,14 +119,14 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
     path: "/features/whatsapp-handoff",
     title: "WhatsApp Handoff for Product Bookings",
     description:
-      "Send booked buyers to WhatsApp with product, Rs. 20 booking, remaining amount, and buyer details ready for seller confirmation.",
+      "Send booked buyers to WhatsApp with product, ₹20 booking, remaining amount, and buyer details ready for seller confirmation.",
     h1: "WhatsApp handoff for product bookings",
     summary:
       "PayPerTap moves buyers from verified booking to WhatsApp with the product and remaining-payment context already prepared.",
     whatItIs:
       "WhatsApp handoff is the step after booking where the buyer continues with the seller. PayPerTap does not auto-reply on WhatsApp or replace WhatsApp Business; it helps the buyer arrive with product, price, booking, and remaining amount context.",
     howItWorks: [
-      "Buyer books a product with the fixed Rs. 20 PayPerTap booking fee.",
+      "Buyer books a product with the fixed ₹20 PayPerTap booking fee.",
       "PayPerTap prepares a WhatsApp message with product and booking context.",
       "Buyer opens WhatsApp and sends the message to the seller.",
       "Seller confirms availability, delivery, UPI, COD, or remaining payment directly.",
@@ -147,7 +147,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       "Sellers looking for full product payment collection through PayPerTap.",
     ],
     example:
-      "A buyer books a handmade tote and opens WhatsApp with a message mentioning the product title, product link, total price, Rs. 20 paid, and remaining amount to confirm with the seller.",
+      "A buyer books a handmade tote and opens WhatsApp with a message mentioning the product title, product link, total price, ₹20 paid, and remaining amount to confirm with the seller.",
     faqs: [
       {
         question: "Does PayPerTap send automatic WhatsApp replies?",
@@ -184,7 +184,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       "Order organization means sellers can see which buyer booked which product, what still needs to happen, and where the WhatsApp conversation should continue. PayPerTap organizes the booking layer while the seller handles delivery and remaining payment directly.",
     howItWorks: [
       "Seller shares a store or product link instead of manually repeating details.",
-      "Buyer books with the fixed Rs. 20 booking fee.",
+      "Buyer books with the fixed ₹20 booking fee.",
       "PayPerTap keeps product interest and buyer context together.",
       "Seller follows up on WhatsApp and updates the selling status.",
     ],
@@ -233,16 +233,16 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
     path: "/features/product-links",
     title: "Shareable Product Links for Instagram Sellers",
     description:
-      "Share one product link in Instagram DMs, stories, and WhatsApp so buyers can see details, book with Rs. 20, and continue to chat.",
+      "Share one product link in Instagram DMs, stories, and WhatsApp so buyers can see details, book with ₹20, and continue to chat.",
     h1: "Shareable product links for Instagram and WhatsApp sellers",
     summary:
       "PayPerTap product links let sellers send one clean product page instead of repeating photos, price, availability, and booking steps in every chat.",
     whatItIs:
-      "A product link is a direct page for one item. It helps buyers review the product, understand the Rs. 20 booking step, and continue to WhatsApp with useful context.",
+      "A product link is a direct page for one item. It helps buyers review the product, understand the ₹20 booking step, and continue to WhatsApp with useful context.",
     howItWorks: [
       "Seller creates a product with images, price, and details.",
       "Seller shares the product link in DMs, stories, status, or chat.",
-      "Buyer opens the product page and books with Rs. 20.",
+      "Buyer opens the product page and books with ₹20.",
       "Buyer continues to WhatsApp for direct seller confirmation.",
     ],
     benefits: [
@@ -298,7 +298,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       "Customer leads in PayPerTap are buyer details connected to a product booking. The goal is not to sell buyer data or run ads; it is to help sellers manage their own booking and WhatsApp follow-up workflow.",
     howItWorks: [
       "Buyer chooses a product from the seller's PayPerTap link.",
-      "Buyer completes the fixed Rs. 20 booking step.",
+      "Buyer completes the fixed ₹20 booking step.",
       "PayPerTap keeps buyer and product context together.",
       "Seller follows up directly on WhatsApp for remaining payment and delivery.",
     ],

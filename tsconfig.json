@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "isolatedModules": true,
+    "noEmit": true
+  },
+  "include": ["src", "scripts"]
+}

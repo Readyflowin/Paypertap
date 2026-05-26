@@ -1,6 +1,8 @@
 import { type ButtonHTMLAttributes, type ReactNode } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import clsx from "clsx";
+
+import { PayPerTapInlineLoader } from "../loaders";
 
 export type PptButtonVariant =
   | "primary"
@@ -61,7 +63,7 @@ export function PptButton({
       onClick={onClick}
     >
       {loading ? (
-        <Loader2 className="pds-spin" size={17} />
+        <PayPerTapInlineLoader tone={variant === "secondary" || variant === "ghost" || variant === "soft" ? "brand" : "light"} />
       ) : success ? (
         <Check size={17} />
       ) : (

@@ -15,6 +15,9 @@ export type PptFieldProps = {
   min?: string | number;
   step?: string | number;
   minLength?: number;
+  maxLength?: number;
+  inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
+  pattern?: string;
   required?: boolean;
   autoComplete?: string;
   className?: string;
@@ -34,6 +37,9 @@ export function PptField({
   min,
   step,
   minLength,
+  maxLength,
+  inputMode,
+  pattern,
   required,
   autoComplete,
   className,
@@ -51,6 +57,7 @@ export function PptField({
             onChange={onChange}
             name={name}
             autoComplete={autoComplete}
+            maxLength={maxLength}
             required={required}
           />
         ) : (
@@ -63,6 +70,9 @@ export function PptField({
             min={min}
             step={step}
             minLength={minLength}
+            maxLength={maxLength}
+            inputMode={inputMode}
+            pattern={pattern}
             autoComplete={autoComplete}
             required={required}
           />

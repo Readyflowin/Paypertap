@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 
-import logo from "../assets/Logo-128.png";
 import { companyLinks, legalLinks, productLinks, sellerLinks } from "./footerLinks";
+
+const logo = "/images/logo/paypertap-logo.png";
 
 function FooterColumn({
   links,
@@ -54,7 +55,7 @@ export function Footer() {
           </Link>
           <p className="ppt-home-copy mt-4 max-w-sm text-sm leading-6 text-[#070707]/50">
             India-first verified booking storefronts for Instagram and WhatsApp sellers.
-            PayPerTap is not a payment gateway in Phase 1.
+            PayPerTap is not a full payment gateway.
           </p>
           <p className="mt-5 text-xs text-[#070707]/40">
             © {year} PayPerTap. All rights reserved.

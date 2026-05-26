@@ -7,15 +7,15 @@ PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp sel
 - Helps sellers create a clean store link and product links.
 - Lets buyers pay a fixed Rs. 20 booking via PayPerTap to reserve a product.
 - Sends booked buyers to WhatsApp with product, buyer, booking, and remaining amount context.
-- Helps sellers reduce casual fake-buyer messages and organize buyer intent.
+- Helps sellers organize buyer intent before the WhatsApp conversation.
 
-## Phase 1 payment model
+## Payment model
 
 - The buyer pays Rs. 20 via PayPerTap as the platform verified-booking fee.
-- The seller does not receive the Rs. 20 in Phase 1.
+- The seller does not receive the Rs. 20.
 - The seller collects the remaining product amount directly from the buyer through WhatsApp, UPI, COD, or the seller's usual process.
-- PayPerTap is not a full payment gateway in Phase 1.
-- PayPerTap does not provide seller payout, split payment, custom seller advance, delivery, or full product refund handling in Phase 1.
+- PayPerTap is not a full payment gateway.
+- PayPerTap does not provide seller payout, split payment, custom seller advance, delivery, or full product refund handling.
 
 ## Best-fit users
 

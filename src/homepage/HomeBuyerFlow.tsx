@@ -17,7 +17,7 @@ export function HomeBuyerFlow() {
   return (
     <MarketingSection
       eyebrow="WhatsApp handoff"
-      title="The buyer arrives with the message already shaped."
+      title="Why does WhatsApp handoff matter?"
       intro="PayPerTap prepares the booking context. The seller still owns the WhatsApp conversation."
     >
       <MarketingCard className="ppt-whatsapp-panel">
@@ -27,9 +27,17 @@ export function HomeBuyerFlow() {
           </div>
           <h3>Seller keeps the relationship in WhatsApp.</h3>
           <p>
-            After the ₹20 booking via PayPerTap, the buyer continues to WhatsApp.
-            The seller can use WhatsApp Business greeting messages, away messages,
-            labels, and quick replies to manage the follow-up.
+            After the ₹20 booking via PayPerTap, the buyer continues to WhatsApp with
+            their details ready to share. Official{" "}
+            <a
+              href="https://whatsappbusiness.com/products/business-platform/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp Business use cases
+            </a>{" "}
+            include order confirmations and shipment updates; PayPerTap prepares a
+            handoff and does not send automated WhatsApp replies.
           </p>
           <div className="ppt-whatsapp-quick-replies" aria-label="WhatsApp Business tools">
             <span>Greeting</span>

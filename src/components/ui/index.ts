@@ -18,6 +18,13 @@ export { IconButton, type IconButtonProps } from "./IconButton";
 export { Input, type InputProps } from "./Input";
 export { LoadingPulse, type LoadingPulseProps } from "./LoadingPulse";
 export {
+  PayPerTapInlineLoader,
+  PayPerTapLoader,
+  type PayPerTapInlineLoaderProps,
+  type PayPerTapLoaderProps,
+  type PayPerTapLoaderVariant,
+} from "../loaders";
+export {
   Skeleton,
   SkeletonCard,
   SkeletonDashboardStats,

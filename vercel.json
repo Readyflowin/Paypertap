@@ -1,6 +1,110 @@
 {
   "rewrites": [
     {
+      "source": "/pricing",
+      "destination": "/pricing/index.html"
+    },
+    {
+      "source": "/how-it-works",
+      "destination": "/how-it-works/index.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/founder",
+      "destination": "/founder/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/faq",
+      "destination": "/faq/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms/index.html"
+    },
+    {
+      "source": "/refund-cancellation",
+      "destination": "/refund-cancellation/index.html"
+    },
+    {
+      "source": "/features/verified-booking",
+      "destination": "/features/verified-booking/index.html"
+    },
+    {
+      "source": "/features/link-in-bio-storefront",
+      "destination": "/features/link-in-bio-storefront/index.html"
+    },
+    {
+      "source": "/features/whatsapp-handoff",
+      "destination": "/features/whatsapp-handoff/index.html"
+    },
+    {
+      "source": "/features/order-organization",
+      "destination": "/features/order-organization/index.html"
+    },
+    {
+      "source": "/features/product-links",
+      "destination": "/features/product-links/index.html"
+    },
+    {
+      "source": "/features/customer-leads",
+      "destination": "/features/customer-leads/index.html"
+    },
+    {
+      "source": "/for/instagram-sellers",
+      "destination": "/for/instagram-sellers/index.html"
+    },
+    {
+      "source": "/for/whatsapp-sellers",
+      "destination": "/for/whatsapp-sellers/index.html"
+    },
+    {
+      "source": "/for/thrift-sellers",
+      "destination": "/for/thrift-sellers/index.html"
+    },
+    {
+      "source": "/for/boutiques",
+      "destination": "/for/boutiques/index.html"
+    },
+    {
+      "source": "/for/handmade-sellers",
+      "destination": "/for/handmade-sellers/index.html"
+    },
+    {
+      "source": "/for/student-sellers",
+      "destination": "/for/student-sellers/index.html"
+    },
+    {
+      "source": "/compare",
+      "destination": "/compare/index.html"
+    },
+    {
+      "source": "/compare/paypertap-vs-linktree",
+      "destination": "/compare/paypertap-vs-linktree/index.html"
+    },
+    {
+      "source": "/compare/paypertap-vs-whatsapp-catalog",
+      "destination": "/compare/paypertap-vs-whatsapp-catalog/index.html"
+    },
+    {
+      "source": "/compare/paypertap-vs-google-forms",
+      "destination": "/compare/paypertap-vs-google-forms/index.html"
+    },
+    {
+      "source": "/compare/paypertap-vs-shopify-starter",
+      "destination": "/compare/paypertap-vs-shopify-starter/index.html"
+    },
+    {
       "source": "/((?!api/|src/|assets/|node_modules/|@|__vite|.*\\..*).*)",
       "destination": "/index.html"
     }

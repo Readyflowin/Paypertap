@@ -13,13 +13,15 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { MarketingLayout } from "../../layout/MarketingLayout";
-import { breadcrumbListSchema } from "../../seo/breadcrumbs";
+import { breadcrumbListSchema, MarketingBreadcrumbs } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
+import { clusterDeepContent } from "../../seo-pages/deepContent";
 import { type SeoPageContent } from "../../seo-pages/seoPageTypes";
 import { CTASection } from "./CTASection";
 import { FAQBlock } from "./FAQBlock";
 import { MarketingCard } from "./MarketingCard";
 import { MarketingSection } from "./MarketingSection";
+import { PageTrustMeta } from "./PageTrustMeta";
 import { RelatedLinks } from "./RelatedLinks";
 
 const useCaseImages: Record<string, { alt: string; src: string }> = {
@@ -57,7 +59,7 @@ function FeatureVisual({ path }: { path: string }) {
           <ReceiptText size={22} aria-hidden="true" />
         </div>
         <p className="ppt-seo-visual-label">Booking receipt</p>
-        <h2>Rs. 20 booking received</h2>
+        <h2>₹20 booking received</h2>
         <div className="ppt-seo-receipt-rows">
           <span>Booking via PayPerTap</span>
           <strong>Platform verified-booking fee</strong>
@@ -98,7 +100,7 @@ function FeatureVisual({ path }: { path: string }) {
         <h2>WhatsApp message ready</h2>
         <div className="ppt-seo-message-bubble">
           <p>Product: Handmade tote</p>
-          <p>Booking paid: Rs. 20 via PayPerTap</p>
+          <p>Booking paid: ₹20 via PayPerTap</p>
           <p>Remaining amount: paid directly to seller</p>
           <p>Buyer details: included for confirmation</p>
         </div>
@@ -180,9 +182,11 @@ function PageHero({
   h1,
   summary,
   visual,
+  path,
 }: {
   eyebrow: string;
   h1: string;
+  path: string;
   summary: string;
   visual: ReactNode;
 }) {
@@ -190,6 +194,7 @@ function PageHero({
     <section className="ppt-seo-hero relative overflow-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
       <div className="relative mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-center">
         <div className="min-w-0">
+          <MarketingBreadcrumbs path={path} />
           <p className="ppt-marketing-pill mb-4 inline-flex w-fit items-center rounded-full px-4 py-2 text-xs font-bold uppercase">
             {eyebrow}
           </p>
@@ -227,7 +232,9 @@ export function SeoClusterPageTemplate({
   page: SeoPageContent;
 }) {
   const isUseCase = eyebrow === "Use case";
+  const deepContent = clusterDeepContent[page.path];
   const visual = isUseCase ? <UseCaseVisual path={page.path} /> : <FeatureVisual path={page.path} />;
+  const faqs = deepContent ? [...page.faqs, ...deepContent.extraFaqs] : page.faqs;
 
   return (
     <MarketingLayout>
@@ -242,15 +249,59 @@ export function SeoClusterPageTemplate({
           ]),
         ]}
       />
-      <PageHero eyebrow={eyebrow} h1={page.h1} summary={page.summary} visual={visual} />
+      <PageHero
+        eyebrow={eyebrow}
+        h1={page.h1}
+        path={page.path}
+        summary={deepContent?.directAnswer ?? page.summary}
+        visual={visual}
+      />
+      <PageTrustMeta path={page.path} />
 
-      <MarketingSection className="ppt-core-page-section" title={isUseCase ? "The seller problem" : "What it does"}>
+      <MarketingSection
+        className="ppt-core-page-section"
+        title={deepContent?.introTitle ?? (isUseCase ? "What problem does this seller face?" : "What does this feature do?")}
+      >
         <MarketingCard className="ppt-seo-lead-copy">
           <p className="text-lg leading-8 text-neutral-700">{page.whatItIs}</p>
+          {deepContent ? (
+            <p className="ppt-home-copy mt-5 text-sm leading-7 text-neutral-600">
+              {deepContent.source.before}
+              <a
+                href={deepContent.source.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {deepContent.source.anchor}
+              </a>
+              {deepContent.source.after}
+            </p>
+          ) : null}
         </MarketingCard>
       </MarketingSection>
 
-      <MarketingSection className="ppt-core-page-section" title="How it works">
+      {deepContent ? (
+        <MarketingSection
+          className="ppt-core-page-section"
+          title={isUseCase ? "What should this seller know before using PayPerTap?" : "What should sellers know about this feature?"}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            {deepContent.answers.map((item) => (
+              <MarketingCard key={item.question}>
+                <h3 className="text-xl font-bold text-neutral-950">{item.question}</h3>
+                <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+                  {item.answer}
+                </p>
+              </MarketingCard>
+            ))}
+          </div>
+        </MarketingSection>
+      ) : null}
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title={deepContent?.workflowTitle ?? "How does it work?"}
+      >
         <div className="ppt-seo-step-grid grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {page.howItWorks.map((step, index) => (
             <MarketingCard className="ppt-core-step-card" key={step}>
@@ -267,7 +318,10 @@ export function SeoClusterPageTemplate({
         </div>
       </MarketingSection>
 
-      <MarketingSection className="ppt-core-page-section" title={isUseCase ? "Where PayPerTap helps" : "Benefits"}>
+      <MarketingSection
+        className="ppt-core-page-section"
+        title={deepContent?.benefitsTitle ?? (isUseCase ? "How does PayPerTap help?" : "Why is this useful?")}
+      >
         <div className="ppt-seo-benefit-grid grid gap-4 md:grid-cols-2">
           {page.benefits.map((benefit) => (
             <MarketingCard className="ppt-seo-benefit-card" key={benefit}>
@@ -319,14 +373,126 @@ export function SeoClusterPageTemplate({
         </MarketingSection>
       ) : null}
 
-      <MarketingSection className="ppt-core-page-section" title="Practical example">
+      {deepContent ? (
+        <MarketingSection
+          className="ppt-core-page-section"
+          title="What does PayPerTap handle, and what does the seller handle?"
+          intro="The Phase 1 boundary is intentionally explicit: PayPerTap handles booking context, while the seller completes the product transaction directly."
+        >
+          <div className="ppt-seo-comparison-table overflow-x-auto rounded-[24px] border backdrop-blur-xl">
+            <table className="w-full min-w-[660px] text-left">
+              <thead className="ppt-seo-comparison-head text-xs font-bold uppercase tracking-[0.12em]">
+                <tr>
+                  <th className="p-4">Stage</th>
+                  <th className="p-4">PayPerTap handles</th>
+                  <th className="p-4">Seller handles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deepContent.responsibilities.map((row) => (
+                  <tr className="ppt-seo-comparison-row border-t" key={row.stage}>
+                    <th className="p-4 text-sm font-bold text-neutral-950">{row.stage}</th>
+                    <td className="p-4 text-sm leading-6 text-neutral-700">{row.paypertap}</td>
+                    <td className="p-4 text-sm leading-6 text-neutral-700">{row.seller}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </MarketingSection>
+      ) : null}
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title={isUseCase ? "How should this seller evaluate the workflow?" : "How should sellers evaluate this feature?"}
+        intro="Use these checks before treating PayPerTap as the right layer for a selling flow."
+      >
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Before sharing the link</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              Confirm that the page, product, or use case fits a physical-product
+              seller who wants booking before WhatsApp. Product photos, price,
+              availability, and seller policy should be accurate before buyers book.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">During the ₹20 booking</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              The buyer pays PayPerTap&apos;s fixed platform verified-booking fee.
+              The fee is not a seller payout, custom advance, split payment, or full
+              product payment. It creates booking and reservation context.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">After WhatsApp handoff</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              The seller confirms remaining payment, delivery, pickup, COD, UPI, and
+              product policy directly. PayPerTap does not automate WhatsApp replies
+              or guarantee that the final product transaction will complete.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">When to choose another tool</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              If the seller needs a full payment gateway, seller settlement,
+              shipping operations, advanced inventory infrastructure, or broad form
+              collection, PayPerTap&apos;s booking-first Phase 1 scope is too narrow.
+            </p>
+          </MarketingCard>
+        </div>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="What mistakes should sellers avoid?"
+        intro="Clear buyer expectations make the booking flow easier to understand."
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Do not call ₹20 a seller advance</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              In Phase 1, the fixed ₹20 belongs to PayPerTap as the platform
+              verified-booking fee. Sellers should explain that the remaining product
+              amount is still collected directly by them after handoff.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Do not skip product policy clarity</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              Booking context helps organize a buyer conversation, but it does not
+              replace seller policies. Delivery timing, cancellation, return,
+              exchange, COD, and pickup expectations should be stated clearly.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-lg font-bold text-neutral-950">Do not promise automatic completion</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              A booking is a useful intent signal and reservation record, not a
+              guaranteed final sale. The seller still confirms remaining payment,
+              product condition, fulfilment, and any buyer questions directly.
+            </p>
+          </MarketingCard>
+        </div>
+        <MarketingCard className="mt-4">
+          <h3 className="text-xl font-bold text-neutral-950">Keep the buyer's next step explicit</h3>
+          <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+            The strongest PayPerTap pages make the next step obvious: review the
+            product, place the fixed booking, continue to WhatsApp, and finish the
+            remaining product transaction directly with the seller. Clear wording
+            prevents buyers from mistaking the booking fee for full checkout.
+          </p>
+        </MarketingCard>
+      </MarketingSection>
+
+      <MarketingSection className="ppt-core-page-section" title="What does this look like in practice?">
         <MarketingCard className="ppt-seo-example-card">
           <p className="text-lg leading-8 text-neutral-700">{page.example}</p>
         </MarketingCard>
       </MarketingSection>
 
-      <MarketingSection className="ppt-core-page-section" title="FAQ">
-        <FAQBlock items={page.faqs} showLink />
+      <MarketingSection className="ppt-core-page-section" title="Frequently asked questions">
+        <FAQBlock items={faqs} showLink />
       </MarketingSection>
 
       <RelatedLinks links={page.related} />

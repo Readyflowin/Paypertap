@@ -41,6 +41,21 @@ const featureLinks = [
     label: "WhatsApp handoff",
     path: "/features/whatsapp-handoff",
   },
+  {
+    copy: "Keep bookings, buyer context, and follow-up status clearer.",
+    label: "Order organization",
+    path: "/features/order-organization",
+  },
+  {
+    copy: "Send one item page instead of repeating photos and price.",
+    label: "Product links",
+    path: "/features/product-links",
+  },
+  {
+    copy: "Keep buyer details connected to the product they booked.",
+    label: "Customer leads",
+    path: "/features/customer-leads",
+  },
 ];
 
 const products = [

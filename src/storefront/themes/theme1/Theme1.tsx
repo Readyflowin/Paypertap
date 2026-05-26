@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Heart,
   ImageIcon,
-  MessageCircle,
   Search,
   ShieldCheck,
   Store as StoreIcon,
@@ -181,13 +180,13 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-500">
-            Reserve your item with {formatINR(BOOKING_ADVANCE_AMOUNT)}. Confirm the rest directly with the seller on WhatsApp.
+            Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)} today. Pay the remaining amount only after the seller confirms on WhatsApp.
           </p>
           <a
             href="#products"
-            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-neutral-950 px-5 text-sm font-medium text-white transition hover:bg-neutral-800 min-[420px]:w-fit"
+            className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-neutral-950 px-5 text-sm font-medium !text-white transition hover:bg-neutral-800 min-[420px]:w-fit"
           >
-            Shop products
+            Browse available items
           </a>
         </div>
 
@@ -202,20 +201,20 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
                   {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
                 </p>
                 <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  Platform booking recorded.
+                  Serious buyer intent recorded.
                 </p>
               </div>
             </div>
             <div className="flex min-w-0 items-start gap-3 rounded-[18px] bg-white p-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-white">
-                <MessageCircle size={16} aria-hidden="true" />
+                <PptBrandIcon type="whatsapp" size={16} />
               </span>
               <div className="min-w-0">
                 <p className="font-medium text-neutral-950">
                   Seller confirms on WhatsApp
                 </p>
                 <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  Continue chat after booking.
+                  Product, buyer, and payment context stay together.
                 </p>
               </div>
             </div>
@@ -297,10 +296,13 @@ function Theme1ProductCard({
   const title = getProductTitle(product);
   const price = getProductPrice(product);
   const badge = getProductBadge(product);
-  const ctaLabel = isBookable(product) ? "Book ₹20" : "View";
+  const bookable = isBookable(product);
+  const ctaLabel = bookable
+    ? `Reserve ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
+    : "View details";
 
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-[22px] border border-neutral-200 bg-white shadow-[0_12px_32px_rgba(17,18,23,0.05)]">
+    <article className="relative min-w-0 overflow-hidden rounded-[22px] border border-neutral-200 bg-white shadow-[0_14px_36px_rgba(17,18,23,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(17,18,23,0.1)]">
       <button
         type="button"
         aria-label={isSaved ? "Remove saved item" : "Save item"}
@@ -343,14 +345,23 @@ function Theme1ProductCard({
           <h2 className="line-clamp-2 min-h-[38px] whitespace-normal break-words text-sm font-medium leading-5 tracking-[-0.01em] text-neutral-950">
             {title}
           </h2>
-          <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-base font-semibold tracking-[-0.03em] text-neutral-950">
+          <div className="mt-3 grid min-w-0 gap-2">
+            <p className="min-w-0 text-base font-semibold tracking-[-0.03em] text-neutral-950">
               {formatINR(price)}
             </p>
-            <span className="max-w-[72px] shrink-0 truncate rounded-full border border-neutral-200 px-2.5 py-1 text-[11px] font-medium text-neutral-700 sm:max-w-none sm:px-3 sm:text-xs">
-              {ctaLabel}
+            <span className="w-fit max-w-full rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+              Limited Drop
             </span>
           </div>
+          <span
+            className={`mt-3 flex min-h-9 w-full items-center justify-center rounded-2xl px-2 text-center text-xs font-semibold ${
+              bookable
+                ? "bg-neutral-950 text-white"
+                : "border border-neutral-200 bg-neutral-50 text-neutral-600"
+            }`}
+          >
+            {ctaLabel}
+          </span>
         </div>
       </button>
     </article>
@@ -738,12 +749,12 @@ function Theme1ProductDetail({
 
             <div className="mt-5 min-w-0 max-w-full rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
               <strong className="block font-medium text-neutral-950">
-                Pay ₹{BOOKING_ADVANCE_AMOUNT} to reserve this item.
+                Reserve this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
               </strong>
               {sellerCollectAmount !== null
-                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
+                ? `${formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation.`
                 : "Pay the remaining amount directly to the seller."}
-              <span className="block">Seller confirms on WhatsApp after booking.</span>
+              <span className="block">WhatsApp opens with the product and buyer details ready.</span>
             </div>
 
             <div className="mt-4">
@@ -756,7 +767,7 @@ function Theme1ProductDetail({
                   to={checkoutHref}
                   className="pds-button pds-button-primary pds-button-lg pds-button-rounded-lg is-full"
                 >
-                  <span>Book now for ₹20</span>
+                  <span>Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
                 </Link>
               ) : (
                 <PptButton fullWidth size="lg" variant="secondary" disabled>
@@ -764,7 +775,7 @@ function Theme1ProductDetail({
                 </PptButton>
               )}
               <p className="flex items-center justify-center gap-2 text-center text-xs font-medium text-neutral-500">
-                <MessageCircle size={14} aria-hidden="true" />
+                <PptBrandIcon type="whatsapp" size={14} />
                 Chat with seller after booking.
               </p>
             </div>
@@ -784,9 +795,9 @@ function Theme1ProductDetail({
             {bookable ? (
               <Link
                 to={checkoutHref}
-                className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-neutral-950 px-3 text-sm font-medium text-white shadow-[0_12px_28px_rgba(17,18,23,0.18)]"
+                className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-neutral-950 px-3 text-sm font-medium !text-white shadow-[0_12px_28px_rgba(17,18,23,0.18)]"
               >
-                Book now for ₹{BOOKING_ADVANCE_AMOUNT}
+                Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
               </Link>
             ) : (
               <button
@@ -968,7 +979,7 @@ function Theme1ProductPageSheet({
                 </PptButton>
               )}
               <p className="flex items-center justify-center gap-2 text-center text-xs font-medium text-neutral-500">
-                <MessageCircle size={14} aria-hidden="true" />
+                <PptBrandIcon type="whatsapp" size={14} />
                 Seller confirms on WhatsApp
               </p>
             </div>

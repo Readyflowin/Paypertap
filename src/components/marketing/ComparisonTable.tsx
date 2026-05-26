@@ -1,7 +1,7 @@
 export function ComparisonTable() {
   const rows = [
     ["Product discovery", "Scattered posts and chats", "Clean public storefront link"],
-    ["Buyer intent", "Holds without commitment", "Fixed Rs. 20 booking via PayPerTap"],
+    ["Buyer intent", "Holds without commitment", "Fixed ₹20 booking via PayPerTap"],
     ["Order details", "Repeated manual questions", "Prefilled WhatsApp flow"],
     ["Remaining payment", "Seller handles directly", "Seller still handles directly"],
   ];

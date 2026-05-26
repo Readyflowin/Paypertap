@@ -76,7 +76,7 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
     muted: "text-neutral-600",
     bookingBox: "border-neutral-200 bg-neutral-50 text-neutral-600",
     bookingStrong: "text-neutral-950",
-    primaryCta: "bg-neutral-950 text-white hover:bg-neutral-800",
+    primaryCta: "bg-neutral-950 !text-white hover:bg-neutral-800",
     disabledCta: "border-neutral-200 bg-neutral-100 text-neutral-400",
     sticky: "border-neutral-200 bg-white/96 text-neutral-950",
     storePanel: "border-neutral-200 bg-white text-neutral-600",
@@ -96,7 +96,7 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
     muted: "text-[#6f6257]",
     bookingBox: "border-[#e7ded4] bg-white/70 text-[#6f6257]",
     bookingStrong: "text-[#171411]",
-    primaryCta: "bg-[#171411] text-[#fffaf4] hover:bg-[#2a241f]",
+    primaryCta: "bg-[#171411] !text-[#fffaf4] hover:bg-[#2a241f]",
     disabledCta: "border-[#dfd3c6] bg-[#f4eadf] text-[#9a8b7c]",
     sticky: "border-[#eadfd3] bg-[#fffaf4]/96 text-[#171411]",
     storePanel: "border-[#e7ded4] bg-[#fffaf4] text-[#6f6257]",
@@ -116,7 +116,7 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
     muted: "text-white/64",
     bookingBox: "border-white/10 bg-white/7 text-white/64",
     bookingStrong: "text-white",
-    primaryCta: "bg-emerald-300 text-neutral-950 hover:bg-emerald-200",
+    primaryCta: "bg-emerald-300 !text-neutral-950 hover:bg-emerald-200",
     disabledCta: "border-white/10 bg-white/10 text-white/40",
     sticky: "border-white/10 bg-neutral-950/96 text-white",
     storePanel: "border-white/10 bg-neutral-900 text-white/58",
@@ -433,13 +433,13 @@ export default function ProductDetailPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <ShieldCheck size={16} aria-hidden="true" className="shrink-0" />
                   <strong className={`font-semibold ${classes.bookingStrong}`}>
-                    {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
+                    Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)}
                   </strong>
                 </div>
                 <p>
-                  {formatINR(sellerCollectAmount)} remaining paid directly to seller
+                  {formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation. WhatsApp opens with product and your details pre-filled.
                 </p>
-                <p>Seller confirms on WhatsApp.</p>
+                
               </div>
 
               {!isAvailable ? (
@@ -466,7 +466,7 @@ export default function ProductDetailPage() {
                     to={checkoutHref}
                     className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3 text-center text-sm font-semibold ${classes.primaryCta}`}
                   >
-                    Book {formatINR(BOOKING_ADVANCE_AMOUNT)}
+                    Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}
                   </Link>
                 ) : (
                   <button
@@ -502,7 +502,7 @@ export default function ProductDetailPage() {
               to={checkoutHref}
               className={`inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl px-3 text-sm font-semibold ${classes.primaryCta}`}
             >
-              Book {formatINR(BOOKING_ADVANCE_AMOUNT)}
+              Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
             </Link>
           ) : (
             <button

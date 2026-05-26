@@ -14,23 +14,23 @@ export const storefrontThemeRegistry: Record<
 > = {
   theme1: {
     id: "theme1",
-    name: "Theme 1",
-    description: "Clean storefront foundation for the first premium PayPerTap theme.",
-    previewLabel: "Clean",
+    name: "Conversion Clean",
+    description: "Fast, focused storefront for clear product browsing and high-intent bookings.",
+    previewLabel: "Clean CRO",
     component: Theme1,
   },
   theme2: {
     id: "theme2",
-    name: "Theme 2",
-    description: "Editorial boutique storefront for fashion, thrift and handmade sellers.",
-    previewLabel: "Boutique",
+    name: "Boutique Edit",
+    description: "Warm editorial storefront for fashion, thrift, boutique, and handmade sellers.",
+    previewLabel: "Boutique CRO",
     component: Theme2,
   },
   theme3: {
     id: "theme3",
-    name: "Theme 3",
-    description: "Bold drop-style storefront for limited releases and creator-led shops.",
-    previewLabel: "Drop",
+    name: "Drop Mode",
+    description: "Bold storefront for limited drops, creator-led launches, and urgency-led sales.",
+    previewLabel: "Drop CRO",
     component: Theme3,
   },
 };

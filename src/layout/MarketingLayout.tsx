@@ -2,7 +2,6 @@ import { type ReactNode } from "react";
 
 import { Footer } from "../footer/Footer";
 import { Header } from "../header/Header";
-import "../homepage/homepage.css";
 
 export function MarketingLayout({ children }: { children: ReactNode }) {
   return (

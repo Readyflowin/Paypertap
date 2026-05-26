@@ -25,10 +25,14 @@ export function organizationSchema(): JsonLdObject {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
-    url: SITE_URL,
+    url: `${SITE_URL}/`,
     logo: `${SITE_URL}/images/logo/paypertap-logo.png`,
+    founder: {
+      "@type": "Person",
+      name: "Aditya",
+    },
     description:
-      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a fixed Rs. 20 verified booking flow.",
+      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a fixed ₹20 verified booking flow.",
   };
 }
 
@@ -37,7 +41,20 @@ export function websiteSchema(): JsonLdObject {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    url: SITE_URL,
+    url: `${SITE_URL}/`,
+  };
+}
+
+export function webApplicationSchema(): JsonLdObject {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: SITE_NAME,
+    url: `${SITE_URL}/`,
+    applicationCategory: "ECommerceApplication",
+    operatingSystem: "Web",
+    description:
+      "PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp sellers.",
   };
 }
 
@@ -46,7 +63,7 @@ export function personSchema(): JsonLdObject {
     "@context": "https://schema.org",
     "@type": "Person",
     name: "Aditya",
-    jobTitle: "Founder of PayPerTap",
+    jobTitle: "Founder",
     description:
       "Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers.",
     worksFor: {
@@ -55,7 +72,6 @@ export function personSchema(): JsonLdObject {
       url: SITE_URL,
     },
     url: `${SITE_URL}/founder`,
-    image: `${SITE_URL}/images/founder/aditya-paypertap-founder.jpg`,
   };
 }
 
@@ -74,7 +90,24 @@ export function breadcrumbListSchema(
   };
 }
 
-export function articleSchemaPlaceholder(input: {
+export function faqPageSchema(items: Array<{ answer: string; question: string }>): JsonLdObject {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+export function articleSchema(input: {
+  authorName: string;
+  dateModified: string;
   description: string;
   headline: string;
   path: string;
@@ -85,13 +118,20 @@ export function articleSchemaPlaceholder(input: {
     headline: input.headline,
     description: input.description,
     url: absoluteUrl(input.path),
+    author: {
+      "@type": "Organization",
+      name: input.authorName,
+    },
+    dateModified: input.dateModified,
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,
-      url: SITE_URL,
+      url: `${SITE_URL}/`,
     },
   };
 }
+
+export const articleSchemaPlaceholder = articleSchema;
 
 export function productSchemaPlaceholder(input: {
   description: string;

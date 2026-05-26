@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
+import { getRouteMetadata, type RouteMetadata } from "./metadata";
+import { fullSeoTitle } from "./renderHead";
+import { getRouteJsonLd } from "./routeSchemas";
 import {
   absoluteUrl,
   DEFAULT_OG_IMAGE,
@@ -42,9 +45,11 @@ export function RouteMeta({
     upsertMeta("property", "og:description", description);
     upsertMeta("property", "og:type", "website");
     upsertMeta("property", "og:url", canonical);
+    upsertMeta("property", "og:site_name", SITE_NAME);
     upsertMeta("name", "twitter:card", "summary_large_image");
     upsertMeta("name", "twitter:title", title);
     upsertMeta("name", "twitter:description", description);
+    removeJsonLdScripts();
 
     setMetaAttribute('link[rel="canonical"]', "href", canonical, () => {
       const link = document.createElement("link");
@@ -88,49 +93,95 @@ function upsertMeta(nameOrProperty: "name" | "property", key: string, content: s
   );
 }
 
-export function Seo({
+function removeJsonLdScripts() {
+  document.head
+    .querySelectorAll('script[type="application/ld+json"]')
+    .forEach((script) => script.remove());
+}
+
+function upsertJsonLdScripts(jsonLd: JsonLdObject[]) {
+  removeJsonLdScripts();
+
+  jsonLd.forEach((schema, index) => {
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.dataset.paypertapJsonLd = "true";
+    script.dataset.paypertapJsonLdIndex = String(index);
+    script.text = JSON.stringify(schema);
+    document.head.appendChild(script);
+  });
+}
+
+function resolveSeoProps({
   canonicalPath,
   description,
-  image = DEFAULT_OG_IMAGE,
+  image,
   jsonLd = [],
   noindex = false,
   title,
-}: SeoProps) {
-  const canonical = absoluteUrl(canonicalPath);
-  const imageUrl = absoluteUrl(image);
-  const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+}: SeoProps): RouteMetadata & {
+  image?: string;
+  jsonLd: JsonLdObject[];
+  noindex: boolean;
+} {
+  const metadata = getRouteMetadata(canonicalPath);
 
-  // TODO: Consider prerender/SSR/static generation later for stronger SEO and social crawler previews.
+  if (metadata) {
+    return {
+      ...metadata,
+      image: metadata.ogImage,
+      jsonLd: getRouteJsonLd(metadata.path),
+      noindex: metadata.robots === "noindex,nofollow",
+    };
+  }
+
+  return {
+    breadcrumbLabel: title,
+    breadcrumbs: [],
+    canonicalPath,
+    description,
+    image,
+    jsonLd,
+    noindex,
+    ogDescription: description,
+    ogImage: image ?? DEFAULT_OG_IMAGE,
+    ogTitle: title,
+    ogType: "website",
+    path: canonicalPath,
+    robots: noindex ? "noindex,nofollow" : "index,follow",
+    title,
+    twitterCard: "summary_large_image",
+  };
+}
+
+export function Seo(props: SeoProps) {
+  const seo = resolveSeoProps(props);
+  const canonical = absoluteUrl(seo.canonicalPath);
+  const imageUrl = absoluteUrl(seo.ogImage ?? seo.image ?? DEFAULT_OG_IMAGE);
+  const fullTitle = fullSeoTitle(seo.title);
+
   useEffect(() => {
     document.title = fullTitle;
-    upsertMeta("name", "description", description);
-    upsertMeta("name", "robots", noindex ? "noindex,nofollow" : "index,follow");
-    upsertMeta("property", "og:title", fullTitle);
-    upsertMeta("property", "og:description", description);
-    upsertMeta("property", "og:type", "website");
+    upsertMeta("name", "description", seo.description);
+    upsertMeta("name", "robots", seo.robots);
+    upsertMeta("property", "og:title", seo.ogTitle);
+    upsertMeta("property", "og:description", seo.ogDescription);
+    upsertMeta("property", "og:type", seo.ogType);
     upsertMeta("property", "og:url", canonical);
+    upsertMeta("property", "og:site_name", SITE_NAME);
     upsertMeta("property", "og:image", imageUrl);
-    upsertMeta("name", "twitter:card", "summary_large_image");
-    upsertMeta("name", "twitter:title", fullTitle);
-    upsertMeta("name", "twitter:description", description);
+    upsertMeta("name", "twitter:card", seo.twitterCard);
+    upsertMeta("name", "twitter:title", seo.ogTitle);
+    upsertMeta("name", "twitter:description", seo.ogDescription);
     upsertMeta("name", "twitter:image", imageUrl);
+    upsertJsonLdScripts(seo.jsonLd);
 
     setMetaAttribute('link[rel="canonical"]', "href", canonical, () => {
       const link = document.createElement("link");
       link.setAttribute("rel", "canonical");
       return link;
     });
-  }, [canonical, description, fullTitle, imageUrl, noindex]);
+  }, [canonical, fullTitle, imageUrl, seo]);
 
-  return (
-    <>
-      {jsonLd.map((schema, index) => (
-        <script
-          key={`${canonicalPath}-${index}`}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-        />
-      ))}
-    </>
-  );
+  return null;
 }

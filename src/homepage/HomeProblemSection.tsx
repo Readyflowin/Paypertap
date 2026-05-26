@@ -39,10 +39,26 @@ const pains = [
 export function HomeProblemSection() {
   return (
     <MarketingSection
-      eyebrow="The DM problem"
-      title="Selling through DMs gets messy fast."
-      intro="Discovery happens in chats. Confirmation needs a cleaner surface."
+      eyebrow="The category"
+      title="What is PayPerTap?"
+      intro="PayPerTap adds a booking-first storefront before the seller continues their existing WhatsApp sales conversation."
     >
+      <MarketingCard className="mb-5 p-6 sm:p-7">
+        <p className="ppt-home-copy max-w-4xl text-sm leading-7 text-neutral-600 sm:text-base">
+          India&apos;s{" "}
+          <a
+            href="https://www.mordorintelligence.com/industry-reports/india-social-commerce-market"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            social commerce market
+          </a>{" "}
+          is growing alongside mobile-first product discovery. PayPerTap is designed
+          for Instagram and WhatsApp sellers within that context: a buyer sees a
+          product link, places a verified booking, and returns to the seller&apos;s
+          direct conversation for the rest of the purchase.
+        </p>
+      </MarketingCard>
       <div className="ppt-problem-layout">
         <div className="ppt-problem-grid">
           {pains.map((pain) => (

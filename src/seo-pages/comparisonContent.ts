@@ -1,10 +1,10 @@
-import { type ComparisonPageContent, type ComparisonSlug } from "./seoPageTypes";
+﻿import { type ComparisonPageContent, type ComparisonSlug } from "./seoPageTypes";
 
 const commonRows = [
   {
     label: "Verified booking",
     other: "Usually not built around a paid product booking signal.",
-    paypertap: "Fixed Rs. 20 booking step before WhatsApp handoff.",
+    paypertap: "Fixed ₹20 booking step before WhatsApp handoff.",
   },
   {
     label: "Buyer context",
@@ -17,9 +17,9 @@ const commonRows = [
     paypertap: "Seller collects the remaining amount directly through WhatsApp, UPI, or COD.",
   },
   {
-    label: "Phase 1 payment role",
+    label: "Payment role",
     other: "May be link-only, catalog-only, form-only, or full ecommerce.",
-    paypertap: "PayPerTap is not a full payment gateway; it keeps the Rs. 20 verified-booking fee.",
+    paypertap: "PayPerTap is not a full payment gateway; it keeps the ₹20 verified-booking fee.",
   },
 ];
 
@@ -28,10 +28,10 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
     path: "/compare/paypertap-vs-linktree",
     title: "PayPerTap vs Linktree | Product Booking Storefront vs Link-in-Bio Tool",
     description:
-      "Compare PayPerTap and Linktree for Instagram sellers who need product pages, buyer details, Rs. 20 booking, and WhatsApp handoff.",
+      "Compare PayPerTap and Linktree for Instagram sellers who need product pages, buyer details, ₹20 booking, and WhatsApp handoff.",
     h1: "PayPerTap vs Linktree",
     summary:
-      "Linktree is useful for sharing many links. PayPerTap is better for product sellers who need a storefront, buyer context, Rs. 20 verified booking, and WhatsApp handoff.",
+      "Linktree is useful for sharing many links. PayPerTap fits product sellers who need a storefront, buyer context, ₹20 verified booking, and WhatsApp handoff.",
     whatItIs:
       "Linktree is a broad link-in-bio tool for creators, brands, and businesses. PayPerTap is narrower: a verified booking storefront for Indian Instagram and WhatsApp sellers who sell physical products through links and chat.",
     rows: [
@@ -50,7 +50,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
     bestFor: [
       "Use Linktree if you mainly need a simple list of links.",
       "Use PayPerTap if you sell products and want product-specific booking.",
-      "Use PayPerTap if fake holds, repeated DMs, and WhatsApp handoff are the real problem.",
+      "Use PayPerTap if uncommitted holds, repeated DMs, and WhatsApp handoff are the real problem.",
     ],
     honestNote:
       "Linktree is a strong link-in-bio tool. PayPerTap is not trying to be a generic link page; it is built for sellers who want the link to start a product booking flow.",
@@ -61,7 +61,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
           "Yes. For product sellers, PayPerTap can replace a generic bio link with a product-focused store link and verified booking flow.",
       },
       {
-        question: "When is Linktree still a better fit?",
+        question: "When is Linktree still the right fit?",
         answer:
           "Linktree is better if your main need is sending people to many different links, not product browsing and booking.",
       },
@@ -82,10 +82,10 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
     path: "/compare/paypertap-vs-whatsapp-catalog",
     title: "PayPerTap vs WhatsApp Catalog | Public Store Link With Booking",
     description:
-      "Compare WhatsApp Catalog and PayPerTap for sellers who want public product links, Rs. 20 verified booking, and WhatsApp Business handoff.",
+      "Compare WhatsApp Catalog and PayPerTap for sellers who want public product links, ₹20 verified booking, and WhatsApp Business handoff.",
     h1: "PayPerTap vs WhatsApp Catalog",
     summary:
-      "WhatsApp Catalog helps display products inside WhatsApp. PayPerTap gives sellers public store and product links with Rs. 20 verified booking before WhatsApp handoff.",
+      "WhatsApp Catalog helps display products inside WhatsApp. PayPerTap gives sellers public store and product links with ₹20 verified booking before WhatsApp handoff.",
     whatItIs:
       "WhatsApp Catalog is useful inside WhatsApp Business. PayPerTap can work alongside it by giving Instagram and WhatsApp buyers a public product link and a booking step before the chat continues.",
     rows: [
@@ -97,7 +97,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       {
         label: "Booking step",
         other: "Catalog browsing is not the same as paid booking.",
-        paypertap: "Fixed Rs. 20 booking before WhatsApp handoff.",
+        paypertap: "Fixed ₹20 booking before WhatsApp handoff.",
       },
       {
         label: "Works with WhatsApp Business",
@@ -141,10 +141,10 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
     path: "/compare/paypertap-vs-google-forms",
     title: "PayPerTap vs Google Forms | Storefront and Booking vs DIY Form",
     description:
-      "Compare PayPerTap and Google Forms for sellers who need product pages, buyer context, Rs. 20 booking, and WhatsApp handoff.",
+      "Compare PayPerTap and Google Forms for sellers who need product pages, buyer context, ₹20 booking, and WhatsApp handoff.",
     h1: "PayPerTap vs Google Forms",
     summary:
-      "Google Forms collects responses. PayPerTap gives sellers a product storefront, buyer context, Rs. 20 verified booking, and WhatsApp handoff.",
+      "Google Forms collects responses. PayPerTap gives sellers a product storefront, buyer context, ₹20 verified booking, and WhatsApp handoff.",
     whatItIs:
       "Google Forms is flexible for surveys and simple data collection. PayPerTap is purpose-built for social sellers who need product discovery, booking, and follow-up context in one selling flow.",
     rows: [
@@ -161,7 +161,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       {
         label: "Trust signal",
         other: "A response alone does not show paid intent.",
-        paypertap: "Rs. 20 booking helps show stronger buyer intent.",
+        paypertap: "₹20 booking helps show stronger buyer intent.",
       },
       ...commonRows,
     ],
@@ -176,7 +176,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       {
         question: "Why not just use a form for orders?",
         answer:
-          "Forms can collect responses, but PayPerTap combines product discovery, Rs. 20 booking, and WhatsApp handoff in one seller-focused flow.",
+          "Forms can collect responses, but PayPerTap combines product discovery, ₹20 booking, and WhatsApp handoff in one seller-focused flow.",
       },
       {
         question: "Does PayPerTap still collect buyer details?",
@@ -203,7 +203,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       "Compare PayPerTap and Shopify Starter for Instagram and WhatsApp sellers choosing between full ecommerce and booking-first social selling.",
     h1: "PayPerTap vs Shopify Starter",
     summary:
-      "Shopify is powerful for full ecommerce. PayPerTap is lighter for early Instagram and WhatsApp sellers who want Rs. 20 booking before direct seller payment.",
+      "Shopify is powerful for full ecommerce. PayPerTap is lighter for early Instagram and WhatsApp sellers who want ₹20 booking before direct seller payment.",
     whatItIs:
       "Shopify Starter and Shopify's broader commerce tools are useful for merchants ready for a fuller ecommerce setup. PayPerTap is simpler and booking-first for sellers who still close on WhatsApp.",
     rows: [
@@ -215,22 +215,22 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       {
         label: "Payment model",
         other: "Built around ecommerce checkout flows.",
-        paypertap: "Fixed Rs. 20 booking; seller collects remaining amount directly.",
+        paypertap: "Fixed ₹20 booking; seller collects remaining amount directly.",
       },
       {
         label: "Best stage",
-        other: "Better when the merchant is ready for more full-stack ecommerce.",
-        paypertap: "Better when the seller wants a simple booking-first social selling flow.",
+        other: "Fits merchants ready for more full-stack ecommerce.",
+        paypertap: "Fits sellers who want a simple booking-first social selling flow.",
       },
       ...commonRows,
     ],
     bestFor: [
       "Use Shopify Starter if you want a broader ecommerce platform.",
       "Use PayPerTap if you mainly sell through Instagram and WhatsApp.",
-      "Use PayPerTap if you do not want seller payout setup, split payments, or full settlement complexity in Phase 1.",
+      "Use PayPerTap if you do not want seller payout setup, split payments, or full settlement complexity.",
     ],
     honestNote:
-      "Shopify is powerful for full ecommerce. PayPerTap is simpler for early social sellers who want product links, Rs. 20 booking, and WhatsApp confirmation without claiming full payment processing.",
+      "Shopify is powerful for full ecommerce. PayPerTap is simpler for early social sellers who want product links, ₹20 booking, and WhatsApp confirmation without claiming full payment processing.",
     faqs: [
       {
         question: "Is PayPerTap a Shopify replacement?",
@@ -240,7 +240,7 @@ export const comparisonContent: Record<ComparisonSlug, ComparisonPageContent> = 
       {
         question: "Does PayPerTap handle full ecommerce checkout?",
         answer:
-          "No. In Phase 1, PayPerTap handles the fixed Rs. 20 booking fee and the seller collects the remaining amount directly.",
+          "No. PayPerTap handles the fixed ₹20 booking fee and the seller collects the remaining amount directly.",
       },
       {
         question: "When should a seller choose Shopify instead?",

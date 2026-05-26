@@ -27,7 +27,27 @@ export function FAQBlock({
               aria-hidden="true"
             />
           </summary>
-          <p className="ppt-home-copy mt-3 text-sm leading-6 text-[#070707]/50">{item.answer}</p>
+          <p className="ppt-home-copy mt-3 text-sm leading-6 text-[#070707]/50">
+            {item.answer}
+            {item.links?.length ? (
+              <>
+                {" "}
+                {item.links.map((link, index) => (
+                  <span key={`${item.question}-${link.path}`}>
+                    {index > 0 ? " " : ""}
+                    {link.external ? (
+                      <a href={link.path} target="_blank" rel="noopener noreferrer">
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link to={link.path}>{link.label}</Link>
+                    )}
+                    .
+                  </span>
+                ))}
+              </>
+            ) : null}
+          </p>
         </details>
       ))}
       {showLink ? (

@@ -1,15 +1,30 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ArrowRight, Mail, Quote, UserRoundCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
+import { FAQBlock } from "../../components/marketing/FAQBlock";
 import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
+import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
 import { personSchema } from "../../seo/schema";
+import { marketingFaqs } from "../faq/faqContent";
+
+const founderFaqs = marketingFaqs.filter((item) =>
+  [
+    "What is PayPerTap?",
+    "How does the ₹20 booking work?",
+    "Does the seller receive the ₹20?",
+    "Is PayPerTap made for Instagram sellers?",
+    "Is PayPerTap useful for WhatsApp sellers?",
+    "Can sellers share direct product links?",
+    "Is PayPerTap a payment gateway?",
+  ].includes(item.question),
+);
 
 function FounderPortrait() {
   const [showImage, setShowImage] = useState(true);
@@ -63,13 +78,15 @@ export function FounderPage() {
       <SectionHeader
         eyebrow="Founder"
         h1="Founder of PayPerTap"
-        subtitle="PayPerTap was started to help Indian social sellers turn serious buyer intent into cleaner WhatsApp conversations."
+        path="/founder"
+        subtitle="Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers. PayPerTap was created to help small sellers collect a fixed ₹20 booking and move booked buyers to WhatsApp with order details ready."
       >
         <div className="flex flex-wrap gap-3" aria-label="Founder profile links">
           <span className="ppt-soft-status-pill">LinkedIn profile coming soon</span>
           <span className="ppt-soft-status-pill">Instagram profile coming soon</span>
         </div>
       </SectionHeader>
+      <PageTrustMeta path="/founder" />
 
       <MarketingSection className="ppt-core-page-section">
         <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
@@ -88,7 +105,7 @@ export function FounderPage() {
                 <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
                   Aditya is the founder of PayPerTap. The PayPerTap founder is focused
                   on Indian Instagram and WhatsApp sellers who need a practical way to
-                  organize product discovery and reduce casual fake bookings.
+                  organize product discovery and record buyer booking intent before handoff.
                 </p>
               </div>
             </MarketingCard>
@@ -98,8 +115,9 @@ export function FounderPage() {
               </h2>
               <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
                 Sellers should not need to chase every DM, repeat every price, or hold
-                products for buyers who disappear. PayPerTap adds a small verified
-                booking step before the WhatsApp conversation continues.
+                products without booking context. PayPerTap adds a booking-first
+                storefront and a fixed ₹20 verified booking before the WhatsApp
+                conversation continues.
               </p>
             </MarketingCard>
             <MarketingCard className="ppt-founder-quote-card">
@@ -133,8 +151,54 @@ export function FounderPage() {
             <Link to="/contact" className="ppt-secondary-link">
               Contact
             </Link>
+            <Link to="/features/verified-booking" className="ppt-secondary-link">
+              Verified booking
+            </Link>
           </div>
         </MarketingCard>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="What problem is the founder of PayPerTap working on?"
+        intro="PayPerTap focuses on social sellers who need more structure between product discovery and direct confirmation."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <MarketingCard>
+            <h3 className="text-xl font-bold text-neutral-950">A social selling context</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              The wider{" "}
+              <a
+                href="https://www.mordorintelligence.com/industry-reports/india-social-commerce-market"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                social commerce market
+              </a>{" "}
+              in India includes growing mobile-first discovery. PayPerTap is Aditya&apos;s
+              booking-first storefront approach for Indian Instagram and WhatsApp
+              sellers working within that everyday buying pattern.
+            </p>
+          </MarketingCard>
+          <MarketingCard>
+            <h3 className="text-xl font-bold text-neutral-950">A limited Phase 1 promise</h3>
+            <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
+              The product records a fixed ₹20 verified booking and prepares a
+              WhatsApp handoff. It does not promise full ecommerce settlement:
+              sellers receive no payout from that fee and continue remaining payment,
+              delivery, and product support directly. This narrow scope is the
+              booking-first storefront mission behind PayPerTap.
+            </p>
+          </MarketingCard>
+        </div>
+      </MarketingSection>
+
+      <MarketingSection
+        className="ppt-core-page-section"
+        title="Founder page booking questions"
+        intro="These are the model details PayPerTap aims to communicate plainly."
+      >
+        <FAQBlock items={founderFaqs} />
       </MarketingSection>
 
       <MarketingSection className="ppt-core-page-section" title="Contact and press">

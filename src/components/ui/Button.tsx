@@ -2,6 +2,8 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import clsx from "clsx";
 
+import { PayPerTapInlineLoader } from "../loaders";
+
 type ButtonVariant =
   | "primary"
   | "secondary"
@@ -57,16 +59,6 @@ const roundedClasses: Record<ButtonRounded, string> = {
   pill: "rounded-full",
 };
 
-function LoadingDots() {
-  return (
-    <span className="ppt-button-dots" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -89,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const activeVariant = isSuccess ? "success" : variant;
     const isDisabled = disabled || isLoading;
     const leadingIcon = isLoading ? (
-      <LoadingDots />
+      <PayPerTapInlineLoader tone={variant === "secondary" || variant === "ghost" ? "brand" : "light"} />
     ) : isSuccess && !leftIcon ? (
       <Check size={18} strokeWidth={2.6} aria-hidden="true" />
     ) : (

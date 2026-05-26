@@ -1,4 +1,4 @@
-import { CheckCircle2, IndianRupee, Link2, MessageCircle, PackagePlus, Store } from "lucide-react";
+import { CheckCircle2, IndianRupee, Link2, MessageCircle, PackageCheck, PackagePlus, Store } from "lucide-react";
 
 import { MarketingCard } from "./MarketingCard";
 
@@ -21,8 +21,13 @@ export function StepList() {
     },
     {
       icon: <IndianRupee size={18} aria-hidden="true" />,
-      title: "Buyer books with Rs. 20",
+      title: "Buyer books with ₹20",
       copy: "The buyer pays the fixed PayPerTap booking fee to reserve the item.",
+    },
+    {
+      icon: <PackageCheck size={18} aria-hidden="true" />,
+      title: "Product is reserved",
+      copy: "The booking supplies a reserved item and buyer record for follow-up.",
     },
     {
       icon: <MessageCircle size={18} aria-hidden="true" />,
@@ -34,10 +39,15 @@ export function StepList() {
       title: "Seller collects directly",
       copy: "The seller collects the remaining amount through UPI, COD, or their usual process.",
     },
+    {
+      icon: <PackageCheck size={18} aria-hidden="true" />,
+      title: "Mark complete",
+      copy: "After direct fulfilment, the seller can mark the order sold or complete.",
+    },
   ];
 
   return (
-    <div className="ppt-core-stepper grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+    <div className="ppt-core-stepper grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {steps.map((step, index) => (
         <MarketingCard className="ppt-core-step-card" key={step.title}>
           <div className="ppt-core-step-index">{String(index + 1).padStart(2, "0")}</div>

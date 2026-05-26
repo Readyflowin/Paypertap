@@ -3,8 +3,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
-import logo from "../assets/Logo-128.png";
 import { headerLinks } from "./headerLinks";
+
+const logo = "/images/logo/paypertap-logo.png";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -68,8 +69,8 @@ export function Header() {
           className={[
             "pointer-events-auto relative flex w-full max-w-[1080px] items-center justify-between overflow-hidden rounded-full border px-3 py-2 transition-colors duration-300 sm:px-4 md:px-5 md:py-2.5",
             isScrolled
-              ? "border-black/10 bg-[#fbf8ee]/92 shadow-[0_12px_34px_rgba(7,7,7,0.1)] backdrop-blur-sm sm:backdrop-blur-md"
-              : "border-white/70 bg-[#fbf8ee]/86 shadow-[0_10px_26px_rgba(7,7,7,0.07)] backdrop-blur-sm",
+              ? "border-white/70 bg-[#eef3f5]/92 shadow-[0_12px_34px_rgba(7,7,7,0.1)] backdrop-blur-sm sm:backdrop-blur-md"
+              : "border-white/80 bg-[#f4f7f8]/82 shadow-[0_10px_26px_rgba(7,7,7,0.07)] backdrop-blur-sm",
           ].join(" ")}
         >
           <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.12))]" />
@@ -174,7 +175,7 @@ export function Header() {
               animate={{ x: 0 }}
               exit={{ x: "104%" }}
               transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed bottom-3 right-3 top-3 z-[140] flex w-[min(88vw,360px)] flex-col overflow-hidden rounded-[28px] border border-black/10 bg-[#fbf8ee]/98 p-5 shadow-[0_20px_54px_rgba(7,7,7,0.18)] backdrop-blur-sm lg:hidden"
+              className="fixed bottom-3 right-3 top-3 z-[140] flex w-[min(88vw,360px)] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-[#eef3f5]/98 p-5 shadow-[0_20px_54px_rgba(7,7,7,0.18)] backdrop-blur-sm lg:hidden"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(124,58,237,0.14),transparent_34%),radial-gradient(circle_at_88%_88%,rgba(29,255,138,0.13),transparent_26%)]" />
               <div className="relative flex items-center justify-between gap-4">

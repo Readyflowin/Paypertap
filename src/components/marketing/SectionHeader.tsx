@@ -1,16 +1,19 @@
 import { type ReactNode } from "react";
 
+import { MarketingBreadcrumbs } from "../../seo/breadcrumbs";
 import { MarketingPill } from "./MarketingPill";
 
 export function SectionHeader({
   children,
   eyebrow,
   h1,
+  path,
   subtitle,
 }: {
   children?: ReactNode;
   eyebrow?: string;
   h1: string;
+  path?: string;
   subtitle: string;
 }) {
   return (
@@ -18,6 +21,7 @@ export function SectionHeader({
       <div className="ppt-page-hero-glow pointer-events-none absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full blur-3xl" />
       <div className="relative mx-auto w-full max-w-7xl">
         <div className="max-w-4xl">
+          {path ? <MarketingBreadcrumbs path={path} /> : null}
           {eyebrow ? <MarketingPill>{eyebrow}</MarketingPill> : null}
           <h1 className="ppt-page-title mt-4 text-4xl font-extrabold leading-[0.98] tracking-[-0.04em] text-neutral-950 sm:text-6xl lg:text-7xl">
             {h1}

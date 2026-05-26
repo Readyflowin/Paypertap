@@ -1,4 +1,4 @@
-import clsx from "clsx";
+import { PayPerTapLoader } from "../loaders";
 
 export function PptTapLoader({
   title = "Preparing WhatsApp...",
@@ -10,13 +10,12 @@ export function PptTapLoader({
   className?: string;
 }) {
   return (
-    <div className={clsx("pds-loader-card", className)}>
-      <div className="pds-tap-pulse" />
-      <div>
-        <strong>{title}</strong>
-        <span>{description}</span>
-      </div>
-    </div>
+    <PayPerTapLoader
+      variant="card"
+      label={title}
+      description={description}
+      className={className}
+    />
   );
 }
 

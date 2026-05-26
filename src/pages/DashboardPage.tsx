@@ -15,6 +15,7 @@ import {
   Copy,
   CreditCard,
   ExternalLink,
+  FolderOpen,
   Link2,
   MessageCircle,
   MoreVertical,
@@ -34,7 +35,7 @@ import {
   PptNotice,
   PptTapLoader,
   type PptTone,
-} from "@/components/ui";
+} from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
 import {
   assertValidImageFile,
@@ -109,6 +110,7 @@ import type {
 const sidebarItems = [
   "Overview",
   "Products",
+  "Collections",
   "Bookings",
   "Customers",
   "Store",
@@ -119,6 +121,7 @@ type DashboardTab = (typeof sidebarItems)[number];
 const mobileNavItems = [
   "Overview",
   "Products",
+  "Collections",
   "Bookings",
   "Customers",
   "Store",
@@ -127,6 +130,7 @@ const mobileNavItems = [
 const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
   Overview: BarChart3,
   Products: ShoppingBag,
+  Collections: FolderOpen,
   Bookings: CalendarCheck,
   Customers: Users,
   Store: StoreIcon,
@@ -287,6 +291,7 @@ export default function DashboardPage() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [copiedStoreLink, setCopiedStoreLink] = useState(false);
+  const [addProductRequest, setAddProductRequest] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -301,6 +306,10 @@ export default function DashboardPage() {
     let cancelled = false;
 
     async function loadDashboard() {
+      if (!user) return;
+
+      const uid = user.uid;
+
       try {
         setLoading(true);
         setError("");
@@ -313,14 +322,14 @@ export default function DashboardPage() {
         }
 
         const [sellerData, storeData] = await Promise.all([
-          getSellerByUid(user.uid),
+          getSellerByUid(uid),
           getStoreById(prepared.storeId),
         ]);
 
         const [productData, bookingData] = storeData
           ? await Promise.all([
-              getSellerProductsForStore(user.uid, storeData.storeId),
-              getCheckoutSessionsBySellerId(user.uid, storeData.storeId).catch((bookingError) => {
+              getSellerProductsForStore(uid, storeData.storeId),
+              getCheckoutSessionsBySellerId(uid, storeData.storeId).catch((bookingError) => {
                 console.warn("Bookings unavailable:", bookingError);
                 return [];
               }),
@@ -362,6 +371,11 @@ export default function DashboardPage() {
   const customers = useMemo(() => deriveCustomerLeads(bookings), [bookings]);
   const storeSlug = store?.storeSlug || store?.storeId || seller?.storeId || "";
   const storeLink = storeSlug ? `${window.location.origin}/${storeSlug}` : "";
+
+  function openAddProduct() {
+    setActiveTab("Products");
+    setAddProductRequest((requestCount) => requestCount + 1);
+  }
 
   function handleProductCreated(product: Product) {
     setProducts((currentProducts) =>
@@ -517,7 +531,7 @@ export default function DashboardPage() {
                 size="md"
                 rounded="pill"
                 icon={<Plus size={16} aria-hidden="true" />}
-                onClick={() => setActiveTab("Products")}
+                onClick={openAddProduct}
               >
                 Add product
               </PptButton>
@@ -584,13 +598,25 @@ export default function DashboardPage() {
             {activeTab === "Products" ? (
               <ProductsTab
                 collections={collections}
-                onCollectionsChanged={setCollections}
+                onSelectTab={setActiveTab}
+                openAddProductSignal={addProductRequest}
                 onProductCreated={handleProductCreated}
                 onProductUpdated={handleProductUpdated}
-                onProductsChanged={setProducts}
                 products={products}
                 store={store}
                 user={user}
+              />
+            ) : null}
+
+            {activeTab === "Collections" ? (
+              <CollectionsManager
+                collections={collections}
+                onAddProduct={openAddProduct}
+                onCollectionsChanged={setCollections}
+                onProductsChanged={setProducts}
+                onViewProducts={() => setActiveTab("Products")}
+                products={products}
+                store={store}
               />
             ) : null}
 
@@ -963,7 +989,8 @@ function CompactRecentActivity({
                   {getStatusLabel(booking.status)}
                 </PptBadge>
                 <a href={whatsappUrl} target="_blank" rel="noreferrer">
-                  WhatsApp
+                  <PptBrandIcon type="whatsapp" size={14} />
+                  <span>WhatsApp</span>
                 </a>
               </article>
             );
@@ -1267,7 +1294,8 @@ function RecentBookingsCard({
                   rel="noreferrer"
                   className="ppt-dashboard-row-link"
                 >
-                  WhatsApp
+                  <PptBrandIcon type="whatsapp" size={14} />
+                  <span>WhatsApp</span>
                 </a>
               </article>
             );
@@ -1461,22 +1489,22 @@ function getCollectionProductCount(
 
 function ProductsTab({
   collections,
-  onCollectionsChanged,
+  onSelectTab,
   onProductUpdated,
-  onProductsChanged,
+  openAddProductSignal,
   products,
   user,
   store,
   onProductCreated,
 }: {
   collections: StoreCollection[];
-  onCollectionsChanged: (collections: StoreCollection[]) => void;
+  onSelectTab: (tab: DashboardTab) => void;
+  openAddProductSignal: number;
   products: Product[] | null | undefined;
   user: User | null;
   store: Store | null;
   onProductCreated: (product: Product) => void;
   onProductUpdated: (product: Product) => void;
-  onProductsChanged: (products: Product[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -1494,6 +1522,13 @@ function ProductsTab({
   const addProductFormRef = useRef<HTMLFormElement>(null);
   const addProductTitleRef = useRef<HTMLInputElement>(null);
   const safeProducts = Array.isArray(products) ? products : [];
+
+  useEffect(() => {
+    if (openAddProductSignal === 0) return;
+
+    setEditingProduct(null);
+    setShowForm(true);
+  }, [openAddProductSignal]);
 
   useEffect(() => {
     if (!showForm) return;
@@ -1572,19 +1607,28 @@ function ProductsTab({
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Products</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Products created during onboarding and dashboard add both appear here.
+              Add and manage the items buyers can book from your storefront.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingProduct(null);
-              setShowForm((isOpen) => !isOpen);
-            }}
-            className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
-          >
-            {showForm ? "Close" : "Add product"}
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProduct(null);
+                setShowForm((isOpen) => !isOpen);
+              }}
+              className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
+            >
+              {showForm ? "Close product form" : "Add product"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectTab("Collections")}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+            >
+              Manage collections
+            </button>
+          </div>
         </div>
 
         {showForm ? (
@@ -1726,17 +1770,30 @@ function ProductsTab({
         ) : null}
       </div>
 
-      <CollectionsManager
-        collections={collections}
-        onCollectionsChanged={onCollectionsChanged}
-        onProductsChanged={onProductsChanged}
-        products={safeProducts}
-        store={store}
-      />
-
       <div className="rounded-2xl border border-gray-200 bg-white">
         {safeProducts.length === 0 ? (
-          <EmptyState title="No products yet" message="Add your first product to make it available in your store." />
+          <EmptyState
+            title="No products yet"
+            message="Add your first product so buyers can book from your store."
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProduct(null);
+                setShowForm(true);
+              }}
+              className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
+            >
+              Add product
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectTab("Collections")}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+            >
+              Create collection
+            </button>
+          </EmptyState>
         ) : (
           <div className="divide-y divide-gray-100">
             {safeProducts.map((product) => (
@@ -1779,39 +1836,50 @@ function CollectionSelect({
     normalizedLegacyLabel && !legacyMatchesManaged && value.startsWith(LEGACY_COLLECTION_PREFIX);
 
   return (
-    <label className="text-sm font-medium text-gray-800">
-      {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
-      >
-        <option value={NO_COLLECTION_VALUE}>No collection</option>
-        {showLegacyOption ? (
-          <option value={`${LEGACY_COLLECTION_PREFIX}${normalizedLegacyLabel}`}>
-            {normalizedLegacyLabel} (legacy)
-          </option>
-        ) : null}
-        {collections.map((collection) => (
-          <option key={collection.collectionId} value={collection.collectionId}>
-            {collection.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div>
+      <label className="text-sm font-medium text-gray-800">
+        {label}
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
+        >
+          <option value={NO_COLLECTION_VALUE}>No collection</option>
+          {showLegacyOption ? (
+            <option value={`${LEGACY_COLLECTION_PREFIX}${normalizedLegacyLabel}`}>
+              {normalizedLegacyLabel} (legacy)
+            </option>
+          ) : null}
+          {collections.map((collection) => (
+            <option key={collection.collectionId} value={collection.collectionId}>
+              {collection.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="mt-2 text-xs leading-5 text-gray-500">
+        {collections.length
+          ? "Optional. Collections help buyers browse your storefront."
+          : "Optional. No collections yet. You can create one after saving this product."}
+      </p>
+    </div>
   );
 }
 
 function CollectionsManager({
   collections,
+  onAddProduct,
   onCollectionsChanged,
   onProductsChanged,
+  onViewProducts,
   products,
   store,
 }: {
   collections: StoreCollection[];
+  onAddProduct: () => void;
   onCollectionsChanged: (collections: StoreCollection[]) => void;
   onProductsChanged: (products: Product[]) => void;
+  onViewProducts: () => void;
   products: Product[];
   store: Store | null;
 }) {
@@ -1821,6 +1889,7 @@ function CollectionsManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const collectionNameRef = useRef<HTMLInputElement>(null);
   const editingCollection = collections.find(
     (collection) => collection.collectionId === editingCollectionId
   );
@@ -1840,6 +1909,14 @@ function CollectionsManager({
     setEditingCollectionId("");
     setName("");
     setDescription("");
+  }
+
+  function focusCollectionForm() {
+    collectionNameRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    collectionNameRef.current?.focus({ preventScroll: true });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1956,14 +2033,27 @@ function CollectionsManager({
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Collections</h2>
           <p className="mt-1 text-sm leading-6 text-gray-500">
-            Group products into storefront filters like New Arrivals, T-Shirts, or Sale.
+            Group products into storefront sections like New Drops, Thrift, Handmade, Sale, or Accessories.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-gray-500">
+            Collections are storefront groups, not sellable products. Add price, stock, and booking status on products.
           </p>
         </div>
-        <PptBadge tone="neutral">{collections.length} managed</PptBadge>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <PptBadge tone="neutral">{collections.length} managed</PptBadge>
+          <button
+            type="button"
+            onClick={onAddProduct}
+            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+          >
+            Add product
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 grid gap-3 border-t border-gray-100 pt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
         <Field
+          inputRef={collectionNameRef}
           label="Collection name"
           placeholder="New Arrivals"
           required
@@ -1972,7 +2062,7 @@ function CollectionsManager({
         />
         <Field
           label="Description"
-          placeholder="Optional internal note"
+          placeholder="Optional storefront note"
           value={description}
           onChange={setDescription}
         />
@@ -2010,9 +2100,24 @@ function CollectionsManager({
       <div className="mt-5 rounded-2xl border border-gray-100">
         {collections.length === 0 ? (
           <EmptyState
-            title="No managed collections yet"
-            message="Create a collection, then assign products from the product form."
-          />
+            title="No collections yet"
+            message="Create collections to help buyers browse your storefront faster."
+          >
+            <button
+              type="button"
+              onClick={focusCollectionForm}
+              className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
+            >
+              Create collection
+            </button>
+            <button
+              type="button"
+              onClick={onAddProduct}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+            >
+              Add product
+            </button>
+          </EmptyState>
         ) : (
           <div className="divide-y divide-gray-100">
             {collections.map((collection) => (
@@ -2034,6 +2139,13 @@ function CollectionsManager({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={onViewProducts}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-900"
+                  >
+                    View products
+                  </button>
                   <button
                     type="button"
                     disabled={saving}
@@ -2335,6 +2447,7 @@ function ProductRow({
 }) {
   const imageUrl = getProductImage(product);
   const availableQuantity = getAvailableQuantity(product);
+  const badge = getProductStatusBadge(product, availableQuantity);
   const managedCollection = findCollectionByProduct(product, collections);
   const collectionLabel =
     managedCollection?.name || getProductCollectionLabel(product) || "Uncategorized";
@@ -2361,13 +2474,13 @@ function ProductRow({
           <p className="min-w-0 break-words text-sm font-semibold text-gray-950">
             {product.title}
           </p>
-          <StatusBadge label={product.status} />
+          <StatusBadge label={badge.label} />
           <button
             type="button"
             onClick={onEdit}
             className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium text-gray-900"
           >
-            Edit
+            Edit product
           </button>
         </div>
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
@@ -2571,17 +2684,19 @@ function BookingCard({
             href={deliveryWhatsappUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900"
           >
-            Delivery details
+            <PptBrandIcon type="whatsapp" size={15} />
+            <span>Delivery details</span>
           </a>
           <a
             href={confirmedWhatsappUrl}
             target="_blank"
             rel="noreferrer"
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900"
           >
-            Order confirmed
+            <PptBrandIcon type="whatsapp" size={15} />
+            <span>Order confirmed</span>
           </a>
           <Metric label="WhatsApp opened" value={booking.whatsappOpened ? "Yes" : "No"} />
         </div>
@@ -3494,26 +3609,39 @@ function QuickReplyCard({ label, text }: { label: string; text: string }) {
 function PaymentsTab() {
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-6">
-      <p className="text-sm font-medium text-gray-500">Phase 1 mode</p>
+      <p className="text-sm font-medium text-gray-500">Booking model</p>
       <h2 className="mt-2 text-xl font-semibold tracking-tight">
         Fixed ₹20 PayPerTap booking fee
       </h2>
       <p className="mt-3 text-sm leading-6 text-gray-600">
         PayPerTap collects ₹20 from the buyer to reserve the item. You collect
-        the remaining product amount directly on WhatsApp/UPI/COD.
+        the remaining product amount directly on WhatsApp/UPI/COD. You get a managed dashboard and verified buyers that reduces your workload and help you look more professional. 
       </p>
       <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-        Custom booking-fee settings are not part of Phase 1.
+        Custom booking-fee settings are not available in this booking model.
       </div>
     </section>
   );
 }
 
-function EmptyState({ title, message }: { title: string; message: string }) {
+function EmptyState({
+  children,
+  message,
+  title,
+}: {
+  children?: ReactNode;
+  message: string;
+  title: string;
+}) {
   return (
     <div className="p-8 text-center">
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
       <p className="mt-2 text-sm text-gray-500">{message}</p>
+      {children ? (
+        <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

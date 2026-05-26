@@ -9,13 +9,25 @@ export const howItWorksLink: RelatedLink = {
   path: "/how-it-works",
 };
 
+const defaultRelatedLinks: RelatedLink[] = [
+  { label: "Pricing and ₹20 booking", path: "/pricing" },
+  howItWorksLink,
+  { label: "Verified booking", path: "/features/verified-booking" },
+  { label: "Link-in-bio storefront", path: "/features/link-in-bio-storefront" },
+  { label: "WhatsApp handoff", path: "/features/whatsapp-handoff" },
+  { label: "Compare selling tools", path: "/compare" },
+  { label: "FAQ answer hub", path: "/faq" },
+];
+
 export const createStoreLink: RelatedLink = {
   label: "Create Your Store",
   path: "/auth",
 };
 
 export function RelatedLinks({ links }: { links: RelatedLink[] }) {
-  const allLinks = [...links, howItWorksLink];
+  const allLinks = [...links, ...defaultRelatedLinks].filter(
+    (link, index, all) => all.findIndex((item) => item.path === link.path) === index,
+  );
 
   return (
     <MarketingSection

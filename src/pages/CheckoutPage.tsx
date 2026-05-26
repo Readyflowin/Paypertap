@@ -28,6 +28,59 @@ import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type CheckoutStep = "details" | "payment";
 
+const BUYER_ADDRESS_MIN_LENGTH = 12;
+const BUYER_ADDRESS_MAX_LENGTH = 160;
+
+function getTenDigitIndianMobile(phone: string): string {
+  const digits = phone.replace(/[^\d]/g, "");
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits.slice(2);
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+
+  return digits;
+}
+
+function validateBuyerDetails(input: {
+  buyerAddress: string;
+  buyerCity: string;
+  buyerName: string;
+  buyerPhone: string;
+  buyerPincode: string;
+}): { normalizedPhone: string } {
+  if (
+    !input.buyerName.trim() ||
+    !input.buyerPhone.trim() ||
+    !input.buyerAddress.trim() ||
+    !input.buyerCity.trim() ||
+    !input.buyerPincode.trim()
+  ) {
+    throw new Error("Please complete all buyer details before continuing.");
+  }
+
+  const normalizedPhone = getTenDigitIndianMobile(input.buyerPhone);
+
+  if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+    throw new Error("Please enter a valid 10-digit WhatsApp mobile number.");
+  }
+
+  const addressLength = input.buyerAddress.trim().length;
+
+  if (addressLength < BUYER_ADDRESS_MIN_LENGTH) {
+    throw new Error("Please add a little more detail to the delivery address.");
+  }
+
+  if (addressLength > BUYER_ADDRESS_MAX_LENGTH) {
+    throw new Error("Please keep the delivery address under 160 characters.");
+  }
+
+  return { normalizedPhone };
+}
+
 function getProductImage(product: Product): string {
   const image = product.images?.find((item) => item.thumbUrl || item.url || item.mediumUrl);
   return image?.thumbUrl || image?.url || image?.mediumUrl || "";
@@ -139,16 +192,14 @@ export default function CheckoutPage() {
     Boolean(product && isProductBookable(product)) &&
     !isOwnerPreview;
 
-  function validateDetails() {
-    if (
-      !buyerName.trim() ||
-      !buyerPhone.trim() ||
-      !buyerAddress.trim() ||
-      !buyerCity.trim() ||
-      !buyerPincode.trim()
-    ) {
-      throw new Error("Please fill all buyer details.");
-    }
+  function validateDetails(): { normalizedPhone: string } {
+    return validateBuyerDetails({
+      buyerAddress,
+      buyerCity,
+      buyerName,
+      buyerPhone,
+      buyerPincode,
+    });
   }
 
   function handleDetailsSubmit(event: FormEvent<HTMLFormElement>) {
@@ -156,7 +207,8 @@ export default function CheckoutPage() {
 
     try {
       setError("");
-      validateDetails();
+      const { normalizedPhone } = validateDetails();
+      setBuyerPhone(normalizedPhone);
       setStep("payment");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Please check your details.");
@@ -169,7 +221,7 @@ export default function CheckoutPage() {
     try {
       setSaving(true);
       setError("");
-      validateDetails();
+      const { normalizedPhone } = validateDetails();
 
       const latestProduct = await getPublicProductById(product.productId || product.id);
 
@@ -186,10 +238,10 @@ export default function CheckoutPage() {
         productTitle: latestProduct.title,
         productPrice: latestProduct.price,
         buyerName,
-        buyerPhone,
-        buyerAddress,
-        buyerCity,
-        buyerPincode,
+        buyerPhone: normalizedPhone,
+        buyerAddress: buyerAddress.trim(),
+        buyerCity: buyerCity.trim(),
+        buyerPincode: buyerPincode.trim(),
       });
 
       sessionStorage.setItem(
@@ -489,6 +541,8 @@ function BuyerFields({
         <PptField
           label="Name"
           placeholder="Your full name"
+          name="name"
+          autoComplete="name"
           value={buyerName}
           onChange={(event) => setBuyerName(event.target.value)}
           required
@@ -497,6 +551,12 @@ function BuyerFields({
           label="WhatsApp number"
           placeholder="10 digit mobile number"
           type="tel"
+          name="tel"
+          autoComplete="tel-national"
+          inputMode="numeric"
+          maxLength={14}
+          pattern="[0-9 +()-]{10,14}"
+          helper="Enter the 10-digit number the seller can message on WhatsApp."
           value={buyerPhone}
           onChange={(event) => setBuyerPhone(event.target.value)}
           required
@@ -505,6 +565,11 @@ function BuyerFields({
       <PptField
         label="Address"
         placeholder="House number, street, area"
+        name="street-address"
+        autoComplete="street-address"
+        minLength={BUYER_ADDRESS_MIN_LENGTH}
+        maxLength={BUYER_ADDRESS_MAX_LENGTH}
+        helper="Enter your delivery address."
         value={buyerAddress}
         onChange={(event) => setBuyerAddress(event.target.value)}
         required
@@ -513,6 +578,8 @@ function BuyerFields({
         <PptField
           label="City"
           placeholder="City"
+          name="address-level2"
+          autoComplete="address-level2"
           value={buyerCity}
           onChange={(event) => setBuyerCity(event.target.value)}
           required
@@ -520,6 +587,11 @@ function BuyerFields({
         <PptField
           label="Pincode"
           placeholder="Pincode"
+          name="postal-code"
+          autoComplete="postal-code"
+          inputMode="numeric"
+          maxLength={6}
+          pattern="[0-9]{6}"
           value={buyerPincode}
           onChange={(event) => setBuyerPincode(event.target.value)}
           required

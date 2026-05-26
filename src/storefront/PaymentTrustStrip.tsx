@@ -91,11 +91,11 @@ export function PaymentTrustStrip({
           <p
             className={`text-xs font-semibold uppercase tracking-[0.14em] ${classes.label}`}
           >
-            Seller payment options
+            Booking and payment
           </p>
           <p className="mt-1 text-xs leading-5">
-            Seller may accept UPI, Google Pay, and PhonePe for the remaining
-            amount.
+            Pay the booking fee on PayPerTap. Confirm the remaining amount
+            directly with the seller.
           </p>
         </div>
 

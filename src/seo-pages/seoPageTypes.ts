@@ -1,5 +1,11 @@
 export type FaqItem = {
   answer: string;
+  group?: string;
+  links?: Array<{
+    external?: boolean;
+    label: string;
+    path: string;
+  }>;
   question: string;
 };
 

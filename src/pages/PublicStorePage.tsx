@@ -13,7 +13,7 @@ function StorefrontLoadingState() {
     <main className="pds-page grid min-h-screen place-items-center px-4 py-8">
       <PptTapLoader
         title="Loading storefront..."
-        description="Checking this PayPerTap store."
+        
       />
     </main>
   );

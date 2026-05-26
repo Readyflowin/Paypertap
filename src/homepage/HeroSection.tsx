@@ -15,7 +15,7 @@ const trustPoints = [
   },
   {
     icon: <ShieldCheck size={17} strokeWidth={2.1} />,
-    label: "Rs. 20 booking intent",
+    label: "₹20 booking intent",
   },
   {
     icon: <WhatsAppIcon size={17} />,
@@ -63,9 +63,10 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={quickTransition(0.14)}
           >
-            PayPerTap helps Instagram and WhatsApp sellers create a clean store link,
-            collect a fixed Rs. 20 booking from serious buyers, and continue the
-            remaining payment and order confirmation directly on WhatsApp.
+            PayPerTap is a verified booking storefront for Indian Instagram and
+            WhatsApp sellers. Sellers create a product store link, buyers pay a fixed
+            ₹20 booking through PayPerTap to reserve an item, and the buyer then
+            continues to WhatsApp with product, price, booking, and contact details ready.
           </motion.p>
 
           <motion.div

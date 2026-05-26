@@ -65,7 +65,7 @@ export function HomeUseCases() {
   return (
     <MarketingSection
       eyebrow="Built for"
-      title="Built for sellers who sell through replies, drops, and quick decisions."
+      title="Who is PayPerTap for?"
       intro="Use the same social selling motion, with cleaner product discovery and booking intent."
     >
       <div className="ppt-use-case-grid">
