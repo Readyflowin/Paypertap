@@ -362,6 +362,7 @@ export async function completeStoreOnboarding(
     whatsappPhone: phone,
     instagramUrl: instagram.instagramUrl,
     instagramHandle: instagram.instagramHandle,
+    supportEmail: existingStore?.supportEmail || user.email || "",
     heroHeading: existingStore?.heroHeading || "",
     heroSubtitle: existingStore?.heroSubtitle || "",
     themeStyle: existingStore?.themeStyle || "clean-minimal",

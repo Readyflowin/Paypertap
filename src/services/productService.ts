@@ -45,6 +45,57 @@ export type UpdateSellerProductInput = {
   imageFiles?: File[];
 };
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") return false;
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function removeUndefinedFields<T>(data: T): T {
+  if (Array.isArray(data)) {
+    return data
+      .filter((item) => item !== undefined)
+      .map((item) => removeUndefinedFields(item)) as T;
+  }
+
+  if (!isPlainObject(data)) {
+    return data;
+  }
+
+  return Object.fromEntries(
+    Object.entries(data)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, removeUndefinedFields(value)])
+  ) as T;
+}
+
+function getUndefinedFieldPaths(value: unknown, prefix = ""): string[] {
+  if (value === undefined) return prefix ? [prefix] : ["<root>"];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      getUndefinedFieldPaths(item, `${prefix}[${index}]`)
+    );
+  }
+
+  if (!isPlainObject(value)) return [];
+
+  return Object.entries(value).flatMap(([key, child]) =>
+    getUndefinedFieldPaths(child, prefix ? `${prefix}.${key}` : key)
+  );
+}
+
+function logProductPayloadDebug(
+  action: "create" | "update",
+  payload: Record<string, unknown>
+) {
+  if (!import.meta.env.DEV) return;
+
+  console.info(`product ${action} keys`, Object.keys(payload));
+  console.info("undefined fields", getUndefinedFieldPaths(payload));
+}
+
 function toPositiveInt(value: number, fieldName: string) {
   const amount = Number(value);
 
@@ -208,7 +259,7 @@ export async function createSellerProduct(
     : [];
   const sortOrder = Date.now();
 
-  const productData = {
+  const rawProductData = {
     productId,
     sellerId: user.uid,
     storeId,
@@ -230,6 +281,8 @@ export async function createSellerProduct(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
+  logProductPayloadDebug("create", rawProductData);
+  const productData = removeUndefinedFields(rawProductData);
 
   await setDoc(productRef, productData);
 
@@ -295,7 +348,7 @@ export async function updateSellerProduct(
   }
 
   const productRef = doc(db, "products", product.productId || product.id);
-  const updatePayload = {
+  const rawUpdatePayload = {
     title,
     description: input.description?.trim() || "",
     category: input.category?.trim() || collectionName || COMPATIBILITY_COLLECTION_NAME,
@@ -310,6 +363,8 @@ export async function updateSellerProduct(
     images,
     updatedAt: serverTimestamp(),
   };
+  logProductPayloadDebug("update", rawUpdatePayload);
+  const updatePayload = removeUndefinedFields(rawUpdatePayload);
 
   await updateDoc(productRef, updatePayload);
 

@@ -133,6 +133,7 @@ export function sanitizePersistedProductImages(images: unknown): ProductImage[] 
     const record = image as Partial<ProductImage>;
     const url = getDurableImageUrl(record.url);
     const thumbUrl = getDurableImageUrl(record.thumbUrl);
+    const mediumUrl = getDurableImageUrl(record.mediumUrl);
 
     if (!url || !thumbUrl) return [];
 
@@ -145,12 +146,14 @@ export function sanitizePersistedProductImages(images: unknown): ProductImage[] 
             ? record.alt.trim()
             : "Product image",
         key: typeof record.key === "string" ? record.key : "",
-        thumbKey: typeof record.thumbKey === "string" ? record.thumbKey : undefined,
         sortOrder:
           typeof record.sortOrder === "number" && Number.isFinite(record.sortOrder)
             ? record.sortOrder
             : index,
-        mediumUrl: getDurableImageUrl(record.mediumUrl) || undefined,
+        ...(typeof record.thumbKey === "string" && record.thumbKey
+          ? { thumbKey: record.thumbKey }
+          : {}),
+        ...(mediumUrl ? { mediumUrl } : {}),
       },
     ];
   });

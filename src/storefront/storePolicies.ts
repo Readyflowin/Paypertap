@@ -1,4 +1,4 @@
-import type { Store } from "@/types/firestore";
+import type { Store, StoreCollection } from "@/types/firestore";
 
 export type StoreContactInfo = {
   displayName: string;
@@ -135,6 +135,27 @@ export function getStorePolicyLinks(store: Store) {
     { type: "returns" as const, label: `${returnsLabel} / Returns Policy` },
     { type: "booking" as const, label: "PayPerTap Booking Terms" },
   ];
+}
+
+export function getStoreFooterSubheading(store: Store) {
+  return (
+    toText(store.heroSubtitle) ||
+    toText(store.tagline) ||
+    toText(store.bio) ||
+    "Fresh finds, easy booking, and seller confirmation on WhatsApp."
+  );
+}
+
+export function getStoreFooterCollectionNames(
+  collections: StoreCollection[] | undefined,
+  limit = 5
+) {
+  if (!collections?.length) return [];
+
+  return collections
+    .map((collection) => toText(collection.name))
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
 export function getStorePolicyContent(

@@ -25,6 +25,8 @@ import {
   getStorefrontImageLoading,
 } from "../../imageMedia";
 import {
+  getStoreFooterCollectionNames,
+  getStoreFooterSubheading,
   getStoreContactInfo,
   getStorePolicyLinks,
 } from "../../storePolicies";
@@ -1033,86 +1035,91 @@ function Theme1ProductPageSheet({
 }
 
 function Theme1CleanFooter({
+  collections: managedCollections,
   store,
   storeSlug,
 }: {
+  collections?: StorefrontThemeProps["collections"];
   store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const contact = getStoreContactInfo(store);
   const currentYear = new Date().getFullYear();
   const policyLinks = getStorePolicyLinks(store);
+  const collectionNames = getStoreFooterCollectionNames(managedCollections);
+  const footerLine = getStoreFooterSubheading(store);
+  const logoUrl = getStoreLogoUrl(store);
+  const initials = getInitials(contact.displayName);
 
   return (
-    <footer className="w-full overflow-hidden border-t border-neutral-200 bg-white text-sm leading-6 text-neutral-600">
-      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 sm:px-5 md:grid-cols-[1.15fr_0.85fr_1fr]">
+    <footer className="w-full overflow-hidden border-t border-neutral-200 bg-[#fbfaf7] text-sm leading-6 text-neutral-600">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-9 sm:px-5 md:grid-cols-[1.2fr_0.9fr_0.9fr]">
         <section className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
-            About
-          </p>
-          <h2 className="mt-3 break-words text-2xl font-semibold tracking-[-0.04em] text-neutral-950">
-            {contact.displayName}
-          </h2>
-          <p className="mt-3 max-w-sm break-words text-neutral-500">
-            {getStoreTagline(store)}
-          </p>
-          <p className="mt-5 text-xs font-medium text-neutral-400">
-            (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border border-neutral-200 bg-white text-sm font-semibold text-neutral-950 shadow-sm">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={`${contact.displayName} logo`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                initials || <StoreIcon size={18} aria-hidden="true" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                Seller Storefront
+              </p>
+              <h2 className="mt-1 break-words text-2xl font-semibold tracking-[-0.035em] text-neutral-950">
+                {contact.displayName}
+              </h2>
+            </div>
+          </div>
+          <p className="mt-4 max-w-sm break-words text-[0.95rem] leading-6 text-neutral-500">
+            {footerLine}
           </p>
         </section>
 
         <section className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
-            Policies
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+            Collections
           </p>
-          <nav className="mt-3 grid gap-2">
-            {policyLinks.map((policy) => (
-              <Link
-                key={policy.type}
-                to={`/${storeSlug}/policies/${policy.type}`}
-                className="w-fit max-w-full break-words font-medium text-neutral-700 hover:text-neutral-950"
+          <nav className="mt-3 flex flex-wrap gap-2">
+            {collectionNames.length ? (
+              collectionNames.map((collectionName) => (
+                <a
+                  key={collectionName}
+                  href="#products"
+                  className="max-w-full rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm hover:border-neutral-300 hover:text-neutral-950"
+                >
+                  {collectionName}
+                </a>
+              ))
+            ) : (
+              <a
+                href="#products"
+                className="w-fit rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm hover:border-neutral-300 hover:text-neutral-950"
               >
-                {policy.label}
-              </Link>
-            ))}
+                All products
+              </a>
+            )}
           </nav>
         </section>
 
         <section className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
-            Contact
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+            Connect
           </p>
-          <div className="mt-3 grid gap-2">
-            {contact.ownerName ? (
-              <p className="break-words text-neutral-600">{contact.ownerName}</p>
-            ) : null}
-            {contact.whatsappUrl ? (
-              <a
-                href={contact.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 font-medium text-neutral-950"
-              >
-                <PptBrandIcon type="whatsapp" size={16} />
-                <span className="truncate">WhatsApp</span>
-              </a>
-            ) : null}
-            {contact.supportPhone ? (
-              contact.supportPhoneHref ? (
-                <a href={contact.supportPhoneHref} className="break-words text-neutral-600">
-                  {contact.supportPhone}
-                </a>
-              ) : (
-                <span className="break-words text-neutral-600">{contact.supportPhone}</span>
-              )
-            ) : null}
+          <div className="mt-3 grid gap-2 text-[0.95rem]">
             {contact.supportEmail ? (
               contact.supportEmailHref ? (
-                <a href={contact.supportEmailHref} className="break-words text-neutral-600">
+                <a href={contact.supportEmailHref} className="break-words text-neutral-700 hover:text-neutral-950">
                   {contact.supportEmail}
                 </a>
               ) : (
-                <span className="break-words text-neutral-600">{contact.supportEmail}</span>
+                <span className="break-words text-neutral-700">{contact.supportEmail}</span>
               )
             ) : null}
             {contact.instagramUrl ? (
@@ -1120,30 +1127,54 @@ function Theme1CleanFooter({
                 href={contact.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 text-neutral-600 hover:text-neutral-950"
+                className="w-fit max-w-full truncate text-neutral-700 hover:text-neutral-950"
               >
-                <PptBrandIcon type="instagram" size={16} />
-                <span className="truncate">{contact.instagramLabel}</span>
+                {contact.instagramLabel}
               </a>
             ) : null}
+            <nav className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-neutral-400">
+              {policyLinks.map((policy) => (
+                <Link
+                  key={policy.type}
+                  to={`/${storeSlug}/policies/${policy.type}`}
+                  className="hover:text-neutral-700"
+                >
+                  {policy.label}
+                </Link>
+              ))}
+            </nav>
           </div>
         </section>
+      </div>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 border-t border-neutral-200 px-4 py-4 text-xs font-medium text-neutral-400 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <span>
+          (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
+        </span>
+        <Link
+          to="/auth"
+          className="w-fit rounded-full border border-neutral-200 bg-white px-3 py-1 text-neutral-500 shadow-sm hover:border-neutral-300 hover:text-neutral-950"
+        >
+          Get your own store here
+        </Link>
       </div>
     </footer>
   );
 }
 
 function Theme1Footer({
+  collections: managedCollections,
   store,
   storeSlug,
 }: {
+  collections?: StorefrontThemeProps["collections"];
   store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const contact = getStoreContactInfo(store);
   const currentYear = new Date().getFullYear();
   const policyLinks = getStorePolicyLinks(store);
-  const aboutText = getStoreTagline(store);
+  const collectionNames = getStoreFooterCollectionNames(managedCollections);
+  const aboutText = getStoreFooterSubheading(store);
 
   return (
     <footer className="w-full overflow-hidden bg-neutral-950 text-sm leading-6 text-white/68">
@@ -1156,6 +1187,9 @@ function Theme1Footer({
             {contact.displayName}
           </h2>
           <p className="mt-3 max-w-sm break-words text-white/62">{aboutText}</p>
+          <Link to="/auth" className="mt-4 block w-fit text-xs font-medium text-white/48 hover:text-white">
+            Get your own store here
+          </Link>
           <p className="mt-6 text-xs font-medium text-white/36">
             © {currentYear} {contact.displayName}. Powered by PayPerTap.
           </p>
@@ -1163,49 +1197,32 @@ function Theme1Footer({
 
         <section className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
-            Shop
+            Collections
           </p>
           <nav className="mt-3 grid gap-2">
-            {policyLinks.map((policy) => (
-              <Link
-                key={policy.type}
-                to={`/${storeSlug}/policies/${policy.type}`}
-                className="w-fit max-w-full break-words text-white/72 hover:text-white"
-              >
-                {policy.label}
-              </Link>
-            ))}
+            {collectionNames.length ? (
+              collectionNames.map((collectionName) => (
+                <a
+                  key={collectionName}
+                  href="#products"
+                  className="w-fit max-w-full break-words text-white/72 hover:text-white"
+                >
+                  {collectionName}
+                </a>
+              ))
+            ) : (
+              <a href="#products" className="w-fit max-w-full break-words text-white/72 hover:text-white">
+                All products
+              </a>
+            )}
           </nav>
         </section>
 
         <section className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
-            Contact
+            Connect
           </p>
           <div className="mt-3 grid gap-2">
-            {contact.ownerName ? (
-              <p className="break-words text-white/72">{contact.ownerName}</p>
-            ) : null}
-            {contact.whatsappUrl ? (
-              <a
-                href={contact.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 font-medium text-white"
-              >
-                <PptBrandIcon type="whatsapp" size={16} />
-                <span className="truncate">WhatsApp</span>
-              </a>
-            ) : null}
-            {contact.supportPhone ? (
-              contact.supportPhoneHref ? (
-                <a href={contact.supportPhoneHref} className="break-words text-white/68">
-                  {contact.supportPhone}
-                </a>
-              ) : (
-                <span className="break-words text-white/68">{contact.supportPhone}</span>
-              )
-            ) : null}
             {contact.supportEmail ? (
               contact.supportEmailHref ? (
                 <a href={contact.supportEmailHref} className="break-words text-white/68">
@@ -1220,13 +1237,23 @@ function Theme1Footer({
                 href={contact.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 text-white/68 hover:text-white"
+                className="w-fit max-w-full truncate text-white/68 hover:text-white"
               >
-                <PptBrandIcon type="instagram" size={16} />
-                <span className="truncate">{contact.instagramLabel}</span>
+                {contact.instagramLabel}
               </a>
             ) : null}
           </div>
+          <nav className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-white/36">
+            {policyLinks.map((policy) => (
+              <Link
+                key={policy.type}
+                to={`/${storeSlug}/policies/${policy.type}`}
+                className="hover:text-white/70"
+              >
+                {policy.label}
+              </Link>
+            ))}
+          </nav>
         </section>
       </div>
     </footer>
@@ -1331,7 +1358,7 @@ export default function Theme1({
           totalProductCount={visibleProducts.length}
         />
       </div>
-      <Theme1CleanFooter store={store} storeSlug={storeSlug} />
+      <Theme1CleanFooter collections={managedCollections} store={store} storeSlug={storeSlug} />
 
       {isOwnerPreview && selectedProduct ? (
         <Theme1ProductPageSheet

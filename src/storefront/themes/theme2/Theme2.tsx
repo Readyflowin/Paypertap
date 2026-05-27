@@ -25,6 +25,8 @@ import {
   getStorefrontImageLoading,
 } from "../../imageMedia";
 import {
+  getStoreFooterCollectionNames,
+  getStoreFooterSubheading,
   getStoreContactInfo,
   getStorePolicyLinks,
 } from "../../storePolicies";
@@ -842,61 +844,90 @@ function Theme2ProductDetail({
   );
 }
 
-function Theme2Footer({ store }: { store: StorefrontThemeProps["store"] }) {
+function Theme2Footer({
+  collections: managedCollections,
+  store,
+}: {
+  collections?: StorefrontThemeProps["collections"];
+  store: StorefrontThemeProps["store"];
+}) {
   const contact = getStoreContactInfo(store);
   const currentYear = new Date().getFullYear();
   const policyLinks = getStorePolicyLinks(store);
+  const collectionNames = getStoreFooterCollectionNames(managedCollections);
+  const footerLine = getStoreFooterSubheading(store);
+  const logoUrl = getStoreLogoUrl(store);
+  const initials = getInitials(contact.displayName);
 
   return (
-    <footer className="rounded-[34px] border border-[#e7ded4] bg-[#fffaf4] p-5 text-sm leading-7 text-[#6f6257] shadow-[0_18px_48px_rgba(78,61,43,0.06)] sm:p-7">
-      <div className="mb-6 flex flex-col gap-3 border-b border-[#eadfd3] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7f6f]">
-            Store care
-          </p>
-          <h2 className="mt-2 break-words text-3xl font-medium tracking-[-0.055em] text-[#171411]">
-            {contact.displayName}
-          </h2>
-          {contact.ownerName ? (
-            <p className="mt-2 break-words">Contact: {contact.ownerName}</p>
-          ) : null}
+    <footer className="overflow-hidden rounded-[30px] border border-[#e7ded4] bg-[#fffaf4] text-sm leading-7 text-[#6f6257] shadow-[0_18px_48px_rgba(78,61,43,0.06)]">
+      <div className="flex flex-col gap-4 border-b border-[#eadfd3] px-5 py-6 sm:px-7 md:flex-row md:items-end md:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#e4d6c7] bg-white text-base font-semibold text-[#171411] shadow-[0_10px_28px_rgba(78,61,43,0.08)]">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`${contact.displayName} logo`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              initials || <StoreIcon size={20} aria-hidden="true" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#a28d78]">
+              Seller Storefront
+            </p>
+            <h2 className="mt-1 break-words text-3xl font-medium tracking-[-0.055em] text-[#171411]">
+              {contact.displayName}
+            </h2>
+            <p className="mt-2 max-w-xl break-words text-[#8f7f6f]">{footerLine}</p>
+          </div>
         </div>
-        <p className="text-xs font-medium text-[#8f7f6f]">
+        <Link
+          to="/auth"
+          className="w-fit rounded-full border border-[#dfd0bf] bg-white/70 px-3 py-1 text-xs font-semibold text-[#8f7f6f] hover:border-[#bfa98f] hover:text-[#171411]"
+        >
+          Get your own store here
+        </Link>
+        <p className="hidden text-xs font-medium text-[#8f7f6f]">
           © {currentYear} {contact.displayName}. Powered by PayPerTap.
         </p>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-[0.9fr_1.1fr_1fr]">
-        <section className="min-w-0 rounded-[24px] border border-[#e7ded4] bg-white/70 p-4">
-          <h3 className="font-medium text-[#171411]">Contact</h3>
-          <div className="mt-3 grid gap-2">
-            {contact.whatsappUrl ? (
-              <a
-                href={contact.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-w-0 items-center gap-2 font-medium text-[#171411]"
-              >
-                <PptBrandIcon type="whatsapp" size={16} />
-                <span className="truncate">WhatsApp seller</span>
-              </a>
-            ) : null}
-            {contact.supportPhone ? (
-              contact.supportPhoneHref ? (
-                <a href={contact.supportPhoneHref} className="break-words">
-                  {contact.supportPhone}
+      <div className="grid gap-0 divide-y divide-[#eadfd3] px-5 py-5 sm:px-7 md:grid-cols-[1fr_0.9fr_1.05fr] md:divide-x md:divide-y-0">
+        <section className="min-w-0 pb-5 md:pb-0 md:pr-6">
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#a28d78]">
+            Collections
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {collectionNames.length ? (
+              collectionNames.map((collectionName) => (
+                <a key={collectionName} href="#products" className="max-w-full rounded-full border border-[#eadfd3] bg-white/70 px-3 py-1 text-xs font-semibold text-[#5f5044] hover:border-[#cdbba7] hover:text-[#171411]">
+                  {collectionName}
                 </a>
-              ) : (
-                <span className="break-words">{contact.supportPhone}</span>
-              )
-            ) : null}
+              ))
+            ) : (
+              <a href="#products" className="w-fit rounded-full border border-[#eadfd3] bg-white/70 px-3 py-1 text-xs font-semibold text-[#5f5044] hover:border-[#cdbba7] hover:text-[#171411]">
+                All products
+              </a>
+            )}
+          </div>
+        </section>
+
+        <section className="min-w-0 py-5 md:px-6 md:py-0">
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#a28d78]">
+            Connect
+          </h3>
+          <div className="mt-3 grid gap-2 text-[0.95rem]">
             {contact.supportEmail ? (
               contact.supportEmailHref ? (
-                <a href={contact.supportEmailHref} className="break-words">
+                <a href={contact.supportEmailHref} className="break-words text-[#5f5044] hover:text-[#171411]">
                   {contact.supportEmail}
                 </a>
               ) : (
-                <span className="break-words">{contact.supportEmail}</span>
+                <span className="break-words text-[#5f5044]">{contact.supportEmail}</span>
               )
             ) : null}
             {contact.instagramUrl ? (
@@ -904,38 +935,32 @@ function Theme2Footer({ store }: { store: StorefrontThemeProps["store"] }) {
                 href={contact.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 items-center gap-2"
+                className="w-fit max-w-full truncate text-[#5f5044] hover:text-[#171411]"
               >
-                <PptBrandIcon type="instagram" size={16} />
-                <span className="truncate">{contact.instagramLabel}</span>
+                {contact.instagramLabel}
               </a>
             ) : null}
           </div>
         </section>
 
-        <section className="min-w-0 rounded-[24px] border border-[#e7ded4] bg-white/70 p-4">
-          <h3 className="font-medium text-[#171411]">Store policies</h3>
-          <nav className="mt-3 grid gap-2">
+        <section className="min-w-0 pt-5 md:pl-6 md:pt-0">
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#a28d78]">
+            Store policies
+          </h3>
+          <nav className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-xs font-semibold">
             {policyLinks.map((policy) => (
               <Link
                 key={policy.type}
                 to={`/${store.storeSlug || store.storeId}/policies/${policy.type}`}
-                className="w-fit max-w-full break-words font-medium text-[#443a32] hover:text-[#171411]"
+                className="w-fit max-w-full break-words text-[#6f6257] hover:text-[#171411]"
               >
                 {policy.label}
               </Link>
             ))}
           </nav>
-        </section>
-
-        <section className="min-w-0 rounded-[24px] border border-[#e7ded4] bg-white/70 p-4">
-          <h3 className="font-medium text-[#171411]">PayPerTap booking</h3>
-          <Link
-            to={`/${store.storeSlug || store.storeId}/policies/booking`}
-            className="mt-3 block w-fit max-w-full break-words font-medium text-[#443a32] hover:text-[#171411]"
-          >
-            Booking Policy / PayPerTap Booking Terms
-          </Link>
+          <p className="mt-4 text-xs font-medium text-[#a28d78]">
+            (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
+          </p>
         </section>
       </div>
     </footer>
@@ -1035,7 +1060,7 @@ export default function Theme2({
           showSavedOnly={showSavedOnly}
           totalProductCount={visibleProducts.length}
         />
-        <Theme2Footer store={store} />
+        <Theme2Footer collections={managedCollections} store={store} />
       </div>
 
       {isOwnerPreview && selectedProduct ? (

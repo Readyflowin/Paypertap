@@ -26,6 +26,8 @@ import {
   getStorefrontImageLoading,
 } from "../../imageMedia";
 import {
+  getStoreFooterCollectionNames,
+  getStoreFooterSubheading,
   getStoreContactInfo,
   getStorePolicyLinks,
 } from "../../storePolicies";
@@ -891,72 +893,92 @@ function Theme3ProductDetail({
 }
 
 function Theme3DarkFooter({
+  collections: managedCollections,
   store,
   storeSlug,
 }: {
+  collections?: StorefrontThemeProps["collections"];
   store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const contact = getStoreContactInfo(store);
   const currentYear = new Date().getFullYear();
   const policyLinks = getStorePolicyLinks(store);
-  const aboutText = store.tagline || store.bio || "Fresh drops with verified booking.";
+  const aboutText = getStoreFooterSubheading(store);
+  const collectionNames = getStoreFooterCollectionNames(managedCollections);
+  const logoUrl = getStoreLogoUrl(store);
+  const initials = getInitials(contact.displayName);
 
   return (
     <footer className="w-full overflow-hidden border-t border-white/10 bg-[#050507] text-sm leading-6 text-white/58">
-      <div className="mx-auto w-full max-w-6xl border-b border-white/10 px-4 py-6 sm:px-5">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
-          About
-        </p>
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h2 className="break-words text-4xl font-black tracking-[-0.06em] text-white">
-              {contact.displayName}
-            </h2>
-            <p className="mt-3 max-w-sm break-words font-medium text-white/58">
-              {aboutText}
-            </p>
-            {contact.ownerName ? (
-              <p className="mt-2 break-words text-sm font-medium text-white/58">
-                Contact: {contact.ownerName}
+      <div className="mx-auto w-full max-w-6xl border-b border-white/10 px-4 py-7 sm:px-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border border-white/14 bg-white/8 text-base font-black text-white shadow-[0_18px_42px_rgba(255,255,255,0.06)]">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={`${contact.displayName} logo`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                initials || <StoreIcon size={20} aria-hidden="true" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-white/34">
+                Seller Storefront
               </p>
-            ) : null}
+              <h2 className="mt-1 break-words text-4xl font-black tracking-[-0.06em] text-white">
+                {contact.displayName}
+              </h2>
+              <p className="mt-3 max-w-sm break-words font-medium text-white/58">
+                {aboutText}
+              </p>
+            </div>
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/34">
-            (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
-          </p>
+          <Link
+            to="/auth"
+            className="w-fit rounded-full border border-white/12 px-3 py-1 text-xs font-black uppercase tracking-[0.1em] text-white/38 hover:border-white/24 hover:text-white"
+          >
+            Get your own store here
+          </Link>
         </div>
       </div>
 
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-9 sm:px-5 lg:grid-cols-[1.1fr_0.9fr_1fr]">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-9 sm:px-5 lg:grid-cols-[1.05fr_0.9fr_1fr]">
         <section className="min-w-0">
           <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
-            Contact
+            Collections
           </h3>
-          <div className="mt-3 grid gap-2">
-            {contact.whatsappUrl ? (
-              <a
-                href={contact.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 font-bold text-white"
-              >
-                <PptBrandIcon type="whatsapp" size={16} />
-                <span className="truncate">WhatsApp</span>
-              </a>
-            ) : null}
-            {contact.supportPhone ? (
-              contact.supportPhoneHref ? (
-                <a href={contact.supportPhoneHref} className="break-words text-white/58">
-                  {contact.supportPhone}
+          <nav className="mt-3 flex flex-wrap gap-2">
+            {collectionNames.length ? (
+              collectionNames.map((collectionName) => (
+                <a
+                  key={collectionName}
+                  href="#products"
+                  className="max-w-full rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-white/64 hover:border-white/20 hover:text-white"
+                >
+                  {collectionName}
                 </a>
-              ) : (
-                <span className="break-words text-white/58">{contact.supportPhone}</span>
-              )
-            ) : null}
+              ))
+            ) : (
+              <a href="#products" className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-white/64 hover:border-white/20 hover:text-white">
+                All products
+              </a>
+            )}
+          </nav>
+        </section>
+
+        <section className="min-w-0">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
+            Connect
+          </h3>
+          <div className="mt-3 grid gap-2 text-[0.95rem]">
             {contact.supportEmail ? (
               contact.supportEmailHref ? (
-                <a href={contact.supportEmailHref} className="break-words text-white/58">
+                <a href={contact.supportEmailHref} className="break-words text-white/58 hover:text-white">
                   {contact.supportEmail}
                 </a>
               ) : (
@@ -968,10 +990,9 @@ function Theme3DarkFooter({
                 href={contact.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 text-white/58 hover:text-white"
+                className="w-fit max-w-full truncate text-white/58 hover:text-white"
               >
-                <PptBrandIcon type="instagram" size={16} />
-                <span className="truncate">{contact.instagramLabel}</span>
+                {contact.instagramLabel}
               </a>
             ) : null}
           </div>
@@ -981,29 +1002,20 @@ function Theme3DarkFooter({
           <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
             Policies
           </h3>
-          <nav className="mt-3 grid gap-2">
+          <nav className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-xs font-black uppercase tracking-[0.08em]">
             {policyLinks.map((policy) => (
               <Link
                 key={policy.type}
                 to={`/${storeSlug}/policies/${policy.type}`}
-                className="w-fit max-w-full break-words font-bold text-white/70 hover:text-white"
+                className="w-fit max-w-full break-words text-white/56 hover:text-white"
               >
                 {policy.label}
               </Link>
             ))}
           </nav>
-        </section>
-
-        <section className="min-w-0">
-          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white/34">
-            PayPerTap booking
-          </h3>
-          <Link
-            to={`/${storeSlug}/policies/booking`}
-            className="mt-3 block w-fit max-w-full break-words font-bold text-white/70 hover:text-white"
-          >
-            Booking Policy / PayPerTap Booking Terms
-          </Link>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-white/34">
+            (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
+          </p>
         </section>
       </div>
     </footer>
@@ -1011,16 +1023,19 @@ function Theme3DarkFooter({
 }
 
 function Theme3Footer({
+  collections: managedCollections,
   store,
   storeSlug,
 }: {
+  collections?: StorefrontThemeProps["collections"];
   store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const contact = getStoreContactInfo(store);
   const currentYear = new Date().getFullYear();
   const policyLinks = getStorePolicyLinks(store);
-  const aboutText = store.tagline || store.bio || "Fresh drops with verified booking.";
+  const aboutText = getStoreFooterSubheading(store);
+  const collectionNames = getStoreFooterCollectionNames(managedCollections);
 
   return (
     <footer className="w-full overflow-hidden border-t border-neutral-200 bg-white text-sm leading-6 text-neutral-600">
@@ -1036,11 +1051,9 @@ function Theme3Footer({
             <p className="mt-3 max-w-sm break-words font-medium text-neutral-600">
               {aboutText}
             </p>
-            {contact.ownerName ? (
-              <p className="mt-2 break-words text-sm font-medium text-neutral-600">
-                Contact: {contact.ownerName}
-              </p>
-            ) : null}
+            <Link to="/auth" className="mt-3 block w-fit text-xs font-black uppercase tracking-[0.12em] text-neutral-400 hover:text-neutral-950">
+              Get your own store here
+            </Link>
           </div>
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-400">
             © {currentYear} {contact.displayName}. Powered by PayPerTap.
@@ -1051,34 +1064,32 @@ function Theme3Footer({
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-9 sm:px-5 lg:grid-cols-[1.1fr_0.9fr_1fr]">
         <section className="min-w-0 text-sm leading-6 text-neutral-600">
           <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
-            Contact
+            Collections
+          </h3>
+          <nav className="mt-3 grid gap-2">
+            {collectionNames.length ? (
+              collectionNames.map((collectionName) => (
+                <a
+                  key={collectionName}
+                  href="#products"
+                  className="w-fit max-w-full break-words font-bold text-neutral-700 hover:text-neutral-950"
+                >
+                  {collectionName}
+                </a>
+              ))
+            ) : (
+              <a href="#products" className="w-fit max-w-full break-words font-bold text-neutral-700 hover:text-neutral-950">
+                All products
+              </a>
+            )}
+          </nav>
+        </section>
+
+        <section className="min-w-0 text-sm leading-6 text-neutral-600">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+            Connect
           </h3>
           <div className="mt-3 grid gap-2">
-            {contact.whatsappUrl ? (
-              <a
-                href={contact.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 font-bold text-neutral-950"
-              >
-                <PptBrandIcon type="whatsapp" size={16} />
-                <span className="truncate">WhatsApp</span>
-              </a>
-            ) : null}
-            {contact.supportPhone ? (
-              contact.supportPhoneHref ? (
-                <a
-                  href={contact.supportPhoneHref}
-                  className="break-words text-neutral-600"
-                >
-                  {contact.supportPhone}
-                </a>
-              ) : (
-                <span className="break-words text-neutral-600">
-                  {contact.supportPhone}
-                </span>
-              )
-            ) : null}
             {contact.supportEmail ? (
               contact.supportEmailHref ? (
                 <a
@@ -1098,10 +1109,9 @@ function Theme3Footer({
                 href={contact.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 w-fit max-w-full items-center gap-2 text-neutral-600 hover:text-neutral-950"
+                className="w-fit max-w-full truncate text-neutral-600 hover:text-neutral-950"
               >
-                <PptBrandIcon type="instagram" size={16} />
-                <span className="truncate">{contact.instagramLabel}</span>
+                {contact.instagramLabel}
               </a>
             ) : null}
           </div>
@@ -1124,17 +1134,6 @@ function Theme3Footer({
           </nav>
         </section>
 
-        <section className="min-w-0 text-sm leading-6 text-neutral-600">
-          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
-            PayPerTap booking
-          </h3>
-          <Link
-            to={`/${storeSlug}/policies/booking`}
-            className="mt-3 block w-fit max-w-full break-words font-bold text-neutral-700 hover:text-neutral-950"
-          >
-            Booking Policy / PayPerTap Booking Terms
-          </Link>
-        </section>
       </div>
     </footer>
   );
@@ -1234,7 +1233,7 @@ export default function Theme3({
           totalProductCount={visibleProducts.length}
         />
       </div>
-      <Theme3DarkFooter store={store} storeSlug={storeSlug} />
+      <Theme3DarkFooter collections={managedCollections} store={store} storeSlug={storeSlug} />
 
       {isOwnerPreview && selectedProduct ? (
         <Theme3ProductDetail
