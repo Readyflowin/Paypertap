@@ -32,7 +32,10 @@ type CheckoutStep = "details" | "payment";
 
 const BUYER_ADDRESS_MIN_LENGTH = 12;
 const BUYER_ADDRESS_MAX_LENGTH = 160;
-const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE === "razorpay" ? "razorpay" : "mock";
+const PAYMENT_MODE =
+  import.meta.env.VITE_PAYMENT_MODE === "mock" && !import.meta.env.PROD
+    ? "mock"
+    : "razorpay";
 const REQUIRED_BOOKING_AMOUNT = 20;
 
 function digitsOnly(value: string): string {
