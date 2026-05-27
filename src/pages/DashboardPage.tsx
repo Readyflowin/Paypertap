@@ -55,11 +55,8 @@ import {
 } from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
 import {
-  cancelOrReleaseBooking,
   getCheckoutSessionsBySellerId,
-  markBookingConfirmed,
-  markBookingContacted,
-  markBookingRemainingPaid,
+  markBookingCancelled,
   markBookingSold,
   repairMissingCheckoutReservation,
 } from "../services/checkoutService";
@@ -158,7 +155,7 @@ function getProductImage(product: Product): string {
 }
 
 function getStoreLogoUrl(store?: Store | null): string {
-  return getDisplayImageUrl(store?.logoUrl);
+  return getDisplayImageUrl(store?.logoUrl || store?.storeLogoUrl);
 }
 
 function getTimeValue(value: unknown): number {
@@ -200,16 +197,16 @@ function getShortDate(value: unknown): string {
 
 function getStoreInstagramProfile(store?: Store | null): string {
   if (!store) return "";
-  return store.instagramUrl || (store.instagramHandle ? `@${store.instagramHandle}` : "");
+  return store.instagramUrl || store.instagramProfile || (store.instagramHandle ? `@${store.instagramHandle}` : "");
 }
 
 function getSelectedStorefrontThemeId(store?: Store | null): StorefrontThemeId {
-  if (isStorefrontThemeId(store?.selectedThemeId)) {
-    return store.selectedThemeId;
-  }
-
   if (isStorefrontThemeId(store?.themeId)) {
     return store.themeId;
+  }
+
+  if (isStorefrontThemeId(store?.selectedThemeId)) {
+    return store.selectedThemeId;
   }
 
   return DEFAULT_STOREFRONT_THEME_ID;
@@ -2887,54 +2884,31 @@ function BookingCard({
             <PptBrandIcon type="whatsapp" size={17} />
             <span>Open WhatsApp</span>
           </a>
-          <label className="text-xs font-medium text-gray-500">
-            Update status
-            <select
-              value={selectedStatus}
-              onChange={(event) => {
-                const value = event.target.value as CheckoutSession["status"] | "";
-
-                if (!value || value === selectedStatus) return;
-
-                if (value === "contacted") {
-                  void runBookingAction("contacted", () => markBookingContacted(booking.checkoutId));
+          <div className="grid gap-2">
+            <span className="text-xs font-medium text-gray-500">Update status</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  void runBookingAction("cancelled", () => markBookingCancelled(booking.checkoutId))
                 }
-                if (value === "remaining_paid") {
-                  void runBookingAction("remaining_paid", () => markBookingRemainingPaid(booking.checkoutId));
-                }
-                if (value === "confirmed") {
-                  void runBookingAction("confirmed", () => markBookingConfirmed(booking.checkoutId));
-                }
-                if (value === "sold") {
-                  void runBookingAction("sold", () => markBookingSold(booking));
-                }
-                if (value === "released") {
-                  void runBookingAction("released", () => cancelOrReleaseBooking(booking));
-                }
-              }}
-              disabled={Boolean(savingAction)}
-              className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-950 disabled:opacity-50"
-            >
-              <option value="" disabled>{savingAction ? "Updating..." : "Choose action"}</option>
-              <option value="started" disabled={selectedStatus !== "started"}>New booking</option>
-              <option value="details_submitted" disabled={selectedStatus !== "details_submitted"}>New booking</option>
-              <option value="payment_pending" disabled={selectedStatus !== "payment_pending"}>New booking</option>
-              <option value="booking_paid" disabled={selectedStatus !== "booking_paid"}>New booking</option>
-              <option value="whatsapp_opened" disabled={selectedStatus !== "whatsapp_opened"}>Contacted</option>
-              <option value="contacted">Contacted</option>
-              <option value="remaining_paid">Remaining paid</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="sold">Sold</option>
-              <option
-                value="released"
-                disabled={["sold", "cancelled", "released"].includes(selectedStatus)}
+                disabled={Boolean(savingAction)}
+                className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-950 disabled:opacity-50"
               >
-                Released
-              </option>
-              <option value="abandoned" disabled={selectedStatus !== "abandoned"}>Cancelled</option>
-              <option value="cancelled" disabled={selectedStatus !== "cancelled"}>Cancelled</option>
-            </select>
-          </label>
+                Cancelled
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  void runBookingAction("sold", () => markBookingSold(booking.checkoutId))
+                }
+                disabled={Boolean(savingAction)}
+                className="rounded-xl bg-gray-950 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
+              >
+                Sold
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3218,7 +3192,7 @@ function StoreTab({
   const [returnsPolicyNotes, setReturnsPolicyNotes] = useState(
     store?.returnsPolicyNotes || ""
   );
-  const [heroHeading, setHeroHeading] = useState(store?.heroHeading || "");
+  const [heroHeading, setHeroHeading] = useState(store?.heroTitle || store?.heroHeading || "");
   const [heroSubtitle, setHeroSubtitle] = useState(store?.heroSubtitle || "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoFileName, setLogoFileName] = useState("");
@@ -3242,7 +3216,7 @@ function StoreTab({
     setSupportPhone(store?.supportPhone || "");
     setReturnsPolicyType(store?.returnsPolicyType || "exchange_only");
     setReturnsPolicyNotes(store?.returnsPolicyNotes || "");
-    setHeroHeading(store?.heroHeading || "");
+    setHeroHeading(store?.heroTitle || store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
   }, [store]);
 
@@ -3267,15 +3241,9 @@ function StoreTab({
         whatsappPhone,
         phone: store.phone || whatsappPhone,
         instagramProfile,
-        ownerName,
-        supportEmail,
-        supportPhone,
-        returnsPolicyType,
-        returnsPolicyNotes,
         heroHeading,
         heroSubtitle,
         logoUrl: uploadedLogo?.url,
-        logoKey: uploadedLogo?.key,
       });
 
       onStoreUpdated({
@@ -3284,17 +3252,12 @@ function StoreTab({
         storeName,
         bio,
         whatsappPhone,
-        ownerName,
-        supportEmail,
-        supportPhone,
-        returnsPolicyType,
-        returnsPolicyNotes,
         instagramUrl: String(updatedFields.instagramUrl || ""),
-        instagramHandle: String(updatedFields.instagramHandle || ""),
-        heroHeading,
+        instagramProfile,
+        heroTitle: heroHeading,
         heroSubtitle,
         logoUrl: uploadedLogo?.url || store.logoUrl,
-        logoKey: uploadedLogo?.key || store.logoKey,
+        storeLogoUrl: uploadedLogo?.url || store.storeLogoUrl,
       });
       setLogoFile(null);
       setLogoFileName("");

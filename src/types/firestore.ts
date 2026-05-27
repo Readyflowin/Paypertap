@@ -23,9 +23,12 @@ export type Store = {
   sellerId: string;
   storeSlug: string;
   storeName: string;
+  storeDescription?: string;
+  description?: string;
   bio: string;
   tagline?: string;
   logoUrl?: string;
+  storeLogoUrl?: string;
   logoKey?: string;
   heroImageUrl?: string;
   themeId: string;
@@ -43,6 +46,7 @@ export type Store = {
   phone?: string;
   whatsappPhone?: string;
   whatsappNumber?: string;
+  instagramProfile?: string;
   instagramUrl?: string;
   instagramHandle?: string;
   ownerName?: string;
@@ -50,6 +54,7 @@ export type Store = {
   supportPhone?: string;
   returnsPolicyType?: "returns_accepted" | "exchange_only" | "no_returns";
   returnsPolicyNotes?: string;
+  heroTitle?: string;
   heroHeading?: string;
   heroSubtitle?: string;
   themeStyle?: "soft-boutique" | "dark-drop" | "clean-minimal" | string;
@@ -99,11 +104,11 @@ export type ProductStatus = "draft" | "open" | "hold" | "sold" | "unpublished";
 
 export type ProductImage = {
   url: string;
-  thumbUrl: string;
-  alt: string;
-  key: string;
+  thumbUrl?: string;
+  alt?: string;
+  key?: string;
   thumbKey?: string;
-  sortOrder: number;
+  sortOrder?: number;
   mediumUrl?: string;
 };
 
@@ -122,6 +127,8 @@ export type Product = {
   collectionId?: string;
   collectionName?: string;
   images?: ProductImage[];
+  imageUrl?: string;
+  thumbnailUrl?: string;
   status: ProductStatus;
   isFeatured: boolean;
   sortOrder: number;

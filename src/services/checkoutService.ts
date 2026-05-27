@@ -120,90 +120,8 @@ export async function createCheckoutSessionWithReservation(
 export async function repairMissingCheckoutReservation(
   checkoutSession: CheckoutSession
 ): Promise<boolean> {
-  if (checkoutSession.reservationApplied !== false) {
-    return false;
-  }
-
-  return runTransaction(db, async (transaction) => {
-    const checkoutRef = doc(db, "checkoutSessions", checkoutSession.checkoutId);
-    const productRef = doc(db, "products", checkoutSession.productId);
-    const [checkoutSnap, productSnap] = await Promise.all([
-      transaction.get(checkoutRef),
-      transaction.get(productRef),
-    ]);
-
-    if (!checkoutSnap.exists() || !productSnap.exists()) {
-      throw new Error("Booking or product could not be found.");
-    }
-
-    const latestSession = checkoutSnap.data() as CheckoutSession;
-
-    if (latestSession.reservationApplied !== false) {
-      return false;
-    }
-
-    if (
-      ![
-        "booking_paid",
-        "whatsapp_opened",
-        "contacted",
-        "remaining_paid",
-        "confirmed",
-      ].includes(latestSession.status)
-    ) {
-      return false;
-    }
-
-    const product = productSnap.data() as {
-      sellerId?: string;
-      storeId?: string;
-      status?: string;
-      inventoryQuantity?: number;
-      reservedQuantity?: number;
-      soldQuantity?: number;
-    };
-
-    if (
-      product.sellerId !== latestSession.sellerId ||
-      product.storeId !== latestSession.storeId
-    ) {
-      throw new Error("Booking and product do not match.");
-    }
-
-    const inventoryQuantity = Number(product.inventoryQuantity || 0);
-    const reservedQuantity = Number(product.reservedQuantity || 0);
-    const soldQuantity = Number(product.soldQuantity || 0);
-    const availableQuantity = getAvailableQuantity({
-      inventoryQuantity,
-      reservedQuantity,
-      soldQuantity,
-    });
-
-    if (product.status !== "open" || availableQuantity <= 0) {
-      throw new Error("This product no longer has reservable stock.");
-    }
-
-    const nextReservedQuantity = reservedQuantity + 1;
-    const nextStatus = getNextProductStatus({
-      inventoryQuantity,
-      reservedQuantity: nextReservedQuantity,
-      soldQuantity,
-    });
-
-    transaction.update(productRef, {
-      reservedQuantity: nextReservedQuantity,
-      status: nextStatus,
-      updatedAt: serverTimestamp(),
-    });
-    transaction.update(checkoutRef, {
-      reservationApplied: true,
-      reservedProductId: latestSession.productId,
-      reservedQuantity: 1,
-      updatedAt: serverTimestamp(),
-    });
-
-    return true;
-  });
+  void checkoutSession;
+  return false;
 }
 
 export async function getCheckoutSessionById(
@@ -222,10 +140,8 @@ export async function markCheckoutEmailEventSent(
   checkoutId: string,
   field: "sellerBookingSentAt" | "buyerBookingSentAt"
 ): Promise<void> {
-  await updateDoc(doc(db, "checkoutSessions", checkoutId), {
-    [`emailEvents.${field}`]: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  void checkoutId;
+  void field;
 }
 
 function getTimeValue(value: unknown): number {
@@ -297,104 +213,10 @@ export async function markBookingConfirmed(checkoutId: string): Promise<void> {
   await updateBookingStatus(checkoutId, "confirmed");
 }
 
-export async function markBookingSold(
-  checkoutSession: CheckoutSession
-): Promise<void> {
-  await runTransaction(db, async (transaction) => {
-    const checkoutRef = doc(db, "checkoutSessions", checkoutSession.checkoutId);
-    const productRef = doc(db, "products", checkoutSession.productId);
-    const [checkoutSnap, productSnap] = await Promise.all([
-      transaction.get(checkoutRef),
-      transaction.get(productRef),
-    ]);
-
-    if (!checkoutSnap.exists() || !productSnap.exists()) {
-      throw new Error("Booking or product could not be found.");
-    }
-
-    const latestSession = checkoutSnap.data() as CheckoutSession;
-
-    if (latestSession.status === "sold") return;
-
-    if (["cancelled", "released"].includes(latestSession.status)) {
-      throw new Error("This booking was already released.");
-    }
-
-    const product = productSnap.data() as {
-      inventoryQuantity?: number;
-      reservedQuantity?: number;
-      soldQuantity?: number;
-    };
-    const inventoryQuantity = Number(product.inventoryQuantity || 0);
-    const reservedQuantity = Number(product.reservedQuantity || 0);
-    const soldQuantity = Number(product.soldQuantity || 0);
-    const nextReservedQuantity = Math.max(0, reservedQuantity - 1);
-    const nextSoldQuantity = Math.min(inventoryQuantity, soldQuantity + 1);
-    const nextStatus = getNextProductStatus({
-      inventoryQuantity,
-      reservedQuantity: nextReservedQuantity,
-      soldQuantity: nextSoldQuantity,
-    });
-
-    transaction.update(checkoutRef, {
-      status: "sold",
-      updatedAt: serverTimestamp(),
-    });
-    transaction.update(productRef, {
-      reservedQuantity: nextReservedQuantity,
-      soldQuantity: nextSoldQuantity,
-      status: nextStatus,
-      updatedAt: serverTimestamp(),
-    });
-  });
+export async function markBookingSold(checkoutId: string): Promise<void> {
+  await updateBookingStatus(checkoutId, "sold");
 }
 
-export async function cancelOrReleaseBooking(
-  checkoutSession: CheckoutSession
-): Promise<void> {
-  await runTransaction(db, async (transaction) => {
-    const checkoutRef = doc(db, "checkoutSessions", checkoutSession.checkoutId);
-    const productRef = doc(db, "products", checkoutSession.productId);
-    const [checkoutSnap, productSnap] = await Promise.all([
-      transaction.get(checkoutRef),
-      transaction.get(productRef),
-    ]);
-
-    if (!checkoutSnap.exists() || !productSnap.exists()) {
-      throw new Error("Booking or product could not be found.");
-    }
-
-    const latestSession = checkoutSnap.data() as CheckoutSession;
-
-    if (latestSession.status === "sold") {
-      throw new Error("Sold bookings cannot be released.");
-    }
-
-    if (["cancelled", "released"].includes(latestSession.status)) return;
-
-    const product = productSnap.data() as {
-      inventoryQuantity?: number;
-      reservedQuantity?: number;
-      soldQuantity?: number;
-    };
-    const inventoryQuantity = Number(product.inventoryQuantity || 0);
-    const reservedQuantity = Number(product.reservedQuantity || 0);
-    const soldQuantity = Number(product.soldQuantity || 0);
-    const nextReservedQuantity = Math.max(0, reservedQuantity - 1);
-    const nextStatus = getNextProductStatus({
-      inventoryQuantity,
-      reservedQuantity: nextReservedQuantity,
-      soldQuantity,
-    });
-
-    transaction.update(checkoutRef, {
-      status: "released",
-      updatedAt: serverTimestamp(),
-    });
-    transaction.update(productRef, {
-      reservedQuantity: nextReservedQuantity,
-      status: nextStatus,
-      updatedAt: serverTimestamp(),
-    });
-  });
+export async function markBookingCancelled(checkoutId: string): Promise<void> {
+  await updateBookingStatus(checkoutId, "cancelled");
 }

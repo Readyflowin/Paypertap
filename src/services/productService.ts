@@ -15,7 +15,7 @@ import { db } from "../lib/firebase";
 import { COMPATIBILITY_COLLECTION_NAME } from "../lib/collections";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { MAX_PRODUCT_IMAGE_COUNT } from "../lib/imageCompression";
-import { sanitizePersistedProductImages } from "../lib/imageUrls";
+import { getDurableImageUrl, sanitizePersistedProductImages } from "../lib/imageUrls";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
 import { uploadProductImages } from "./uploadService";
 
@@ -30,6 +30,12 @@ type CreateSellerProductInput = {
   inventoryQuantity?: number;
   imageFile?: File | null;
   imageFiles?: File[];
+};
+
+type RuleSafeProductImage = {
+  url: string;
+  key: string;
+  alt: string;
 };
 
 export type UpdateSellerProductInput = {
@@ -151,6 +157,46 @@ function getProductImageFiles(input: {
   return files;
 }
 
+function toRuleSafeProductImages(images: ProductImage[]): RuleSafeProductImage[] {
+  return images.map((image) => ({
+    url: image.url,
+    key: image.key || "",
+    alt: image.alt || "Product image",
+  }));
+}
+
+function getPrimaryImageFields(images: ProductImage[]) {
+  const firstImage = images[0];
+
+  return {
+    imageUrl: firstImage?.url || "",
+    thumbnailUrl: firstImage?.thumbUrl || firstImage?.url || "",
+  };
+}
+
+function getPersistedProductImages(product: Product): ProductImage[] {
+  const images = sanitizePersistedProductImages(product.images);
+
+  if (images.length) {
+    return images;
+  }
+
+  const imageUrl = getDurableImageUrl(product.imageUrl);
+  if (!imageUrl) {
+    return [];
+  }
+
+  return [
+    {
+      url: imageUrl,
+      thumbUrl: getDurableImageUrl(product.thumbnailUrl) || imageUrl,
+      alt: product.title || "Product image",
+      key: "",
+      sortOrder: 0,
+    },
+  ];
+}
+
 export async function getProductById(productId: string): Promise<Product | null> {
   const productSnap = await getDoc(doc(db, "products", productId));
 
@@ -257,6 +303,8 @@ export async function createSellerProduct(
   const images: ProductImage[] = imageFiles.length
     ? await uploadProductImages(imageFiles, title)
     : [];
+  const ruleSafeImages = toRuleSafeProductImages(images);
+  const primaryImageFields = getPrimaryImageFields(images);
   const sortOrder = Date.now();
 
   const rawProductData = {
@@ -271,7 +319,8 @@ export async function createSellerProduct(
     category: input.category?.trim() || collectionName || COMPATIBILITY_COLLECTION_NAME,
     collectionId,
     collectionName,
-    images,
+    images: ruleSafeImages,
+    ...primaryImageFields,
     status: input.status || "open",
     isFeatured: false,
     sortOrder,
@@ -329,15 +378,7 @@ export async function updateSellerProduct(
     throw new Error("Total stock cannot be less than reserved + sold quantity.");
   }
 
-  const inventoryStatusCounts =
-    input.status === "sold"
-      ? {
-          reservedQuantity: 0,
-          soldQuantity: inventoryQuantity,
-        }
-      : {};
-
-  let images: ProductImage[] = sanitizePersistedProductImages(product.images);
+  let images: ProductImage[] = getPersistedProductImages(product);
   const collectionId = input.collectionId?.trim() || "";
   const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
 
@@ -346,6 +387,9 @@ export async function updateSellerProduct(
   if (imageFiles.length) {
     images = await uploadProductImages(imageFiles, title);
   }
+
+  const ruleSafeImages = toRuleSafeProductImages(images);
+  const primaryImageFields = getPrimaryImageFields(images);
 
   const productRef = doc(db, "products", product.productId || product.id);
   const rawUpdatePayload = {
@@ -359,8 +403,8 @@ export async function updateSellerProduct(
     sellerCollectAmount: getSellerCollectAmount(price),
     inventoryQuantity,
     status: input.status,
-    ...inventoryStatusCounts,
-    images,
+    images: ruleSafeImages,
+    ...primaryImageFields,
     updatedAt: serverTimestamp(),
   };
   logProductPayloadDebug("update", rawUpdatePayload);

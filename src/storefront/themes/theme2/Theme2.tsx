@@ -64,7 +64,7 @@ function getStoreTagline(store: StorefrontThemeProps["store"]) {
 }
 
 function getStoreLogoUrl(store: StorefrontThemeProps["store"]) {
-  return getDisplayImageUrl(store.logoUrl);
+  return getDisplayImageUrl(store.logoUrl || store.storeLogoUrl);
 }
 
 function getProductId(product: StorefrontProduct) {

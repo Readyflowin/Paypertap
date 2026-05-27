@@ -130,12 +130,17 @@ export function sanitizePersistedProductImages(images: unknown): ProductImage[] 
   return images.flatMap((image, index) => {
     if (!image || typeof image !== "object") return [];
 
-    const record = image as Partial<ProductImage>;
+    const record = image as Partial<ProductImage> & {
+      thumbnailUrl?: unknown;
+    };
     const url = getDurableImageUrl(record.url);
-    const thumbUrl = getDurableImageUrl(record.thumbUrl);
+    const thumbUrl =
+      getDurableImageUrl(record.thumbUrl) ||
+      getDurableImageUrl(record.thumbnailUrl) ||
+      url;
     const mediumUrl = getDurableImageUrl(record.mediumUrl);
 
-    if (!url || !thumbUrl) return [];
+    if (!url) return [];
 
     return [
       {

@@ -68,17 +68,25 @@ export default function StoreOnboardingPage() {
         storeName,
         instagramProfile,
         logoUrl: uploadedLogo?.url,
-        logoKey: uploadedLogo?.key,
       });
 
       navigate(result.nextRoute);
     } catch (err) {
       console.error("Store onboarding failed:", err);
+      console.error("Store onboarding auth context:", {
+        hasUser: Boolean(user),
+        uid: user.uid,
+      });
       const debugInfo = getStoreOnboardingDebugInfo(err);
       if (debugInfo) {
         console.error("Store onboarding write context:", debugInfo);
       }
-      setError(err instanceof Error ? err.message : "Could not save your store.");
+      const message = err instanceof Error ? err.message : "Could not save your store.";
+      setError(
+        debugInfo && import.meta.env.DEV
+          ? `${message} (${debugInfo.operation})`
+          : message
+      );
     } finally {
       setLoading(false);
       setSubmitStatus("");

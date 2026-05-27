@@ -643,6 +643,7 @@
           line-height: 1;
           font-weight: 430;
           white-space: nowrap;
+          box-sizing: border-box;
         }
 
         .pds-badge-icon,
@@ -652,6 +653,11 @@
           justify-content: center;
           line-height: 1;
           color: inherit;
+          height: 100%;
+        }
+
+        .pds-badge-text {
+          transform: translateY(0.5px);
         }
 
         .pds-badge-primary,
@@ -1912,7 +1918,10 @@
           justify-content: center;
           align-self: center;
           justify-self: end;
-          min-height: 28px;
+          height: 36px;
+          min-height: 36px;
+          padding-top: 0;
+          padding-bottom: 0;
           line-height: 1;
           white-space: nowrap;
         }

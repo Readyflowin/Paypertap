@@ -126,7 +126,7 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
 };
 
 function getSelectedThemeId(store: Store): PageThemeId {
-  const selectedThemeId = store.selectedThemeId || store.themeId;
+  const selectedThemeId = store.themeId || store.selectedThemeId;
   return selectedThemeId === "theme2" || selectedThemeId === "theme3"
     ? selectedThemeId
     : "theme1";
@@ -188,7 +188,7 @@ function StoreMiniBlock({
   storeSlug: string;
 }) {
   const instagramUrl = getStoreInstagramUrl(store);
-  const logoUrl = getDisplayImageUrl(store.logoUrl);
+  const logoUrl = getDisplayImageUrl(store.logoUrl || store.storeLogoUrl);
 
   return (
     <section className={`min-w-0 rounded-[24px] border p-4 ${classes.storePanel}`}>

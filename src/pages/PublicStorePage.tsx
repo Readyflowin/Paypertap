@@ -67,7 +67,7 @@ export default function PublicStorePage() {
       products={data.products}
       storeSlug={storeSlug}
       isOwnerPreview={data.isOwnerPreview}
-      selectedThemeId={data.store.selectedThemeId || data.store.themeId}
+      selectedThemeId={data.store.themeId || data.store.selectedThemeId}
     />
   );
 }

@@ -27,11 +27,17 @@ type StoreOnboardingInput = {
   storeName: string;
   instagramProfile?: string;
   logoUrl?: string;
-  logoKey?: string;
 };
 
 type StoreOnboardingDebugInfo = {
-  operation: "create-slug-reservation" | "save-store" | "update-seller-onboarding";
+  operation:
+    | "load-seller"
+    | "create-minimal-seller"
+    | "check-slug-reservation"
+    | "create-slug-reservation"
+    | "check-store"
+    | "save-store"
+    | "update-seller-onboarding";
   attemptedStoreSlug: string;
   storeId: string;
   payloadKeys: string[];
@@ -66,8 +72,7 @@ const DEFAULT_COLORS = {
 
 const DEFAULT_THEME_ID = "theme1";
 
-const SLUG_TAKEN_MESSAGE =
-  "This store URL is already taken. Try a different store name.";
+const SLUG_TAKEN_MESSAGE = "This store link is already taken.";
 
 class StoreOnboardingWriteError extends Error {
   debugInfo: StoreOnboardingDebugInfo;
@@ -143,7 +148,21 @@ async function getStore(storeId: string): Promise<Store | null> {
 async function ensureMinimalSeller(user: User): Promise<Seller> {
   const uid = user.uid;
   const sellerRef = doc(db, "sellers", uid);
-  const seller = await getSeller(uid);
+  let seller: Seller | null;
+
+  try {
+    seller = await getSeller(uid);
+  } catch (error) {
+    throw createStoreOnboardingWriteError(error, {
+      operation: "load-seller",
+      attemptedStoreSlug: "",
+      storeId: "",
+      payloadKeys: [],
+      creatingSlug: false,
+      creatingStore: false,
+      updatingSeller: false,
+    });
+  }
 
   if (seller) {
     return seller;
@@ -165,18 +184,21 @@ async function ensureMinimalSeller(user: User): Promise<Seller> {
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(sellerRef, minimalSeller);
-  void sendSellerWelcomeEmail({ seller: minimalSeller }).then(async (sent) => {
-    if (!sent) return;
+  try {
+    await setDoc(sellerRef, minimalSeller);
+  } catch (error) {
+    throw createStoreOnboardingWriteError(error, {
+      operation: "create-minimal-seller",
+      attemptedStoreSlug: "",
+      storeId: "",
+      payloadKeys: Object.keys(minimalSeller),
+      creatingSlug: false,
+      creatingStore: false,
+      updatingSeller: false,
+    });
+  }
 
-    try {
-      await updateDoc(sellerRef, {
-        "emailEvents.welcomeSentAt": serverTimestamp(),
-      });
-    } catch (error) {
-      console.warn("Could not mark seller welcome email as sent:", error);
-    }
-  });
+  void sendSellerWelcomeEmail({ seller: minimalSeller });
 
   return minimalSeller;
 }
@@ -193,7 +215,21 @@ function toPositiveInt(value: number, fieldName: string) {
 
 async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
   const slugRef = doc(db, "storeSlugs", slug);
-  const slugSnap = await getDoc(slugRef);
+  let slugSnap;
+
+  try {
+    slugSnap = await getDoc(slugRef);
+  } catch (error) {
+    throw createStoreOnboardingWriteError(error, {
+      operation: "check-slug-reservation",
+      attemptedStoreSlug: slug,
+      storeId: slug,
+      payloadKeys: [],
+      creatingSlug: false,
+      creatingStore: false,
+      updatingSeller: false,
+    });
+  }
 
   if (slugSnap.exists()) {
     const reservation = slugSnap.data() as StoreSlugReservation;
@@ -223,6 +259,8 @@ async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
       if (reservation.sellerId === uid) {
         return slug;
       }
+
+      throw new Error(SLUG_TAKEN_MESSAGE);
     }
 
     if (isPermissionDenied(error)) {
@@ -238,7 +276,9 @@ async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
     }
 
     console.error("Slug reservation failed:", error);
-    throw new Error(SLUG_TAKEN_MESSAGE);
+    throw error instanceof Error
+      ? error
+      : new Error("Could not reserve your store link.");
   }
 
   return slug;
@@ -322,22 +362,22 @@ export async function completeStoreOnboarding(
   const sellerRef = doc(db, "sellers", uid);
   const seller = await ensureMinimalSeller(user);
   const existingStoreId = seller.storeId?.trim() || "";
-  const storeId = existingStoreId || (await createUniqueStoreSlug(storeName, uid));
-  const storeRef = doc(db, "stores", storeId);
-  const existingStore = existingStoreId ? await getStore(storeId) : null;
-  if (existingStoreId) {
-    await reserveStoreSlug(existingStoreId, uid);
-  }
-  const instagram = normalizeInstagramProfile(
-    input.instagramProfile ||
-      existingStore?.instagramUrl ||
-      existingStore?.instagramHandle ||
-      ""
-  );
-  const inputLogoUrl = input.logoUrl?.trim() || "";
-  const existingLogoUrl = getDurableImageUrl(existingStore?.logoUrl);
+  const storeId = existingStoreId || slugifyStoreName(storeName);
 
-  if (inputLogoUrl && !getDurableImageUrl(inputLogoUrl)) {
+  if (!storeId) {
+    throw new Error("Store name must include at least one letter or number.");
+  }
+
+  await reserveStoreSlug(storeId, uid);
+
+  const storeRef = doc(db, "stores", storeId);
+  const instagramProfile = input.instagramProfile?.trim() || "";
+  const instagram = normalizeInstagramProfile(instagramProfile);
+  const inputLogoUrl = input.logoUrl?.trim() || "";
+  const safeLogoUrl = getDurableImageUrl(inputLogoUrl);
+  const bio = "Fresh drops, limited pieces.";
+
+  if (inputLogoUrl && !safeLogoUrl) {
     throw new Error("Please re-upload the store logo before saving.");
   }
 
@@ -346,45 +386,37 @@ export async function completeStoreOnboarding(
     sellerId: uid,
     storeSlug: storeId,
     storeName,
-    bio: existingStore?.bio || "Fresh drops, limited pieces.",
-    logoUrl: inputLogoUrl || existingLogoUrl,
-    logoKey: input.logoKey || existingStore?.logoKey || "",
-    heroImageUrl: existingStore?.heroImageUrl || "",
-    themeId: existingStore?.themeId || DEFAULT_THEME_ID,
-    selectedThemeId: existingStore?.selectedThemeId || DEFAULT_THEME_ID,
-    primaryColor: existingStore?.primaryColor || DEFAULT_COLORS.primaryColor,
-    secondaryColor:
-      existingStore?.secondaryColor || DEFAULT_COLORS.secondaryColor,
-    accentColor: existingStore?.accentColor || DEFAULT_COLORS.accentColor,
-    fontStyle: existingStore?.fontStyle || "sans",
+    storeDescription: bio,
+    description: bio,
+    bio,
+    logoUrl: safeLogoUrl,
+    storeLogoUrl: safeLogoUrl,
+    heroTitle: "",
+    heroSubtitle: "",
+    heroImageUrl: "",
+    themeId: DEFAULT_THEME_ID,
+    primaryColor: DEFAULT_COLORS.primaryColor,
+    secondaryColor: DEFAULT_COLORS.secondaryColor,
+    accentColor: DEFAULT_COLORS.accentColor,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     phone,
     whatsappPhone: phone,
+    instagramProfile,
     instagramUrl: instagram.instagramUrl,
-    instagramHandle: instagram.instagramHandle,
-    supportEmail: existingStore?.supportEmail || user.email || "",
-    heroHeading: existingStore?.heroHeading || "",
-    heroSubtitle: existingStore?.heroSubtitle || "",
-    themeStyle: existingStore?.themeStyle || "clean-minimal",
-    isPublished: existingStore?.isPublished ?? true,
+    isPublished: true,
     updatedAt: serverTimestamp(),
   };
 
-  const storeWritePayload = {
-    ...storePayload,
-    ...(!existingStore ? { createdAt: serverTimestamp() } : {}),
-  };
-
   try {
-    await setDoc(storeRef, storeWritePayload, { merge: true });
+    await setDoc(storeRef, storePayload, { merge: true });
   } catch (error) {
     throw createStoreOnboardingWriteError(error, {
       operation: "save-store",
       attemptedStoreSlug: storeId,
       storeId,
-      payloadKeys: Object.keys(storeWritePayload),
+      payloadKeys: Object.keys(storePayload),
       creatingSlug: false,
-      creatingStore: !existingStore,
+      creatingStore: !existingStoreId,
       updatingSeller: false,
     });
   }
@@ -415,7 +447,7 @@ export async function completeStoreOnboarding(
     });
   }
 
-  if (!existingStore?.emailEvents?.storeCreatedSentAt) {
+  if (!existingStoreId) {
     const sellerForEmail: Seller = {
       ...seller,
       sellerId: uid,
@@ -426,7 +458,6 @@ export async function completeStoreOnboarding(
       storeId,
     };
     const storeForEmail: Store = {
-      ...(existingStore || ({} as Store)),
       ...storePayload,
     };
 
@@ -438,10 +469,10 @@ export async function completeStoreOnboarding(
 
       try {
         await updateDoc(storeRef, {
-          "emailEvents.storeCreatedSentAt": serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
       } catch (error) {
-        console.warn("Could not mark store created email as sent:", error);
+        console.warn("Could not touch store after created email was sent:", error);
       }
     });
   }
