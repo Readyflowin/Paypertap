@@ -183,6 +183,8 @@ export type CheckoutSession = {
   reservationApplied?: boolean;
   reservedProductId?: string;
   reservedQuantity?: number;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   emailEvents?: {
     sellerBookingSentAt?: unknown;
     buyerBookingSentAt?: unknown;

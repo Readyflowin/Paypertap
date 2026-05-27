@@ -120,7 +120,26 @@ function buildPublicUrl(baseUrl: string | undefined, key: string) {
     return null;
   }
 
-  return `${trimmedBaseUrl}/${key.replace(/^\/+/g, "")}`;
+  const url = `${trimmedBaseUrl}/${key.replace(/^\/+/g, "")}`;
+
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (
+      parsed.protocol !== "https:" ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1"
+    ) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  return url;
 }
 
 function parseUpload(req: any) {
@@ -222,12 +241,19 @@ export default async function handler(req: any, res: any) {
 
     const url = buildPublicUrl(process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL, key);
 
+    if (!url) {
+      return sendJson(res, 500, {
+        success: false,
+        error:
+          "Cloudflare R2 public image URL is not configured as a durable HTTPS URL.",
+      });
+    }
+
     return sendJson(res, 200, {
       success: true,
       key,
       url,
       cacheControl: publicImageCacheControl,
-      warning: url ? undefined : "CLOUDFLARE_R2_PUBLIC_BASE_URL is not configured.",
     });
   } catch (error) {
     const statusCode =

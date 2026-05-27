@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { PptBadge, PptBrandIcon, PptButton } from "@/components/ui";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
 import {
   getAvailableQuantity as getSharedAvailableQuantity,
@@ -58,6 +59,10 @@ function getInitials(name: string) {
 
 function getStoreTagline(store: StorefrontThemeProps["store"]) {
   return store.tagline || store.bio || "Fresh drops, limited pieces.";
+}
+
+function getStoreLogoUrl(store: StorefrontThemeProps["store"]) {
+  return getDisplayImageUrl(store.logoUrl);
 }
 
 function getProductId(product: StorefrontProduct) {
@@ -124,7 +129,7 @@ function getSellerCollectAmount(price: number) {
 
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
-  if (status === "reserved") return "Reserved";
+  if (status === "hold" || status === "reserved") return "Currently reserved";
   return getProductUnavailableLabel(product);
 }
 
@@ -132,15 +137,16 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
   const storeName = store.storeName || "PayPerTap Store";
   const initials = getInitials(storeName);
   const contact = getStoreContactInfo(store);
+  const logoUrl = getStoreLogoUrl(store);
 
   return (
     <header className="relative overflow-hidden rounded-[34px] border border-[#e7ded4] bg-[#fffaf4] shadow-[0_22px_64px_rgba(78,61,43,0.09)]">
       <div className="grid min-w-0 gap-6 px-5 py-7 sm:px-8 sm:py-9 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)] md:items-end">
         <div className="min-w-0">
           <div className="mb-6 flex min-w-0 items-center gap-3">
-            {store.logoUrl ? (
+            {logoUrl ? (
               <img
-                src={store.logoUrl}
+                src={logoUrl}
                 alt={`${storeName} logo`}
                 decoding="async"
                 fetchPriority="high"
@@ -182,7 +188,7 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#75695f]">
-            Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)} today. Pay the remaining amount only after the seller confirms on WhatsApp.
+            Pay {formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
           </p>
           <a
             href="#products"
@@ -203,7 +209,7 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
                   {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
-                  Serious buyer intent recorded.
+                  Your item is held after successful booking.
                 </p>
               </div>
             </div>
@@ -213,10 +219,10 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
               </span>
               <div className="min-w-0">
                 <p className="font-medium text-[#171411]">
-                  Seller confirms on WhatsApp
+                  Continue on WhatsApp
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[#8f7f6f]">
-                  Product, buyer, and payment context stay together.
+                  Product and contact details are ready to send.
                 </p>
               </div>
             </div>
@@ -230,15 +236,16 @@ function Theme2EditorialHero({ store }: { store: StorefrontThemeProps["store"] }
 function Theme2Hero({ store }: { store: StorefrontThemeProps["store"] }) {
   const storeName = store.storeName || "PayPerTap Store";
   const initials = getInitials(storeName);
+  const logoUrl = getStoreLogoUrl(store);
 
   return (
     <header className="relative overflow-hidden rounded-[34px] border border-[#e7ded4] bg-[#fffaf4] px-5 py-7 shadow-[0_20px_60px_rgba(78,61,43,0.08)] sm:px-8 sm:py-9">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-5 flex items-center gap-3">
-            {store.logoUrl ? (
+            {logoUrl ? (
               <img
-                src={store.logoUrl}
+                src={logoUrl}
                 alt={`${storeName} logo`}
                 decoding="async"
                 fetchPriority="high"
@@ -299,7 +306,7 @@ function Theme2ProductCard({
   const badge = getProductBadge(product);
   const bookable = isBookable(product);
   const ctaLabel = bookable
-    ? `Reserve ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
+    ? `Book for ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
     : "View details";
 
   return (
@@ -334,7 +341,7 @@ function Theme2ProductCard({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[#9a8c7f]">
               <ImageIcon size={24} aria-hidden="true" />
-              <span className="text-xs font-medium">No image</span>
+              <span className="text-xs font-medium">Product image</span>
             </div>
           )}
           <div className="absolute left-2 top-2">
@@ -763,10 +770,10 @@ function Theme2ProductDetail({
 
             <div className="mt-6 min-w-0 max-w-full rounded-[22px] border border-[#e7ded4] bg-[#fffaf4] p-4 text-sm leading-6 text-[#6f6257]">
               <strong className="block font-medium text-[#171411]">
-                Reserve this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
+                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
               </strong>
               {sellerCollectAmount !== null
-                ? `${formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation.`
+                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
                 : "Pay the remaining amount directly to the seller."}
               <span className="block">WhatsApp opens with the product and buyer details ready.</span>
             </div>
@@ -781,7 +788,7 @@ function Theme2ProductDetail({
                   to={checkoutHref}
                   className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#171411] px-5 py-3 text-center text-sm font-medium !text-[#fffaf4] shadow-[0_14px_34px_rgba(23,20,17,0.18)] transition hover:bg-[#2a241f]"
                 >
-                  <span>Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
+                  <span>Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
                 </Link>
               ) : (
                 <PptButton fullWidth size="lg" variant="secondary" disabled>
@@ -811,7 +818,7 @@ function Theme2ProductDetail({
                 to={checkoutHref}
                 className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-[#171411] px-3 text-sm font-medium !text-[#fffaf4] shadow-[0_12px_28px_rgba(23,20,17,0.18)]"
               >
-                Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
+                Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
               </Link>
             ) : (
               <button
@@ -825,9 +832,9 @@ function Theme2ProductDetail({
           </div>
           <p className="mt-2 break-words text-center text-xs font-medium text-[#8f7f6f]">
             {sellerCollectAmount !== null
-              ? `${formatINR(sellerCollectAmount)} remaining paid directly to seller`
-              : "Pay remaining directly to seller"}
-            <span className="block">Seller confirms on WhatsApp</span>
+              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
+              : "Pay the remaining amount directly to the seller"}
+            <span className="block">Continue on WhatsApp</span>
           </p>
         </div>
       </div>

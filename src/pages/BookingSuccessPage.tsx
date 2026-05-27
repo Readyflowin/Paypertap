@@ -19,6 +19,7 @@ import {
   buildBuyerBookingWhatsAppUrl,
   getStoreWhatsAppPhone,
 } from "@/services/whatsappService";
+import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type SuccessState = {
@@ -170,7 +171,7 @@ export default function BookingSuccessPage() {
   const productImage = state.product?.images?.find(
     (image) => image.thumbUrl || image.url || image.mediumUrl
   );
-  const productImageUrl = productImage?.thumbUrl || productImage?.url || productImage?.mediumUrl || "";
+  const productImageUrl = state.product ? getProductGridImageUrl(state.product) : "";
 
   return (
     <main className="pds-page">
@@ -180,13 +181,13 @@ export default function BookingSuccessPage() {
             <CheckCircle2 size={34} strokeWidth={2.4} aria-hidden="true" />
           </div>
           <PptBadge tone={reservationApplied ? "success" : "warning"} className="mt-5">
-            {reservationApplied ? "Booking confirmed" : "Booking recorded"}
+            Booking received
           </PptBadge>
           <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
-            {reservationApplied ? "Booking confirmed" : "Booking recorded"}
+            Booking received
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Your ₹20 booking via PayPerTap has been recorded. Please message the seller to confirm delivery.
+            Your item is reserved. Continue to WhatsApp to confirm delivery and the remaining payment with the seller.
           </p>
 
           <div className="mt-6 flex flex-col items-center gap-3">
@@ -199,7 +200,7 @@ export default function BookingSuccessPage() {
                 icon={<PptBrandIcon type="whatsapp" size={18} />}
                 onClick={openWhatsApp}
               >
-                Message seller on WhatsApp
+                Continue to WhatsApp
               </PptButton>
             ) : (
               <PptButton type="button" variant="secondary" size="lg" rounded="pill" disabled>
@@ -231,7 +232,10 @@ export default function BookingSuccessPage() {
                     loading="lazy"
                   />
                 ) : (
-                  <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />
+                  <div className="flex flex-col items-center gap-1 text-[var(--pds-muted)]">
+                    <ImageIcon size={22} aria-hidden="true" />
+                    <span className="text-[10px] font-medium">Product image</span>
+                  </div>
                 )}
               </div>
               <div className="min-w-0 flex-1">
@@ -257,7 +261,7 @@ export default function BookingSuccessPage() {
               productPrice={checkout.productPrice}
               advanceAmount={checkout.bookingAdvanceAmount}
               currency="₹"
-              note="Remaining amount is paid directly to the seller."
+              note="Pay the remaining amount directly to the seller."
             />
           </aside>
         </div>
@@ -265,11 +269,10 @@ export default function BookingSuccessPage() {
         <div className="mt-5 grid gap-5">
           <PptNotice
             tone="info"
-            title="After booking, message the seller on WhatsApp."
+            title="Continue on WhatsApp"
             icon={<PptBrandIcon type="whatsapp" size={18} />}
           >
-            We prepared a message with your booking details so the seller can confirm the remaining
-            amount directly.
+            Product and contact details are ready to send.
           </PptNotice>
 
           <details className="pds-panel group">

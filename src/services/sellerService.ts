@@ -7,6 +7,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { getDurableImageUrl } from "../lib/imageUrls";
 import type { Seller, Store, StoreSlugReservation } from "../types/firestore";
 import {
   sendSellerWelcomeEmail,
@@ -333,6 +334,12 @@ export async function completeStoreOnboarding(
       existingStore?.instagramHandle ||
       ""
   );
+  const inputLogoUrl = input.logoUrl?.trim() || "";
+  const existingLogoUrl = getDurableImageUrl(existingStore?.logoUrl);
+
+  if (inputLogoUrl && !getDurableImageUrl(inputLogoUrl)) {
+    throw new Error("Please re-upload the store logo before saving.");
+  }
 
   const storePayload = {
     storeId,
@@ -340,7 +347,7 @@ export async function completeStoreOnboarding(
     storeSlug: storeId,
     storeName,
     bio: existingStore?.bio || "Fresh drops, limited pieces.",
-    logoUrl: input.logoUrl || existingStore?.logoUrl || "",
+    logoUrl: inputLogoUrl || existingLogoUrl,
     logoKey: input.logoKey || existingStore?.logoKey || "",
     heroImageUrl: existingStore?.heroImageUrl || "",
     themeId: existingStore?.themeId || DEFAULT_THEME_ID,

@@ -11,6 +11,7 @@ import {
   MAX_PRODUCT_IMAGE_COUNT,
   type ImageCompressionPreset,
 } from "../lib/imageCompression";
+import { isDurableImageUrl } from "../lib/imageUrls";
 
 const maxImageSize = 5 * 1024 * 1024;
 export const PUBLIC_IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -70,8 +71,10 @@ async function uploadImageBlobToR2(
     throw new Error(getUploadError(data, "Image upload failed. Please try again."));
   }
 
-  if (!data.url || !data.key) {
-    throw new Error("Image uploaded, but the public URL was not returned.");
+  if (!data.url || !data.key || !isDurableImageUrl(data.url)) {
+    throw new Error(
+      "Image upload is not configured with a durable public URL. Please check storage settings and try again."
+    );
   }
 
   return {

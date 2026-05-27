@@ -88,14 +88,9 @@ export function PaymentTrustStrip({
         }`}
       >
         <div className="min-w-0">
-          <p
-            className={`text-xs font-semibold uppercase tracking-[0.14em] ${classes.label}`}
-          >
-            Booking and payment
-          </p>
+          <p className={`text-xs font-semibold ${classes.label}`}>Book your item</p>
           <p className="mt-1 text-xs leading-5">
-            Pay the booking fee on PayPerTap. Confirm the remaining amount
-            directly with the seller.
+            Pay ₹20 to reserve this item, then continue to WhatsApp.
           </p>
         </div>
 
@@ -145,7 +140,7 @@ export function PaymentTrustStrip({
             <PptBrandIcon type="whatsapp" size={15} />
           </span>
           <span className="min-w-0 whitespace-normal break-words">
-            Seller confirms on WhatsApp
+            Continue on WhatsApp
           </span>
         </div>
         <div
@@ -157,7 +152,7 @@ export function PaymentTrustStrip({
             <IndianRupee size={14} aria-hidden="true" />
           </span>
           <span className="min-w-0 whitespace-normal break-words">
-            Remaining amount paid directly to seller
+            Pay the seller directly
           </span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import type { StorefrontProduct, StorefrontStore } from "./themes/types";
 import type { ProductImage } from "@/types/firestore";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 
 type FlexibleStore = StorefrontStore & {
   bannerImageUrl?: unknown;
@@ -27,9 +28,7 @@ type ImageLike = Partial<ProductImage> & {
 };
 
 export function normalizePublicImageUrl(value: unknown): string {
-  if (typeof value !== "string") return "";
-
-  return value.trim();
+  return getDisplayImageUrl(value);
 }
 
 export function getStorefrontImageLoading(index: number): "eager" | "lazy" {

@@ -113,7 +113,7 @@ export function generateReturnsPolicy(store: Store): string {
     exchange_only:
       "Exchange may be available as per seller confirmation. Please contact the seller on WhatsApp with your order details.",
     no_returns:
-      "Returns are not accepted unless the seller confirms otherwise. Please check product details before booking.",
+      "Returns depend on the seller's store policy. Please check product details before booking.",
   }[getReturnsPolicyType(store)];
 
   return notes ? `${baseCopy} ${notes}` : baseCopy;
@@ -124,7 +124,7 @@ export function generatePrivacyPolicy(): string {
 }
 
 export function getPayPerTapBookingExplanation(): string {
-  return "PayPerTap collects a fixed ₹20 verified-booking fee. The seller does not receive this ₹20. The buyer pays the remaining product amount directly to the seller on WhatsApp, UPI, or COD, and the seller confirms order and delivery on WhatsApp.";
+  return "Book an item with ₹20 on PayPerTap. Your item is held after successful booking, and you can continue on WhatsApp to confirm delivery and the remaining payment with the seller.";
 }
 
 export function getStorePolicyLinks(store: Store) {
@@ -168,7 +168,7 @@ export function getStorePolicyContent(
       title: "PayPerTap Booking Terms",
       body: [
         getPayPerTapBookingExplanation(),
-        "This booking fee verifies buyer intent and reserves the item for seller follow-up. PayPerTap does not process the remaining product payment.",
+        "Pay the remaining amount directly to the seller on WhatsApp, UPI, or COD.",
       ],
     };
   }

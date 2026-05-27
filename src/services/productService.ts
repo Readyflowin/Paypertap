@@ -15,6 +15,7 @@ import { db } from "../lib/firebase";
 import { COMPATIBILITY_COLLECTION_NAME } from "../lib/collections";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { MAX_PRODUCT_IMAGE_COUNT } from "../lib/imageCompression";
+import { sanitizePersistedProductImages } from "../lib/imageUrls";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
 import { uploadProductImages } from "./uploadService";
 
@@ -283,7 +284,7 @@ export async function updateSellerProduct(
         }
       : {};
 
-  let images: ProductImage[] = product.images || [];
+  let images: ProductImage[] = sanitizePersistedProductImages(product.images);
   const collectionId = input.collectionId?.trim() || "";
   const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
 

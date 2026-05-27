@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { PptBadge, PptBrandIcon, PptButton } from "@/components/ui";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
 import {
   getAvailableQuantity as getSharedAvailableQuantity,
@@ -44,6 +45,10 @@ type FlexibleProduct = StorefrontProduct & {
 
 function getStoreTagline(store: StorefrontThemeProps["store"]) {
   return store.tagline || store.bio || "Fresh drops, limited pieces.";
+}
+
+function getStoreLogoUrl(store: StorefrontThemeProps["store"]) {
+  return getDisplayImageUrl(store.logoUrl);
 }
 
 function getInitials(name: string) {
@@ -123,7 +128,7 @@ function getSellerCollectAmount(price: number) {
 
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
-  if (status === "reserved") return "Reserved";
+  if (status === "hold" || status === "reserved") return "Currently reserved";
   return getProductUnavailableLabel(product);
 }
 
@@ -131,15 +136,16 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
   const storeName = store.storeName || "PayPerTap Store";
   const initials = getInitials(storeName);
   const contact = getStoreContactInfo(store);
+  const logoUrl = getStoreLogoUrl(store);
 
   return (
     <header className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_18px_50px_rgba(17,18,23,0.07)]">
       <div className="grid min-w-0 gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1.08fr)_minmax(260px,0.92fr)] md:items-end">
         <div className="min-w-0">
           <div className="mb-5 flex min-w-0 items-center gap-3">
-            {store.logoUrl ? (
+            {logoUrl ? (
               <img
-                src={store.logoUrl}
+                src={logoUrl}
                 alt={`${storeName} logo`}
                 decoding="async"
                 fetchPriority="high"
@@ -180,7 +186,7 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-500">
-            Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)} today. Pay the remaining amount only after the seller confirms on WhatsApp.
+            Pay {formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
           </p>
           <a
             href="#products"
@@ -201,7 +207,7 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
                   {formatINR(BOOKING_ADVANCE_AMOUNT)} booking via PayPerTap
                 </p>
                 <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  Serious buyer intent recorded.
+                  Your item is held after successful booking.
                 </p>
               </div>
             </div>
@@ -211,10 +217,10 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
               </span>
               <div className="min-w-0">
                 <p className="font-medium text-neutral-950">
-                  Seller confirms on WhatsApp
+                  Continue on WhatsApp
                 </p>
                 <p className="mt-1 text-xs leading-5 text-neutral-500">
-                  Product, buyer, and payment context stay together.
+                  Product and contact details are ready to send.
                 </p>
               </div>
             </div>
@@ -227,13 +233,14 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
 
 function Theme1Header({ store }: { store: StorefrontThemeProps["store"] }) {
   const initials = getInitials(store.storeName || "Store");
+  const logoUrl = getStoreLogoUrl(store);
 
   return (
     <header className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-[0_16px_44px_rgba(17,18,23,0.06)] sm:p-6">
       <div className="flex items-start gap-4">
-        {store.logoUrl ? (
+        {logoUrl ? (
           <img
-            src={store.logoUrl}
+            src={logoUrl}
             alt={`${store.storeName} logo`}
             decoding="async"
             fetchPriority="high"
@@ -265,10 +272,10 @@ function Theme1Header({ store }: { store: StorefrontThemeProps["store"] }) {
           Verified booking via PayPerTap
         </div>
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-          ₹20 booking reserves this item
+          Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
         </div>
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-          Remaining amount is paid directly to seller
+          Pay the remaining amount directly to the seller
         </div>
       </div>
 
@@ -298,7 +305,7 @@ function Theme1ProductCard({
   const badge = getProductBadge(product);
   const bookable = isBookable(product);
   const ctaLabel = bookable
-    ? `Reserve ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
+    ? `Book for ${formatINR(BOOKING_ADVANCE_AMOUNT)}`
     : "View details";
 
   return (
@@ -333,7 +340,7 @@ function Theme1ProductCard({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-neutral-400">
               <ImageIcon size={24} aria-hidden="true" />
-              <span className="text-xs font-medium">No image</span>
+              <span className="text-xs font-medium">Product image</span>
             </div>
           )}
           <div className="absolute left-2 top-2">
@@ -749,10 +756,10 @@ function Theme1ProductDetail({
 
             <div className="mt-5 min-w-0 max-w-full rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
               <strong className="block font-medium text-neutral-950">
-                Reserve this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
+                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
               </strong>
               {sellerCollectAmount !== null
-                ? `${formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation.`
+                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
                 : "Pay the remaining amount directly to the seller."}
               <span className="block">WhatsApp opens with the product and buyer details ready.</span>
             </div>
@@ -767,7 +774,7 @@ function Theme1ProductDetail({
                   to={checkoutHref}
                   className="pds-button pds-button-primary pds-button-lg pds-button-rounded-lg is-full"
                 >
-                  <span>Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
+                  <span>Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}</span>
                 </Link>
               ) : (
                 <PptButton fullWidth size="lg" variant="secondary" disabled>
@@ -797,7 +804,7 @@ function Theme1ProductDetail({
                 to={checkoutHref}
                 className="inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl bg-neutral-950 px-3 text-sm font-medium !text-white shadow-[0_12px_28px_rgba(17,18,23,0.18)]"
               >
-                Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
+                Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
               </Link>
             ) : (
               <button
@@ -811,9 +818,9 @@ function Theme1ProductDetail({
           </div>
           <p className="mt-2 break-words text-center text-xs font-medium text-neutral-500">
             {sellerCollectAmount !== null
-              ? `${formatINR(sellerCollectAmount)} remaining paid directly to seller`
-              : "Pay remaining directly to seller"}
-            <span className="block">Seller confirms on WhatsApp</span>
+              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
+              : "Pay the remaining amount directly to the seller"}
+            <span className="block">Continue on WhatsApp</span>
           </p>
         </div>
       </div>
@@ -953,12 +960,12 @@ function Theme1ProductPageSheet({
 
             <div className="mt-6 min-w-0 max-w-full rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
               <strong className="block font-medium text-neutral-950">
-                Pay {formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve this item.
+                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
               </strong>
               {sellerCollectAmount !== null
-                ? `${formatINR(sellerCollectAmount)} remaining paid directly to seller.`
-                : "Remaining amount paid directly to seller."}
-              <span className="block">Seller confirms on WhatsApp.</span>
+                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
+                : "Pay the remaining amount directly to the seller."}
+              <span className="block">Continue on WhatsApp to confirm delivery.</span>
             </div>
 
             <div className="mt-4">
@@ -980,7 +987,7 @@ function Theme1ProductPageSheet({
               )}
               <p className="flex items-center justify-center gap-2 text-center text-xs font-medium text-neutral-500">
                 <PptBrandIcon type="whatsapp" size={14} />
-                Seller confirms on WhatsApp
+                Continue on WhatsApp
               </p>
             </div>
           </section>
@@ -1015,9 +1022,9 @@ function Theme1ProductPageSheet({
           </div>
           <p className="mt-2 break-words text-center text-xs font-medium text-neutral-500">
             {sellerCollectAmount !== null
-              ? `${formatINR(sellerCollectAmount)} remaining paid directly to seller`
-              : "Remaining amount paid directly to seller"}
-            <span className="block">Seller confirms on WhatsApp</span>
+              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
+              : "Pay the remaining amount directly to the seller"}
+            <span className="block">Continue on WhatsApp</span>
           </p>
         </div>
       </div>

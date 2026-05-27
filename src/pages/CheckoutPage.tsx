@@ -25,6 +25,7 @@ import {
   sendBuyerBookingConfirmationEmail,
 } from "@/services/emailEventService";
 import { markCheckoutEmailEventSent } from "@/services/checkoutService";
+import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type CheckoutStep = "details" | "payment";
@@ -32,6 +33,7 @@ type CheckoutStep = "details" | "payment";
 const BUYER_ADDRESS_MIN_LENGTH = 12;
 const BUYER_ADDRESS_MAX_LENGTH = 160;
 const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE === "razorpay" ? "razorpay" : "mock";
+const REQUIRED_BOOKING_AMOUNT = 20;
 
 function digitsOnly(value: string): string {
   return value.replace(/[^\d]/g, "");
@@ -92,8 +94,7 @@ function validateBuyerDetails(input: {
 }
 
 function getProductImage(product: Product): string {
-  const image = product.images?.find((item) => item.thumbUrl || item.url || item.mediumUrl);
-  return image?.thumbUrl || image?.url || image?.mediumUrl || "";
+  return getProductGridImageUrl(product);
 }
 
 function getProductBadge(
@@ -144,6 +145,7 @@ export default function CheckoutPage() {
   const [isOwnerPreview, setIsOwnerPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("");
   const [step, setStep] = useState<CheckoutStep>("details");
   const [error, setError] = useState("");
 
@@ -230,6 +232,9 @@ export default function CheckoutPage() {
 
     try {
       setSaving(true);
+      setPaymentStatus(
+        PAYMENT_MODE === "razorpay" ? "Creating secure payment..." : "Creating booking..."
+      );
       setError("");
       const { normalizedPhone } = validateDetails();
 
@@ -254,8 +259,20 @@ export default function CheckoutPage() {
       };
       const result =
         PAYMENT_MODE === "razorpay"
-          ? await startRazorpayBookingPayment(paymentInput)
+          ? await startRazorpayBookingPayment(paymentInput, (status) => {
+              if (status === "creating") setPaymentStatus("Creating secure payment...");
+              if (status === "checkout") setPaymentStatus("Complete payment to continue...");
+              if (status === "verifying") setPaymentStatus("Verifying payment...");
+            })
           : await startMockBookingPayment(paymentInput);
+
+      if (
+        result.checkoutSession.status !== "booking_paid" ||
+        result.checkoutSession.bookingAdvanceAmount !== REQUIRED_BOOKING_AMOUNT ||
+        (PAYMENT_MODE === "razorpay" && !result.checkoutSession.razorpayPaymentId)
+      ) {
+        throw new Error("Payment could not be verified. No booking was created.");
+      }
 
       sessionStorage.setItem(
         `paypertap:checkout:${result.checkoutId}`,
@@ -269,10 +286,19 @@ export default function CheckoutPage() {
       setError(getCheckoutErrorMessage(err));
     } finally {
       setSaving(false);
+      setPaymentStatus("");
     }
   }
 
   async function sendBookingEmails(checkoutSession: CheckoutSession) {
+    if (
+      checkoutSession.status !== "booking_paid" ||
+      checkoutSession.bookingAdvanceAmount !== REQUIRED_BOOKING_AMOUNT ||
+      (PAYMENT_MODE === "razorpay" && !checkoutSession.razorpayPaymentId)
+    ) {
+      return;
+    }
+
     try {
       const seller = await getSellerByUid(checkoutSession.sellerId);
 
@@ -355,10 +381,10 @@ export default function CheckoutPage() {
             Reservation checkout
           </PptBadge>
           <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
-            Reserve your item
+            Book this item
           </h1>
           <p className="mt-3 max-w-2xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Pay ₹20 now. Pay the remaining amount directly to the seller on WhatsApp.
+            Pay ₹20 to reserve this item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
           </p>
         </header>
 
@@ -411,13 +437,13 @@ export default function CheckoutPage() {
                   {error ? <ErrorNotice message={error} /> : null}
 
                   <PptButton type="submit" fullWidth size="lg" disabled={!canCheckout}>
-                    Continue to ₹20 booking
+                    Continue to booking
                   </PptButton>
                 </form>
               ) : (
                 <div className="mt-6 space-y-4">
                   <PptNotice tone="success" title="Details saved">
-                    Your item is reserved after the ₹20 booking is recorded.
+                    Your item is held after successful booking.
                   </PptNotice>
 
                   {error ? <ErrorNotice message={error} /> : null}
@@ -430,18 +456,18 @@ export default function CheckoutPage() {
                     fullWidth
                     size="lg"
                   >
-                    {saving ? "Reserving item..." : "Pay ₹20 & reserve"}
+                    {saving ? paymentStatus || "Creating secure payment..." : "Pay ₹20 and book"}
                   </PptButton>
                 </div>
               )}
 
               <PptNotice
                 tone="info"
-                title="After payment, we’ll open WhatsApp with a ready message to the seller."
+                title="After booking, you can continue on WhatsApp."
                 icon={<ShieldCheck size={18} aria-hidden="true" />}
                 className="mt-5"
               >
-                The seller confirms the remaining payment and delivery details directly on WhatsApp.
+                Message the seller to confirm delivery and the remaining payment.
               </PptNotice>
             </div>
           </section>
@@ -457,7 +483,7 @@ export default function CheckoutPage() {
               productPrice={product.price}
               advanceAmount={product.bookingAdvanceAmount || 20}
               currency="₹"
-              note="PayPerTap keeps the ₹20 booking fee. Pay the remaining amount directly to the seller."
+              note="After booking, you can message the seller on WhatsApp to confirm delivery and the remaining payment."
             />
           </aside>
         </div>
@@ -495,7 +521,10 @@ function ProductSummaryCard({
               loading="lazy"
             />
           ) : (
-            <ImageIcon size={24} className="text-[var(--pds-muted)]" aria-hidden="true" />
+            <div className="flex flex-col items-center gap-1 text-[var(--pds-muted)]">
+              <ImageIcon size={22} aria-hidden="true" />
+              <span className="text-[10px] font-medium">Product image</span>
+            </div>
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -510,7 +539,7 @@ function ProductSummaryCard({
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <PptBadge tone={badge.tone}>{badge.label}</PptBadge>
-            <PptBadge tone="primary">Reserve with ₹20</PptBadge>
+            <PptBadge tone="primary">Book for ₹20</PptBadge>
           </div>
           <p className="mt-2 text-xs font-light text-[var(--pds-muted)]">
             {availableQuantity > 0 ? `${availableQuantity} available` : "Unavailable"}

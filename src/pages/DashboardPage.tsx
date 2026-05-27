@@ -49,6 +49,10 @@ import {
   normalizeCollectionName,
 } from "../lib/collections";
 import { formatINR } from "../lib/money";
+import {
+  getDisplayImageUrl,
+  productHasTemporaryImageUrls,
+} from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
 import {
   cancelOrReleaseBooking,
@@ -82,6 +86,7 @@ import {
   updateStorePublishStatus,
 } from "../services/storeService";
 import { ThemeRenderer } from "../storefront/ThemeRenderer";
+import { getProductGridImageUrl } from "../storefront/imageMedia";
 import {
   DEFAULT_STOREFRONT_THEME_ID,
   isStorefrontThemeId,
@@ -149,11 +154,11 @@ const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
 };
 
 function getProductImage(product: Product): string {
-  const image = product.images?.find(
-    (item) => item.thumbUrl || item.url || item.mediumUrl
-  );
+  return getProductGridImageUrl(product);
+}
 
-  return image?.thumbUrl || image?.url || image?.mediumUrl || "";
+function getStoreLogoUrl(store?: Store | null): string {
+  return getDisplayImageUrl(store?.logoUrl);
 }
 
 function getTimeValue(value: unknown): number {
@@ -2380,6 +2385,7 @@ function EditProductForm({
     requestedInventoryQuantity - reservedQuantity - soldQuantity
   );
   const openingWithoutStock = status === "open" && formAvailableQuantity <= 0;
+  const needsImageReupload = productHasTemporaryImageUrls(product);
 
   useEffect(() => {
     if (imageFiles.length === 0) {
@@ -2567,6 +2573,12 @@ function EditProductForm({
           : "Public checkout uses available stock, not the original total capacity."}
       </PptNotice>
 
+      {needsImageReupload ? (
+        <PptNotice tone="warning" title="This image needs to be re-uploaded.">
+          The saved image URL is temporary, so buyers will see the fallback until you replace it.
+        </PptNotice>
+      ) : null}
+
       <label className="text-sm font-medium text-gray-800">
         Description
         <textarea
@@ -2671,6 +2683,7 @@ function ProductRow({
   const imageUrl = getProductImage(product);
   const availableQuantity = getAvailableQuantity(product);
   const badge = getProductStatusBadge(product, availableQuantity);
+  const needsImageReupload = productHasTemporaryImageUrls(product);
   const managedCollection = findCollectionByProduct(product, collections);
   const collectionLabel =
     managedCollection?.name || getProductCollectionLabel(product) || "Uncategorized";
@@ -2688,7 +2701,7 @@ function ProductRow({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-gray-400">
-            No image
+            Product image
           </div>
         )}
       </div>
@@ -2717,6 +2730,11 @@ function ProductRow({
           <span className="max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
             {collectionLabel}
           </span>
+          {needsImageReupload ? (
+            <span className="max-w-full rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+              This image needs to be re-uploaded.
+            </span>
+          ) : null}
         </div>
         {product.description ? (
           <p className="mt-2 line-clamp-2 min-w-0 break-words text-xs leading-5 text-gray-500">
@@ -3212,6 +3230,7 @@ function StoreTab({
   const [themeSavedMessage, setThemeSavedMessage] = useState("");
   const [themeError, setThemeError] = useState("");
   const selectedThemeId = getSelectedStorefrontThemeId(store);
+  const safeLogoUrl = getStoreLogoUrl(store);
 
   useEffect(() => {
     setStoreName(store?.storeName || "");
@@ -3338,9 +3357,9 @@ function StoreTab({
         <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr]">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
             <div className="h-32 w-32 overflow-hidden rounded-2xl border border-gray-200 bg-gray-100">
-              {store?.logoUrl ? (
+              {safeLogoUrl ? (
                 <img
-                  src={store.logoUrl}
+                  src={safeLogoUrl}
                   alt={store.storeName}
                   decoding="async"
                   loading="lazy"
@@ -3348,7 +3367,7 @@ function StoreTab({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-gray-400">
-                  No logo
+                  Store logo
                 </div>
               )}
             </div>
@@ -3381,9 +3400,9 @@ function StoreTab({
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gray-950 text-sm font-semibold text-white">
-                  {store?.logoUrl ? (
+                  {safeLogoUrl ? (
                     <img
-                      src={store.logoUrl}
+                      src={safeLogoUrl}
                       alt=""
                       decoding="async"
                       loading="lazy"

@@ -1,5 +1,5 @@
-import { createCheckoutSessionWithReservation, type CreateCheckoutSessionInput } from "./checkoutService";
-import { buildCheckoutSession } from "./mockPaymentService";
+import type { CreateCheckoutSessionInput } from "./checkoutService";
+import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import type { CheckoutSession } from "../types/firestore";
 
 type RazorpayOrderResponse = {
@@ -13,6 +13,9 @@ type RazorpayOrderResponse = {
 
 type RazorpayVerificationResponse = {
   success: boolean;
+  checkoutId?: string;
+  checkoutSession?: CheckoutSession;
+  reservationApplied?: boolean;
   error?: string;
 };
 
@@ -148,7 +151,7 @@ function openRazorpayCheckout(
       modal: {
         ondismiss() {
           if (!settled) {
-            reject(new Error("Payment was closed before completion."));
+            reject(new Error("Payment was not completed."));
           }
         },
       },
@@ -159,25 +162,46 @@ function openRazorpayCheckout(
 }
 
 export async function startRazorpayBookingPayment(
-  input: CreateCheckoutSessionInput
+  input: CreateCheckoutSessionInput,
+  onStatus?: (status: "creating" | "checkout" | "verifying") => void
 ): Promise<{
   success: true;
   checkoutId: string;
   checkoutSession: CheckoutSession;
   reservationApplied: boolean;
 }> {
+  onStatus?.("creating");
   await loadRazorpayCheckoutScript();
 
-  const order = await postJson<RazorpayOrderResponse>("/api/create-razorpay-order", {
+  const booking = {
     sellerId: input.sellerId,
     storeId: input.storeId,
     productId: input.productId,
+    productTitle: input.productTitle,
+    productPrice: input.productPrice,
+    bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
+    sellerCollectAmount: getSellerCollectAmount(input.productPrice),
+    buyerName: input.buyerName,
+    buyerPhone: input.buyerPhone,
+    buyerAddress: input.buyerAddress,
+    buyerCity: input.buyerCity,
+    buyerPincode: input.buyerPincode,
+    ...(input.buyerEmail ? { buyerEmail: input.buyerEmail } : {}),
+  };
+
+  const order = await postJson<RazorpayOrderResponse>("/api/razorpay/create-order", {
+    ...booking,
   });
 
   if (!order.success || !order.keyId || !order.orderId || !order.amount || !order.currency) {
     throw new Error(order.error || "Could not create Razorpay order.");
   }
 
+  if (order.amount !== 2000 || order.currency !== "INR") {
+    throw new Error("Payment amount mismatch. No booking was created.");
+  }
+
+  onStatus?.("checkout");
   const payment = await openRazorpayCheckout(input, {
     keyId: order.keyId,
     orderId: order.orderId,
@@ -185,22 +209,25 @@ export async function startRazorpayBookingPayment(
     currency: order.currency,
   });
 
+  onStatus?.("verifying");
   const verification = await postJson<RazorpayVerificationResponse>(
-    "/api/verify-razorpay-payment",
-    payment
+    "/api/razorpay/verify-payment",
+    {
+      ...payment,
+      booking,
+    }
   );
 
-  if (!verification.success) {
-    throw new Error(verification.error || "Payment verification failed.");
+  if (!verification.success || !verification.checkoutId || !verification.checkoutSession) {
+    throw new Error(
+      verification.error || "Payment could not be verified. No booking was created."
+    );
   }
-
-  const checkoutId = await createCheckoutSessionWithReservation(input);
-  const checkoutSession = buildCheckoutSession(input, checkoutId);
 
   return {
     success: true,
-    checkoutId,
-    checkoutSession,
-    reservationApplied: true,
+    checkoutId: verification.checkoutId,
+    checkoutSession: verification.checkoutSession,
+    reservationApplied: verification.reservationApplied !== false,
   };
 }

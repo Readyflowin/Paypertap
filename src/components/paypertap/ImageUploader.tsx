@@ -3,6 +3,7 @@ import { ImageUp, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 import { Button, LoadingPulse } from "@/components/ui";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 
 type ImageUploaderAspect = "square" | "product" | "banner";
 
@@ -64,7 +65,7 @@ export function ImageUploader({
       return URL.createObjectURL(activeFile);
     }
 
-    return valueUrl || "";
+    return getDisplayImageUrl(valueUrl);
   }, [activeFile, valueUrl]);
 
   useEffect(() => {

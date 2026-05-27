@@ -1,6 +1,7 @@
 import clsx from "clsx";
 
 import { Badge, PptBrandIcon } from "../ui";
+import { getDisplayImageUrl } from "../../lib/imageUrls";
 
 import { getWhatsAppHref } from "./WhatsAppButton";
 
@@ -30,11 +31,12 @@ function InstagramIcon() {
 
 function StoreLogo({ storeName, logoUrl, compact }: Pick<StoreIdentityProps, "storeName" | "logoUrl"> & { compact: boolean }) {
   const sizeClassName = compact ? "h-12 w-12 rounded-[var(--ppt-radius-md)]" : "h-16 w-16 rounded-[var(--ppt-radius-lg)]";
+  const safeLogoUrl = getDisplayImageUrl(logoUrl);
 
-  if (logoUrl) {
+  if (safeLogoUrl) {
     return (
       <img
-        src={logoUrl}
+        src={safeLogoUrl}
         alt={`${storeName} logo`}
         decoding="async"
         loading={compact ? "lazy" : "eager"}

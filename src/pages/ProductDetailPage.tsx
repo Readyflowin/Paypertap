@@ -28,6 +28,7 @@ import { getProductById, getPublicProductById } from "@/services/productService"
 import { getPublicStoreData } from "@/services/publicStoreService";
 import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
 import { getProductDetailImageUrls } from "@/storefront/imageMedia";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 import type { Product, Store } from "@/types/firestore";
 
 type PageThemeId = "theme1" | "theme2" | "theme3";
@@ -187,13 +188,14 @@ function StoreMiniBlock({
   storeSlug: string;
 }) {
   const instagramUrl = getStoreInstagramUrl(store);
+  const logoUrl = getDisplayImageUrl(store.logoUrl);
 
   return (
     <section className={`min-w-0 rounded-[24px] border p-4 ${classes.storePanel}`}>
       <div className="flex min-w-0 items-center gap-3">
-        {store.logoUrl ? (
+        {logoUrl ? (
           <img
-            src={store.logoUrl}
+            src={logoUrl}
             alt={`${store.storeName} logo`}
             decoding="async"
             loading="lazy"
@@ -346,6 +348,8 @@ export default function ProductDetailPage() {
     ? "Preview only"
     : isSoldOut
       ? "Sold out"
+      : isReserved
+        ? "Currently reserved"
       : getProductUnavailableLabel(product);
   const sellerCollectAmount = Math.max(0, product.price - BOOKING_ADVANCE_AMOUNT);
 
@@ -375,7 +379,7 @@ export default function ProductDetailPage() {
               ) : (
                 <div className={`flex h-full flex-col items-center justify-center gap-2 ${classes.emptyImage}`}>
                   <ImageIcon size={32} />
-                  <span className="text-sm font-medium">No image</span>
+                  <span className="text-sm font-medium">Product image</span>
                 </div>
               )}
             </div>
@@ -433,11 +437,11 @@ export default function ProductDetailPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <ShieldCheck size={16} aria-hidden="true" className="shrink-0" />
                   <strong className={`font-semibold ${classes.bookingStrong}`}>
-                    Reserve with {formatINR(BOOKING_ADVANCE_AMOUNT)}
+                    Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
                   </strong>
                 </div>
                 <p>
-                  {formatINR(sellerCollectAmount)} remains payable directly to the seller after confirmation. WhatsApp opens with product and your details pre-filled.
+                  Your item is held after successful booking. Pay {formatINR(sellerCollectAmount)} directly to the seller.
                 </p>
                 
               </div>
@@ -466,7 +470,7 @@ export default function ProductDetailPage() {
                     to={checkoutHref}
                     className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3 text-center text-sm font-semibold ${classes.primaryCta}`}
                   >
-                    Reserve for {formatINR(BOOKING_ADVANCE_AMOUNT)}
+                    Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
                   </Link>
                 ) : (
                   <button
@@ -479,7 +483,7 @@ export default function ProductDetailPage() {
                 )}
                 <p className={`flex items-center justify-center gap-2 text-center text-xs font-medium ${classes.muted}`}>
                   <MessageCircle size={14} aria-hidden="true" />
-                  Seller confirms on WhatsApp
+                  Continue on WhatsApp
                 </p>
               </div>
             </section>
@@ -502,7 +506,7 @@ export default function ProductDetailPage() {
               to={checkoutHref}
               className={`inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl px-3 text-sm font-semibold ${classes.primaryCta}`}
             >
-              Reserve {formatINR(BOOKING_ADVANCE_AMOUNT)}
+              Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
             </Link>
           ) : (
             <button
@@ -515,8 +519,8 @@ export default function ProductDetailPage() {
           )}
         </div>
         <p className={`mt-2 break-words text-center text-xs font-medium ${classes.muted}`}>
-          {formatINR(sellerCollectAmount)} remaining paid directly to seller
-          <span className="block">Seller confirms on WhatsApp</span>
+          Pay {formatINR(sellerCollectAmount)} directly to the seller
+          <span className="block">Continue on WhatsApp</span>
         </p>
       </div>
     </main>

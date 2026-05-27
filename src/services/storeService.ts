@@ -1,5 +1,6 @@
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { getDurableImageUrl } from "../lib/imageUrls";
 import type { StorefrontThemeId } from "../storefront/themes/types";
 import type { Store, StoreSlugReservation } from "../types/firestore";
 
@@ -162,7 +163,13 @@ export async function updateStoreCustomization(
   if (input.returnsPolicyNotes !== undefined) {
     payload.returnsPolicyNotes = input.returnsPolicyNotes.trim();
   }
-  if (input.logoUrl !== undefined) payload.logoUrl = input.logoUrl;
+  if (input.logoUrl !== undefined) {
+    const logoUrl = input.logoUrl.trim();
+    if (logoUrl && !getDurableImageUrl(logoUrl)) {
+      throw new Error("Please re-upload the store logo before saving.");
+    }
+    payload.logoUrl = logoUrl;
+  }
   if (input.logoKey !== undefined) payload.logoKey = input.logoKey;
   if (input.heroHeading !== undefined) payload.heroHeading = input.heroHeading.trim();
   if (input.heroSubtitle !== undefined) payload.heroSubtitle = input.heroSubtitle.trim();

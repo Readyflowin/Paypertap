@@ -3,6 +3,7 @@ import clsx from "clsx";
 
 import { Badge, Button, Card, type BadgeProps } from "@/components/ui";
 import { formatINR } from "@/lib/money";
+import { getDisplayImageUrl } from "@/lib/imageUrls";
 import {
   getAvailableQuantity as getSharedAvailableQuantity,
   getProductUnavailableLabel,
@@ -89,16 +90,17 @@ function ProductImage({
   onClick,
   compact = false,
 }: Pick<ProductCardProps, "imageUrl" | "title" | "href" | "onClick"> & { compact?: boolean }) {
-  const image = imageUrl ? (
+  const safeImageUrl = getDisplayImageUrl(imageUrl);
+  const image = safeImageUrl ? (
     <img
-      src={imageUrl}
+      src={safeImageUrl}
       alt={title}
       decoding="async"
       loading="lazy"
       className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
     />
   ) : (
-    <span className="text-xs font-bold text-[var(--ppt-text-muted)]">No image</span>
+    <span className="text-xs font-bold text-[var(--ppt-text-muted)]">Product image</span>
   );
 
   const imageClassName = clsx(

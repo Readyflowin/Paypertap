@@ -80,7 +80,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
     `Product: ${input.productTitle}`,
     `Product link: ${productUrl}`,
     `Product price: ₹${input.productPrice}`,
-    `PayPerTap booking fee: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
+    `₹20 booking paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
     `Remaining amount: ₹${input.sellerCollectAmount}`,
     "",
     "My details:",
@@ -90,7 +90,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
     `City: ${input.buyerCity}`,
     `Pincode: ${input.buyerPincode}`,
     "",
-    "Please share your UPI/payment details so I can pay the remaining amount and confirm delivery.",
+    "Please confirm delivery and the remaining payment details.",
   ].join("\n");
 }
 
