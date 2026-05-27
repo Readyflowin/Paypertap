@@ -36,6 +36,16 @@ function assertStoreId(storeId: string): string {
   return normalizedStoreId;
 }
 
+function assertSellerId(sellerId: string): string {
+  const normalizedSellerId = sellerId.trim();
+
+  if (!normalizedSellerId) {
+    throw new Error("Seller session is not ready yet.");
+  }
+
+  return normalizedSellerId;
+}
+
 function assertCollectionId(collectionId: string): string {
   const normalizedCollectionId = collectionId.trim();
 
@@ -157,10 +167,12 @@ export async function createStoreCollection(
 
 export async function updateStoreCollection(
   storeId: string,
+  sellerId: string,
   collectionId: string,
   input: CollectionInput
 ): Promise<StoreCollection> {
   const safeStoreId = assertStoreId(storeId);
+  const safeSellerId = assertSellerId(sellerId);
   const safeCollectionId = assertCollectionId(collectionId);
   const name = assertCollectionName(input.name);
   await assertUniqueCollectionName(safeStoreId, name, safeCollectionId);
@@ -179,6 +191,7 @@ export async function updateStoreCollection(
 
   const productsQuery = query(
     collection(db, "products"),
+    where("sellerId", "==", safeSellerId),
     where("storeId", "==", safeStoreId),
     where("collectionId", "==", safeCollectionId)
   );
@@ -209,12 +222,15 @@ export async function updateStoreCollection(
 
 export async function clearProductsForDeletedCollection(
   storeId: string,
+  sellerId: string,
   collectionId: string
 ): Promise<void> {
   const safeStoreId = assertStoreId(storeId);
+  const safeSellerId = assertSellerId(sellerId);
   const safeCollectionId = assertCollectionId(collectionId);
   const productsQuery = query(
     collection(db, "products"),
+    where("sellerId", "==", safeSellerId),
     where("storeId", "==", safeStoreId),
     where("collectionId", "==", safeCollectionId)
   );
@@ -238,12 +254,14 @@ export async function clearProductsForDeletedCollection(
 
 export async function deleteStoreCollection(
   storeId: string,
+  sellerId: string,
   collectionId: string
 ): Promise<void> {
   const safeStoreId = assertStoreId(storeId);
+  const safeSellerId = assertSellerId(sellerId);
   const safeCollectionId = assertCollectionId(collectionId);
 
-  await clearProductsForDeletedCollection(safeStoreId, safeCollectionId);
+  await clearProductsForDeletedCollection(safeStoreId, safeSellerId, safeCollectionId);
   await deleteDoc(doc(db, "stores", safeStoreId, "collections", safeCollectionId));
 }
 

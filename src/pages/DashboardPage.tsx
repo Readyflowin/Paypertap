@@ -707,6 +707,7 @@ export default function DashboardPage() {
                 onViewProducts={() => setActiveTab("Products")}
                 products={products}
                 store={store}
+                user={user}
               />
             ) : null}
 
@@ -2040,6 +2041,7 @@ function CollectionsManager({
   onViewProducts,
   products,
   store,
+  user,
 }: {
   collections: StoreCollection[];
   onAddProduct: () => void;
@@ -2048,6 +2050,7 @@ function CollectionsManager({
   onViewProducts: () => void;
   products: Product[];
   store: Store | null;
+  user: User | null;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -2088,7 +2091,7 @@ function CollectionsManager({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!store?.storeId) {
+    if (!store?.storeId || !user?.uid) {
       setError("Store setup is not ready yet.");
       return;
     }
@@ -2101,6 +2104,7 @@ function CollectionsManager({
       if (editingCollection) {
         const updatedCollection = await updateStoreCollection(
           store.storeId,
+          user.uid,
           editingCollection.collectionId,
           { name, description }
         );
@@ -2153,7 +2157,10 @@ function CollectionsManager({
   }
 
   async function handleDelete(collectionToDelete: StoreCollection) {
-    if (!store?.storeId) return;
+    if (!store?.storeId || !user?.uid) {
+      setError("Store setup is not ready yet.");
+      return;
+    }
 
     const confirmed = window.confirm(
       `Delete "${collectionToDelete.name}"? Products will stay in your store and become uncategorized.`
@@ -2165,7 +2172,11 @@ function CollectionsManager({
       setSaving(true);
       setError("");
       setSuccess("");
-      await deleteStoreCollection(store.storeId, collectionToDelete.collectionId);
+      await deleteStoreCollection(
+        store.storeId,
+        user.uid,
+        collectionToDelete.collectionId
+      );
       onCollectionsChanged(
         collections.filter(
           (collection) => collection.collectionId !== collectionToDelete.collectionId
