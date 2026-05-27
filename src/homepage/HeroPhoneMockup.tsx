@@ -74,7 +74,7 @@ export function HeroPhoneMockup() {
             <div className="ppt-store-topbar">
               <div>
                 <span>PayPerTap store</span>
-                <strong>aditya.thrift</strong>
+                <span className="ppt-faux-strong">aditya.thrift</span>
               </div>
               <div className="ppt-store-avatar">P</div>
             </div>
@@ -82,7 +82,7 @@ export function HeroPhoneMockup() {
             <div className="ppt-store-hero-card">
               <div className="ppt-store-hero-copy">
                 <span>New drop</span>
-                <strong>Reserved through verified bookings</strong>
+                <span className="ppt-faux-strong">Reserved through verified bookings</span>
               </div>
               <div className="ppt-store-hero-metric">₹20</div>
             </div>
@@ -122,7 +122,7 @@ export function HeroPhoneMockup() {
             <div className="ppt-store-booking-strip">
               <ShieldCheck size={16} strokeWidth={2.2} />
               <div>
-                <strong>₹20 booking via PayPerTap</strong>
+                <span className="ppt-faux-strong">₹20 booking via PayPerTap</span>
                 <span>Remaining amount paid directly to seller</span>
               </div>
             </div>

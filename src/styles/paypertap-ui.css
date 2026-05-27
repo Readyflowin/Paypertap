@@ -325,13 +325,14 @@
           align-items: center;
           justify-content: center;
           gap: 8px;
+          min-width: 0;
           border: 0;
           color: var(--pds-text);
           font: inherit;
           font-size: 14px;
           font-weight: 430;
           line-height: 1;
-          letter-spacing: -.004em;
+          letter-spacing: 0;
           cursor: pointer;
           white-space: nowrap;
           transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease, opacity .16s ease;
@@ -339,17 +340,32 @@
 
         .pds-button > svg,
         .pds-button .pds-brand-icon,
+        .pds-button-icon,
         .pds-button-right {
           flex: 0 0 auto;
         }
 
-        .pds-button span {
+        .pds-button-icon {
+          display: inline-grid;
+          width: 18px;
+          height: 18px;
+          place-items: center;
+        }
+
+        .pds-button-icon:empty {
+          display: none;
+        }
+
+        .pds-button-label {
           display: inline-flex;
+          min-width: 0;
           align-items: center;
           justify-content: center;
           color: inherit;
-          line-height: 1;
-          white-space: nowrap;
+          line-height: 1.15;
+          overflow-wrap: anywhere;
+          text-align: center;
+          white-space: normal;
         }
 
         .pds-button-right {
@@ -369,7 +385,7 @@
         .pds-button-rounded-lg { border-radius: 15px; }
         .pds-button-rounded-pill { border-radius: 999px; }
 
-        .pds-button.is-full { width: 100%; }
+        .pds-button.is-full { width: 100%; min-width: 0; }
 
         .pds-button:hover:not(:disabled) {
           transform: translateY(-1px);
@@ -979,7 +995,7 @@
           height: 16px;
         }
 
-        .pds-success-card .pds-button span {
+        .pds-success-card .pds-button .pds-button-label {
           min-width: 0;
           white-space: normal;
           overflow-wrap: normal;
@@ -1833,19 +1849,19 @@
           width: 100%;
           min-height: 44px;
           padding: 0 12px;
-          border: 1px solid var(--pds-border);
+          border: 1px solid #2e1a79;
           border-radius: 16px;
-          background: rgba(255,255,255,.82);
-          color: var(--pds-text);
-          box-shadow: none;
+          background: #2e1a79;
+          color: #fff !important;
+          box-shadow: 0 10px 22px rgba(46,26,121,.14);
           font-size: 13px;
-          font-weight: 430;
+          font-weight: 560;
         }
 
         .ppt-dashboard-quick-card .ppt-dashboard-action-card .pds-button:hover:not(:disabled) {
-          border-color: rgba(91,53,245,.22);
-          background: var(--pds-primary-soft);
-          color: var(--pds-primary);
+          border-color: #111217;
+          background: #111217;
+          color: #fff !important;
         }
 
         .ppt-dashboard-activity-card {
@@ -1891,9 +1907,23 @@
         }
 
         .ppt-dashboard-activity-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           align-self: center;
           justify-self: end;
+          min-height: 28px;
+          line-height: 1;
           white-space: nowrap;
+        }
+
+        .ppt-dashboard-activity-badge .pds-badge-text {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 0;
+          color: inherit;
+          line-height: 1;
         }
 
         .ppt-dashboard-activity-row strong,
@@ -1924,14 +1954,27 @@
           align-items: center;
           justify-content: center;
           gap: 6px;
-          min-height: 32px;
-          padding: 0 10px;
+          min-height: 34px;
+          padding: 0 12px;
           border-radius: 999px;
-          background: #0f172a;
+          background: linear-gradient(135deg, #16a34a, #087f3b);
           color: white;
           font-size: 12px;
-          font-weight: 450;
+          font-weight: 560;
           text-decoration: none;
+          box-shadow: 0 10px 20px rgba(22,163,74,.14);
+        }
+
+        .ppt-dashboard-activity-row a span,
+        .ppt-dashboard-row-link span {
+          margin-top: 0;
+          color: inherit;
+          line-height: 1;
+        }
+
+        .ppt-dashboard-activity-row a .pds-brand-whatsapp,
+        .ppt-dashboard-row-link .pds-brand-whatsapp {
+          color: currentColor;
         }
 
         .ppt-dashboard-overview-grid,
@@ -2225,7 +2268,7 @@
             bottom: calc(10px + env(safe-area-inset-bottom));
             z-index: 40;
             display: grid;
-            grid-template-columns: repeat(6, minmax(0,1fr));
+            grid-template-columns: repeat(7, minmax(0,1fr));
             gap: 4px;
             margin: 0;
             overflow: visible;

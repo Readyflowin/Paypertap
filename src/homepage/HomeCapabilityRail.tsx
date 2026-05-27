@@ -28,8 +28,22 @@ const capabilities: Capability[] = [
           <strong>New drop</strong>
         </div>
         <div>
-          <img src={productImage} alt="" width={360} height={240} loading="lazy" decoding="async" />
-          <img src={toteImage} alt="" width={360} height={240} loading="lazy" decoding="async" />
+          <img
+            src={productImage}
+            alt="PayPerTap storefront product card preview"
+            width={360}
+            height={240}
+            loading="lazy"
+            decoding="async"
+          />
+          <img
+            src={toteImage}
+            alt="PayPerTap storefront product collection preview"
+            width={360}
+            height={240}
+            loading="lazy"
+            decoding="async"
+          />
         </div>
       </div>
     ),

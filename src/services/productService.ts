@@ -1,6 +1,7 @@
 import type { User } from "firebase/auth";
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -263,19 +264,15 @@ export async function updateSellerProduct(
     throw new Error("Product price must be greater than ₹20.");
   }
 
-  let inventoryQuantity = toPositiveInt(
+  const inventoryQuantity = toPositiveInt(
     input.inventoryQuantity,
     "Inventory quantity"
   );
   const reservedQuantity = Number(product.reservedQuantity || 0);
   const soldQuantity = Number(product.soldQuantity || 0);
 
-  if (input.status === "open" && inventoryQuantity <= reservedQuantity + soldQuantity) {
-    inventoryQuantity = reservedQuantity + soldQuantity + 1;
-  }
-
   if (inventoryQuantity < reservedQuantity + soldQuantity) {
-    throw new Error("Inventory cannot be lower than reserved plus sold quantity.");
+    throw new Error("Total stock cannot be less than reserved + sold quantity.");
   }
 
   const inventoryStatusCounts =
@@ -320,5 +317,38 @@ export async function updateSellerProduct(
     ...updatePayload,
     collectionId,
     updatedAt: undefined,
+  };
+}
+
+export async function deleteSellerProduct(
+  user: User,
+  product: Product,
+  options: { preserveHistory: boolean }
+): Promise<{ deleted: boolean; product?: Product }> {
+  if (product.sellerId !== user.uid) {
+    throw new Error("You can only delete your own products.");
+  }
+
+  const productRef = doc(db, "products", product.productId || product.id);
+
+  if (!options.preserveHistory) {
+    await deleteDoc(productRef);
+    return { deleted: true };
+  }
+
+  const updatePayload = {
+    status: "unpublished" as ProductStatus,
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(productRef, updatePayload);
+
+  return {
+    deleted: false,
+    product: {
+      ...product,
+      ...updatePayload,
+      updatedAt: undefined,
+    },
   };
 }

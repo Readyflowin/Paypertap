@@ -6,6 +6,7 @@ import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
 import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
+import { TopCreateStoreCTA } from "../../components/marketing/TopCreateStoreCTA";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
@@ -57,6 +58,11 @@ export function FAQPage() {
         subtitle="PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp sellers. Buyers pay a fixed ₹20 booking through PayPerTap to reserve a product, then continue to WhatsApp so the seller can collect the remaining amount directly and confirm delivery."
       />
       <PageTrustMeta path="/faq" />
+      <TopCreateStoreCTA
+        title="Need a store link for Instagram or WhatsApp?"
+        secondaryLabel="See pricing"
+        secondaryTo="/pricing"
+      />
 
       <MarketingSection
         className="ppt-core-page-section"

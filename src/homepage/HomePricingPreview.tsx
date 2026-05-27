@@ -33,22 +33,22 @@ export function HomePricingPreview() {
       <MarketingCard className="ppt-pricing-panel">
         <div className="ppt-pricing-amount">
           <span>Fixed buyer booking</span>
-          <strong>₹20</strong>
+          <span className="ppt-faux-strong">₹20</span>
           <p>PayPerTap keeps this as the platform verified-booking fee.</p>
         </div>
 
         <div className="ppt-pricing-route" aria-label="PayPerTap payment route">
           <div>
             <span>Buyer</span>
-            <strong>Books through PayPerTap</strong>
+            <span className="ppt-faux-strong">Books through PayPerTap</span>
           </div>
           <div>
             <span>PayPerTap</span>
-            <strong>Keeps ₹20 booking fee</strong>
+            <span className="ppt-faux-strong">Keeps ₹20 booking fee</span>
           </div>
           <div>
             <span>Seller</span>
-            <strong>Collects remaining directly</strong>
+            <span className="ppt-faux-strong">Collects remaining directly</span>
           </div>
         </div>
 

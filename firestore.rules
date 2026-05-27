@@ -1,0 +1,713 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // CONSTANTS / HELPERS
+    // =========================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(sellerId) {
+      return signedIn() && request.auth.uid == sellerId;
+    }
+
+    function phaseOneBookingAdvance() {
+      return 20;
+    }
+
+    function isValidString(value) {
+      return value is string && value.size() > 0 && value.size() <= 500;
+    }
+
+    function isValidPhone(value) {
+      return value is string && value.size() >= 8 && value.size() <= 15;
+    }
+
+    function isValidPincode(value) {
+      return value is string && value.size() >= 4 && value.size() <= 10;
+    }
+
+    function isValidAmount(value) {
+      return value is int && value >= 0 && value <= 1000000;
+    }
+
+    function isValidPositiveAmount(value) {
+      return value is int && value > 0 && value <= 1000000;
+    }
+
+    function isPhaseOneBookingAmount(value) {
+      return value is int && value == phaseOneBookingAdvance();
+    }
+
+    function isValidSellerStatus(value) {
+      return value in ["active", "paused", "suspended"];
+    }
+
+    function isValidOnboardingStatus(value) {
+      return value in [
+        "auth_completed",
+        "store_completed",
+        "product_completed",
+        "completed"
+      ];
+    }
+
+    function isValidOnboardingStep(value) {
+      return value in ["store", "product", "dashboard"];
+    }
+
+    function isValidProductStatus(value) {
+      return value in ["draft", "open", "hold", "sold", "unpublished"];
+    }
+
+    function isPublicProductStatus(value) {
+      return value in ["open", "hold", "sold"];
+    }
+
+    function isValidCheckoutStatus(value) {
+      return value in [
+        "started",
+        "details_submitted",
+        "payment_pending",
+        "payment_created",
+        "booking_paid",
+        "payment_failed",
+        "whatsapp_opened",
+        "contacted",
+        "remaining_paid",
+        "confirmed",
+        "sold",
+        "abandoned",
+        "expired",
+        "cancelled",
+        "released"
+      ];
+    }
+
+    function isValidOrderStatus(value) {
+      return value in [
+        "new_booking",
+        "contacted",
+        "remaining_paid",
+        "confirmed",
+        "sold",
+        "cancelled",
+        "released"
+      ];
+    }
+
+    function isValidWhatsappStatus(value) {
+      return value in ["not_opened", "opened", "message_sent"];
+    }
+
+    function isValidSlug(value) {
+      return value is string && value.size() > 0 && value.size() <= 120;
+    }
+
+    function isValidCollectionName(value) {
+      return value is string && value.size() > 0 && value.size() <= 80;
+    }
+
+    function isValidCollectionDescription(value) {
+      return value is string && value.size() <= 500;
+    }
+
+    function hasValidCollectionFields(data, storeId, collectionId) {
+      return data.keys().hasOnly([
+          "collectionId",
+          "storeId",
+          "name",
+          "slug",
+          "description",
+          "createdAt",
+          "updatedAt",
+          "productCount"
+        ])
+        && data.collectionId == collectionId
+        && data.storeId == storeId
+        && isValidCollectionName(data.name)
+        && isValidSlug(data.slug)
+        && (
+          !("description" in data)
+          || isValidCollectionDescription(data.description)
+        )
+        && (
+          !("createdAt" in data)
+          || data.createdAt is timestamp
+        )
+        && (
+          !("updatedAt" in data)
+          || data.updatedAt is timestamp
+        )
+        && (
+          !("productCount" in data)
+          || (data.productCount is int && data.productCount >= 0)
+        );
+    }
+
+    function storeExists(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId));
+    }
+
+    function storeData(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data;
+    }
+
+    function storeOwner(storeId) {
+      return storeData(storeId).sellerId;
+    }
+
+    function isStoreOwner(storeId) {
+      return signedIn()
+        && storeExists(storeId)
+        && storeOwner(storeId) == request.auth.uid;
+    }
+
+    function isPublishedStore(storeId) {
+      return storeExists(storeId)
+        && storeData(storeId).isPublished == true;
+    }
+
+    function productExists(productId) {
+      return exists(/databases/$(database)/documents/products/$(productId));
+    }
+
+    function productData(productId) {
+      return get(/databases/$(database)/documents/products/$(productId)).data;
+    }
+
+    function hasValidInventoryFields(data) {
+      return data.inventoryQuantity is int
+        && data.reservedQuantity is int
+        && data.soldQuantity is int
+        && data.inventoryQuantity >= 0
+        && data.reservedQuantity >= 0
+        && data.soldQuantity >= 0
+        && data.reservedQuantity + data.soldQuantity <= data.inventoryQuantity;
+    }
+
+    function productAvailableFromData(data) {
+      return data.inventoryQuantity - data.reservedQuantity - data.soldQuantity;
+    }
+
+    function productAfterReservation(productId) {
+      return getAfter(/databases/$(database)/documents/products/$(productId)).data;
+    }
+
+    function publicReservationNextStatus() {
+      return resource.data.inventoryQuantity
+        - (resource.data.reservedQuantity + 1)
+        - resource.data.soldQuantity > 0
+          ? "open"
+          : "hold";
+    }
+
+    function productStatusForInventory(data) {
+      return data.inventoryQuantity > 0
+        && data.soldQuantity >= data.inventoryQuantity
+          ? "sold"
+          : productAvailableFromData(data) > 0
+            ? "open"
+            : data.reservedQuantity > 0
+              ? "hold"
+              : "open";
+    }
+
+    function isValidPublicReservationUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "reservedQuantity",
+          "status",
+          "updatedAt"
+        ])
+        && resource.data.status == "open"
+        && isPublishedStore(resource.data.storeId)
+        && hasValidInventoryFields(resource.data)
+        && productAvailableFromData(resource.data) > 0
+        && request.resource.data.inventoryQuantity == resource.data.inventoryQuantity
+        && request.resource.data.soldQuantity == resource.data.soldQuantity
+        && request.resource.data.reservedQuantity == resource.data.reservedQuantity + 1
+        && request.resource.data.status == publicReservationNextStatus()
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidSellerInventoryTransition() {
+      return isOwner(resource.data.sellerId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "reservedQuantity",
+          "soldQuantity",
+          "status",
+          "updatedAt"
+        ])
+        && hasValidInventoryFields(resource.data)
+        && hasValidInventoryFields(request.resource.data)
+        && resource.data.reservedQuantity > 0
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.status == productStatusForInventory(request.resource.data)
+        && (
+          (
+            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
+            && request.resource.data.soldQuantity == resource.data.soldQuantity + 1
+          )
+          || (
+            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
+            && request.resource.data.soldQuantity == resource.data.soldQuantity
+          )
+        );
+    }
+
+    function checkoutHasValidReservationFields(data, checkoutId) {
+      return data.checkoutId == checkoutId
+        && data.status == "booking_paid"
+        && data.whatsappOpened == false
+        && data.reservationApplied == true
+        && data.reservedProductId == data.productId
+        && data.reservedQuantity == 1;
+    }
+
+    function checkoutMatchesReservedProduct(data) {
+      let beforeProduct = productData(data.productId);
+      let afterProduct = productAfterReservation(data.productId);
+
+      return data.sellerId == beforeProduct.sellerId
+        && data.storeId == beforeProduct.storeId
+        && data.productTitle == beforeProduct.title
+        && data.productPrice == beforeProduct.price
+        && afterProduct.inventoryQuantity == beforeProduct.inventoryQuantity
+        && afterProduct.soldQuantity == beforeProduct.soldQuantity
+        && afterProduct.reservedQuantity == beforeProduct.reservedQuantity + 1
+        && afterProduct.status ==
+          (
+            beforeProduct.inventoryQuantity
+            - (beforeProduct.reservedQuantity + 1)
+            - beforeProduct.soldQuantity > 0
+              ? "open"
+              : "hold"
+          );
+    }
+
+    function isOpenProductInPublishedStore(productId, storeId) {
+      return productExists(productId)
+        && productData(productId).storeId == storeId
+        && productData(productId).status == "open"
+        && productData(productId).inventoryQuantity is int
+        && productData(productId).reservedQuantity is int
+        && productData(productId).soldQuantity is int
+        && productData(productId).inventoryQuantity
+          - productData(productId).reservedQuantity
+          - productData(productId).soldQuantity > 0
+        && isPublishedStore(storeId);
+    }
+
+    function slugReservationExists(slug) {
+      return exists(/databases/$(database)/documents/storeSlugs/$(slug));
+    }
+
+    function slugReservationData(slug) {
+      return get(/databases/$(database)/documents/storeSlugs/$(slug)).data;
+    }
+
+    function isSlugReservedByOwner(slug) {
+      return slugReservationExists(slug)
+        && slugReservationData(slug).sellerId == request.auth.uid;
+    }
+
+    function hasValidSellerEmailEvents(data) {
+      return data is map
+        && data.keys().hasOnly(["welcomeSentAt"])
+        && (
+          !("welcomeSentAt" in data)
+          || data.welcomeSentAt is timestamp
+        );
+    }
+
+    function hasOnlySellerMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "name",
+        "phone",
+        "storeId",
+        "status",
+        "razorpayLinked",
+        "profileImageUrl",
+        "onboardingStatus",
+        "onboardingStep",
+        "updatedAt",
+        "emailEvents"
+      ]);
+    }
+
+    function hasOnlyOrderSellerMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "orderStatus",
+        "whatsappStatus",
+        "sellerNotes",
+        "updatedAt"
+      ]);
+    }
+
+    function hasOnlyCustomerSellerMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "tags",
+        "notes",
+        "updatedAt"
+      ]);
+    }
+
+    // =========================================================
+    // SELLERS
+    // =========================================================
+
+    match /sellers/{sellerId} {
+      allow create: if signedIn()
+        && sellerId == request.auth.uid
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.authUid == request.auth.uid
+        && isValidSellerStatus(request.resource.data.status)
+        && isValidOnboardingStatus(request.resource.data.onboardingStatus)
+        && isValidOnboardingStep(request.resource.data.onboardingStep);
+
+      allow read: if isOwner(sellerId) || isAdmin();
+
+      allow update: if isOwner(sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.authUid == resource.data.authUid
+        && isValidSellerStatus(request.resource.data.status)
+        && isValidOnboardingStatus(request.resource.data.onboardingStatus)
+        && isValidOnboardingStep(request.resource.data.onboardingStep)
+        && (
+          !("emailEvents" in request.resource.data)
+          || hasValidSellerEmailEvents(request.resource.data.emailEvents)
+        )
+        && hasOnlySellerMutableFields();
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // STORE SLUG RESERVATIONS
+    // =========================================================
+
+    match /storeSlugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.slug == slug
+        && request.resource.data.storeId == slug
+        && request.resource.data.sellerId == request.auth.uid
+        && !slugReservationExists(slug);
+
+      allow update: if false;
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // STORES
+    // =========================================================
+
+    match /stores/{storeId} {
+      allow read: if resource.data.isPublished == true
+        || isOwner(resource.data.sellerId)
+        || isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.storeId == storeId
+        && request.resource.data.storeSlug == storeId
+        && isSlugReservedByOwner(storeId)
+        && isValidString(request.resource.data.storeName)
+        && request.resource.data.isPublished is bool
+        && request.resource.data.themeId is string
+        && request.resource.data.primaryColor is string
+        && request.resource.data.secondaryColor is string
+        && request.resource.data.accentColor is string
+        && (
+          !("bookingAdvanceAmount" in request.resource.data)
+          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+        );
+
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.storeSlug == resource.data.storeSlug
+        && isValidString(request.resource.data.storeName)
+        && request.resource.data.isPublished is bool
+        && (
+          !("bookingAdvanceAmount" in request.resource.data)
+          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // STORE COLLECTIONS
+    // =========================================================
+
+    match /stores/{storeId}/collections/{collectionId} {
+      allow read: if isPublishedStore(storeId)
+        || isStoreOwner(storeId)
+        || isAdmin();
+
+      allow create: if isStoreOwner(storeId)
+        && hasValidCollectionFields(request.resource.data, storeId, collectionId);
+
+      allow update: if isStoreOwner(storeId)
+        && resource.data.storeId == storeId
+        && resource.data.collectionId == collectionId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.collectionId == resource.data.collectionId
+        && hasValidCollectionFields(request.resource.data, storeId, collectionId);
+
+      allow delete: if isStoreOwner(storeId) || isAdmin();
+    }
+
+    // =========================================================
+    // THEMES
+    // =========================================================
+
+    match /themes/{themeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // PRODUCTS
+    // =========================================================
+
+    match /products/{productId} {
+      allow read: if (
+          isPublicProductStatus(resource.data.status)
+          && isPublishedStore(resource.data.storeId)
+        )
+        || isOwner(resource.data.sellerId)
+        || isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.storeId is string
+        && isStoreOwner(request.resource.data.storeId)
+        && isValidString(request.resource.data.title)
+        && request.resource.data.description is string
+        && request.resource.data.category is string
+        && isValidPositiveAmount(request.resource.data.price)
+        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+        && isValidAmount(request.resource.data.sellerCollectAmount)
+        && request.resource.data.sellerCollectAmount ==
+          request.resource.data.price - phaseOneBookingAdvance()
+        && isValidProductStatus(request.resource.data.status)
+        && request.resource.data.isFeatured is bool
+        && request.resource.data.sortOrder is int
+        && hasValidInventoryFields(request.resource.data)
+        && (
+          !("images" in request.resource.data)
+          || request.resource.data.images is list
+        );
+
+      allow update: if (
+          isOwner(resource.data.sellerId)
+          && request.resource.data.sellerId == resource.data.sellerId
+          && request.resource.data.storeId == resource.data.storeId
+          && isValidString(request.resource.data.title)
+          && request.resource.data.description is string
+          && request.resource.data.category is string
+          && isValidPositiveAmount(request.resource.data.price)
+          && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+          && isValidAmount(request.resource.data.sellerCollectAmount)
+          && request.resource.data.sellerCollectAmount ==
+            request.resource.data.price - phaseOneBookingAdvance()
+          && isValidProductStatus(request.resource.data.status)
+          && request.resource.data.isFeatured is bool
+          && request.resource.data.sortOrder is int
+          && hasValidInventoryFields(request.resource.data)
+          && (
+            !("images" in request.resource.data)
+            || request.resource.data.images is list
+          )
+        )
+        || isValidPublicReservationUpdate()
+        || isValidSellerInventoryTransition();
+
+      allow delete: if isOwner(resource.data.sellerId) || isAdmin();
+    }
+
+    // =========================================================
+    // CHECKOUT SESSIONS
+    // =========================================================
+
+    match /checkoutSessions/{checkoutId} {
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          "checkoutId",
+          "sellerId",
+          "storeId",
+          "productId",
+          "productTitle",
+          "productPrice",
+          "bookingAdvanceAmount",
+          "sellerCollectAmount",
+          "buyerName",
+          "buyerEmail",
+          "buyerPhone",
+          "buyerAddress",
+          "buyerCity",
+          "buyerPincode",
+          "status",
+          "whatsappOpened",
+          "reservationApplied",
+          "reservedProductId",
+          "reservedQuantity",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.keys().hasAll([
+          "checkoutId",
+          "sellerId",
+          "storeId",
+          "productId",
+          "productTitle",
+          "productPrice",
+          "bookingAdvanceAmount",
+          "sellerCollectAmount",
+          "buyerName",
+          "buyerPhone",
+          "buyerAddress",
+          "buyerCity",
+          "buyerPincode",
+          "status",
+          "whatsappOpened",
+          "reservationApplied",
+          "reservedProductId",
+          "reservedQuantity",
+          "createdAt",
+          "updatedAt"
+        ])
+        && checkoutHasValidReservationFields(request.resource.data, checkoutId)
+        && request.resource.data.sellerId == storeOwner(request.resource.data.storeId)
+        && isOpenProductInPublishedStore(
+          request.resource.data.productId,
+          request.resource.data.storeId
+        )
+        && checkoutMatchesReservedProduct(request.resource.data)
+        && request.resource.data.productTitle is string
+        && isValidPositiveAmount(request.resource.data.productPrice)
+        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+        && isValidAmount(request.resource.data.sellerCollectAmount)
+        && request.resource.data.sellerCollectAmount ==
+          request.resource.data.productPrice - phaseOneBookingAdvance()
+        && request.resource.data.buyerName is string
+        && (
+          !("buyerEmail" in request.resource.data)
+          || request.resource.data.buyerEmail is string
+        )
+        && isValidPhone(request.resource.data.buyerPhone)
+        && request.resource.data.buyerAddress is string
+        && request.resource.data.buyerCity is string
+        && isValidPincode(request.resource.data.buyerPincode)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.productId == resource.data.productId
+        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
+        && request.resource.data.productPrice == resource.data.productPrice
+        && request.resource.data.sellerCollectAmount == resource.data.sellerCollectAmount
+        && isValidCheckoutStatus(request.resource.data.status);
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // ORDERS / BOOKINGS
+    // =========================================================
+
+    match /orders/{orderId} {
+      allow create: if false;
+
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.productId == resource.data.productId
+        && request.resource.data.checkoutId == resource.data.checkoutId
+        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
+        && request.resource.data.productPrice == resource.data.productPrice
+        && request.resource.data.sellerCollectAmount == resource.data.sellerCollectAmount
+        && isValidOrderStatus(request.resource.data.orderStatus)
+        && isValidWhatsappStatus(request.resource.data.whatsappStatus)
+        && hasOnlyOrderSellerMutableFields();
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // CUSTOMERS / LEADS
+    // =========================================================
+
+    match /customers/{customerId} {
+      allow create: if false;
+
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && hasOnlyCustomerSellerMutableFields();
+
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================
+    // PAYMENTS
+    // =========================================================
+
+    match /payments/{paymentId} {
+      allow create, update, delete: if false;
+
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+    }
+
+    // =========================================================
+    // EVENTS
+    // =========================================================
+
+    match /events/{eventId} {
+      allow create: if
+        request.resource.data.sellerId is string
+        && request.resource.data.storeId is string
+        && request.resource.data.eventType in [
+          "store_view",
+          "product_click",
+          "checkout_start",
+          "details_submit",
+          "payment_initiated",
+          "booking_paid",
+          "whatsapp_open"
+        ];
+
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================================================
+    // ADMIN SETTINGS
+    // =========================================================
+
+    match /adminSettings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

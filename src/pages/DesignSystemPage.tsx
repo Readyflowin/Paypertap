@@ -192,7 +192,7 @@ function BookingSuccessPreview() {
         <Check size={22} />
       </div>
       <h3>Booking confirmed</h3>
-      <p>Your ₹20 booking via PayPerTap has been recorded.</p>
+      <p>Your ₹20 booking via PayPerTap has been recorded. Please ensure to message the seller to confirm the delivery</p>
       <Button variant="whatsapp" fullWidth icon={<BrandIcon type="whatsapp" />}>
         Message seller on WhatsApp
       </Button>

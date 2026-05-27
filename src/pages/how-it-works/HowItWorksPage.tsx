@@ -9,6 +9,7 @@ import { MarketingSection } from "../../components/marketing/MarketingSection";
 import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
 import { StepList } from "../../components/marketing/StepList";
+import { TopCreateStoreCTA } from "../../components/marketing/TopCreateStoreCTA";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
@@ -87,6 +88,7 @@ export function HowItWorksPage() {
         subtitle="PayPerTap helps sellers turn social media interest into a verified booking. The seller shares a store or product link, the buyer pays ₹20 to reserve the item, and PayPerTap sends the buyer to WhatsApp with product, price, remaining amount, and contact details ready to share."
       />
       <PageTrustMeta path="/how-it-works" />
+      <TopCreateStoreCTA />
       <MarketingSection
         className="ppt-core-page-section"
         title="How does PayPerTap work for sellers?"

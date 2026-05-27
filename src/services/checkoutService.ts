@@ -6,7 +6,6 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -34,45 +33,10 @@ function normalizeBuyerPhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
 }
 
-export async function createCheckoutSession(
-  input: CreateCheckoutSessionInput
-): Promise<string> {
-  const checkoutRef = doc(collection(db, "checkoutSessions"));
-  const checkoutId = checkoutRef.id;
-  const productPrice = Math.trunc(Number(input.productPrice));
-  const buyerPhone = normalizeBuyerPhone(input.buyerPhone);
-
-  const checkoutData: CheckoutSession = {
-    checkoutId,
-    sellerId: input.sellerId,
-    storeId: input.storeId,
-    productId: input.productId,
-    productTitle: input.productTitle,
-    productPrice,
-    bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
-    sellerCollectAmount: getSellerCollectAmount(productPrice),
-    buyerName: input.buyerName.trim(),
-    ...(input.buyerEmail?.trim() ? { buyerEmail: input.buyerEmail.trim() } : {}),
-    buyerPhone,
-    buyerAddress: input.buyerAddress.trim(),
-    buyerCity: input.buyerCity.trim(),
-    buyerPincode: input.buyerPincode.trim(),
-    status: input.status || "booking_paid",
-    whatsappOpened: false,
-    reservationApplied: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  await setDoc(checkoutRef, checkoutData);
-
-  return checkoutId;
-}
-
 export async function createCheckoutSessionWithReservation(
   input: CreateCheckoutSessionInput
 ): Promise<string> {
-  // TODO: Production reservation must be moved to backend/Admin SDK after Razorpay verification.
+  // TODO: Call this after real payment verification when Razorpay replaces the mock flow.
   const checkoutRef = doc(collection(db, "checkoutSessions"));
   const productRef = doc(db, "products", input.productId);
   const checkoutId = checkoutRef.id;
@@ -151,6 +115,95 @@ export async function createCheckoutSessionWithReservation(
   });
 
   return checkoutId;
+}
+
+export async function repairMissingCheckoutReservation(
+  checkoutSession: CheckoutSession
+): Promise<boolean> {
+  if (checkoutSession.reservationApplied !== false) {
+    return false;
+  }
+
+  return runTransaction(db, async (transaction) => {
+    const checkoutRef = doc(db, "checkoutSessions", checkoutSession.checkoutId);
+    const productRef = doc(db, "products", checkoutSession.productId);
+    const [checkoutSnap, productSnap] = await Promise.all([
+      transaction.get(checkoutRef),
+      transaction.get(productRef),
+    ]);
+
+    if (!checkoutSnap.exists() || !productSnap.exists()) {
+      throw new Error("Booking or product could not be found.");
+    }
+
+    const latestSession = checkoutSnap.data() as CheckoutSession;
+
+    if (latestSession.reservationApplied !== false) {
+      return false;
+    }
+
+    if (
+      ![
+        "booking_paid",
+        "whatsapp_opened",
+        "contacted",
+        "remaining_paid",
+        "confirmed",
+      ].includes(latestSession.status)
+    ) {
+      return false;
+    }
+
+    const product = productSnap.data() as {
+      sellerId?: string;
+      storeId?: string;
+      status?: string;
+      inventoryQuantity?: number;
+      reservedQuantity?: number;
+      soldQuantity?: number;
+    };
+
+    if (
+      product.sellerId !== latestSession.sellerId ||
+      product.storeId !== latestSession.storeId
+    ) {
+      throw new Error("Booking and product do not match.");
+    }
+
+    const inventoryQuantity = Number(product.inventoryQuantity || 0);
+    const reservedQuantity = Number(product.reservedQuantity || 0);
+    const soldQuantity = Number(product.soldQuantity || 0);
+    const availableQuantity = getAvailableQuantity({
+      inventoryQuantity,
+      reservedQuantity,
+      soldQuantity,
+    });
+
+    if (product.status !== "open" || availableQuantity <= 0) {
+      throw new Error("This product no longer has reservable stock.");
+    }
+
+    const nextReservedQuantity = reservedQuantity + 1;
+    const nextStatus = getNextProductStatus({
+      inventoryQuantity,
+      reservedQuantity: nextReservedQuantity,
+      soldQuantity,
+    });
+
+    transaction.update(productRef, {
+      reservedQuantity: nextReservedQuantity,
+      status: nextStatus,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(checkoutRef, {
+      reservationApplied: true,
+      reservedProductId: latestSession.productId,
+      reservedQuantity: 1,
+      updatedAt: serverTimestamp(),
+    });
+
+    return true;
+  });
 }
 
 export async function getCheckoutSessionById(

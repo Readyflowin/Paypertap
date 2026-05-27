@@ -12,12 +12,12 @@ import { useNavigate } from "react-router-dom";
 import {
   BarChart3,
   CalendarCheck,
+  CheckCircle2,
   Copy,
   CreditCard,
   ExternalLink,
   FolderOpen,
   Link2,
-  MessageCircle,
   MoreVertical,
   PackageOpen,
   Plus,
@@ -57,9 +57,11 @@ import {
   markBookingContacted,
   markBookingRemainingPaid,
   markBookingSold,
+  repairMissingCheckoutReservation,
 } from "../services/checkoutService";
 import {
   createSellerProduct,
+  deleteSellerProduct,
   getSellerProductsForStore,
   updateSellerProduct,
 } from "../services/productService";
@@ -107,6 +109,14 @@ import type {
   StoreCollection,
 } from "../types/firestore";
 
+function sanitizePositiveNumberInput(value: string): string {
+  const digits = value.replace(/[^\d]/g, "");
+
+  if (!digits || /^0+$/.test(digits)) return "";
+
+  return digits.replace(/^0+/, "");
+}
+
 const sidebarItems = [
   "Overview",
   "Products",
@@ -125,6 +135,7 @@ const mobileNavItems = [
   "Bookings",
   "Customers",
   "Store",
+  "Payments",
 ] as const satisfies readonly DashboardTab[];
 
 const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
@@ -209,14 +220,36 @@ function getCheckoutStatusTone(status: CheckoutSession["status"]): PptTone {
 }
 
 function getStatusLabel(status: CheckoutSession["status"]): string {
-  if (status === "booking_paid") return "Verified booking";
-  if (status === "payment_pending") return "Payment pending";
-  if (status === "whatsapp_opened") return "WhatsApp opened";
+  if (!status) return "Choose action";
+  if (["started", "details_submitted", "payment_pending", "booking_paid"].includes(status)) {
+    return "New booking";
+  }
+  if (status === "whatsapp_opened") return "Contacted";
   if (status === "contacted") return "Contacted";
   if (status === "remaining_paid") return "Remaining paid";
   if (status === "confirmed") return "Confirmed";
+  if (status === "sold") return "Sold";
   if (status === "released") return "Released";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "abandoned") return "Cancelled";
   return status.replace(/_/g, " ");
+}
+
+function getSellerCollectAmountFromBooking(booking: CheckoutSession): number {
+  const bookingWithLegacyAmounts = booking as CheckoutSession & {
+    collectFromBuyer?: number;
+    remainingAmount?: number;
+  };
+
+  return Math.max(
+    0,
+    Number(
+      booking.sellerCollectAmount ||
+        bookingWithLegacyAmounts.collectFromBuyer ||
+        bookingWithLegacyAmounts.remainingAmount ||
+        0
+    )
+  );
 }
 
 function isActiveBookingLead(status: CheckoutSession["status"]): boolean {
@@ -277,6 +310,27 @@ async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
+async function repairMissingReservations(
+  bookings: CheckoutSession[]
+): Promise<boolean> {
+  const staleBookings = bookings.filter(
+    (booking) => booking.reservationApplied === false
+  );
+
+  if (!staleBookings.length) return false;
+
+  const results = await Promise.all(
+    staleBookings.map((booking) =>
+      repairMissingCheckoutReservation(booking).catch((error) => {
+        console.warn("Could not repair booking reservation:", error);
+        return false;
+      })
+    )
+  );
+
+  return results.some(Boolean);
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuthUser();
@@ -335,8 +389,21 @@ export default function DashboardPage() {
               }),
             ])
           : [[], []];
+        const repairedReservations = storeData
+          ? await repairMissingReservations(bookingData)
+          : false;
+        const [currentProductData, currentBookingData] =
+          storeData && repairedReservations
+            ? await Promise.all([
+                getSellerProductsForStore(uid, storeData.storeId),
+                getCheckoutSessionsBySellerId(uid, storeData.storeId).catch((bookingError) => {
+                  console.warn("Bookings unavailable:", bookingError);
+                  return bookingData;
+                }),
+              ])
+            : [productData, bookingData];
         const collectionData = storeData
-          ? await listStoreCollections(storeData.storeId, productData).catch((collectionError) => {
+          ? await listStoreCollections(storeData.storeId, currentProductData).catch((collectionError) => {
               console.warn("Collections unavailable:", collectionError);
               return [];
             })
@@ -346,9 +413,9 @@ export default function DashboardPage() {
 
         setSeller(sellerData);
         setStore(storeData);
-        setProducts(productData);
+        setProducts(currentProductData);
         setCollections(collectionData);
-        setBookings(bookingData);
+        setBookings(currentBookingData);
       } catch (err) {
         console.error("Dashboard load failed:", err);
         if (!cancelled) {
@@ -396,6 +463,15 @@ export default function DashboardPage() {
     );
   }
 
+  function handleProductRemoved(productId: string) {
+    setProducts((currentProducts) =>
+      currentProducts.filter(
+        (currentProduct) =>
+          (currentProduct.productId || currentProduct.id) !== productId
+      )
+    );
+  }
+
   async function refreshProductsAndBookings() {
     if (!user || !store?.storeId) return;
 
@@ -406,17 +482,27 @@ export default function DashboardPage() {
         return [];
       }),
     ]);
+    const repairedReservations = await repairMissingReservations(bookingData);
+    const [currentProductData, currentBookingData] = repairedReservations
+      ? await Promise.all([
+          getSellerProductsForStore(user.uid, store.storeId),
+          getCheckoutSessionsBySellerId(user.uid, store.storeId).catch((bookingError) => {
+            console.warn("Bookings unavailable:", bookingError);
+            return bookingData;
+          }),
+        ])
+      : [productData, bookingData];
     const collectionData = await listStoreCollections(
       store.storeId,
-      productData
+      currentProductData
     ).catch((collectionError) => {
       console.warn("Collections unavailable:", collectionError);
       return collections;
     });
 
-    setProducts(productData);
+    setProducts(currentProductData);
     setCollections(collectionData);
-    setBookings(bookingData);
+    setBookings(currentBookingData);
   }
 
   async function handleTogglePublish() {
@@ -452,7 +538,7 @@ export default function DashboardPage() {
       <main className="pds-page grid place-items-center">
         <PptTapLoader
           title="Loading dashboard..."
-          description="Preparing your seller cockpit."
+          description="Preparing your seller space."
         />
       </main>
     );
@@ -601,7 +687,9 @@ export default function DashboardPage() {
                 onSelectTab={setActiveTab}
                 openAddProductSignal={addProductRequest}
                 onProductCreated={handleProductCreated}
+                onProductRemoved={handleProductRemoved}
                 onProductUpdated={handleProductUpdated}
+                bookings={bookings}
                 products={products}
                 store={store}
                 user={user}
@@ -677,12 +765,6 @@ function OverviewTab({
   store: Store | null;
   storeLink: string;
 }) {
-  const openProducts = products.filter(
-    (product) => product.status === "open" && getAvailableQuantity(product) > 0
-  ).length;
-  const reservedProducts = products.filter((product) =>
-    product.reservedQuantity > 0 || product.status === "hold"
-  ).length;
   const activeBookingLeads = bookings.filter((booking) =>
     !["cancelled", "released"].includes(booking.status)
   ).length;
@@ -696,6 +778,11 @@ function OverviewTab({
       booking.status
     )
   ).length;
+  const soldBookings = bookings.filter((booking) => booking.status === "sold");
+  const sellerRevenue = soldBookings.reduce(
+    (total, booking) => total + getSellerCollectAmountFromBooking(booking),
+    0
+  );
   const recentBookings = [...bookings]
     .sort((a, b) => getTimeValue(b.createdAt) - getTimeValue(a.createdAt))
     .slice(0, 3);
@@ -716,27 +803,27 @@ function OverviewTab({
           icon={<CalendarCheck size={16} aria-hidden="true" />}
           label="Bookings"
           value={bookings.length}
-          helper={`${verifiedBookings} verified/progressed`}
+          helper={`${verifiedBookings} progressed`}
         />
         <CompactStatCard
-          icon={<ShoppingBag size={16} aria-hidden="true" />}
-          label="Open products"
-          value={openProducts}
-          helper="ready to book"
+          icon={<CreditCard size={16} aria-hidden="true" />}
+          label="Total seller revenue"
+          value={formatINR(sellerRevenue)}
+          helper="from sold bookings"
           tone="success"
         />
         <CompactStatCard
-          icon={<MessageCircle size={16} aria-hidden="true" />}
-          label="Follow-ups"
-          value={Math.max(pendingFollowUps, reservedProducts)}
-          helper="needs WhatsApp"
+          icon={<CheckCircle2 size={16} aria-hidden="true" />}
+          label="Sold"
+          value={soldBookings.length}
+          helper="completed sales"
           tone="info"
         />
         <CompactStatCard
           icon={<Users size={16} aria-hidden="true" />}
           label="Customers"
           value={customers.length}
-          helper={`${activeBookingLeads} active leads`}
+          helper={`${activeBookingLeads} active buyer bookings`}
         />
       </div>
 
@@ -1488,8 +1575,10 @@ function getCollectionProductCount(
 }
 
 function ProductsTab({
+  bookings,
   collections,
   onSelectTab,
+  onProductRemoved,
   onProductUpdated,
   openAddProductSignal,
   products,
@@ -1497,6 +1586,7 @@ function ProductsTab({
   store,
   onProductCreated,
 }: {
+  bookings: CheckoutSession[];
   collections: StoreCollection[];
   onSelectTab: (tab: DashboardTab) => void;
   openAddProductSignal: number;
@@ -1504,6 +1594,7 @@ function ProductsTab({
   user: User | null;
   store: Store | null;
   onProductCreated: (product: Product) => void;
+  onProductRemoved: (productId: string) => void;
   onProductUpdated: (product: Product) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -1522,6 +1613,62 @@ function ProductsTab({
   const addProductFormRef = useRef<HTMLFormElement>(null);
   const addProductTitleRef = useRef<HTMLInputElement>(null);
   const safeProducts = Array.isArray(products) ? products : [];
+
+  function getProductBookingCount(product: Product): number {
+    const productId = product.productId || product.id;
+    return bookings.filter((booking) => booking.productId === productId).length;
+  }
+
+  async function handleProductDeleted(product: Product) {
+    const productId = product.productId || product.id;
+
+    if (!productId) return;
+
+    const bookingCount = getProductBookingCount(product);
+
+    if (bookingCount > 0) {
+      const confirmed = window.confirm(
+        `This product has ${bookingCount} booking record${bookingCount === 1 ? "" : "s"}. It will be removed from the storefront and kept in history. Continue?`
+      );
+
+      if (!confirmed) return;
+    } else {
+      const confirmed = window.confirm(
+        "Delete this product permanently? This cannot be undone."
+      );
+
+      if (!confirmed) return;
+    }
+
+    if (!user) {
+      setError("Please sign in again to delete this product.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const result = await deleteSellerProduct(user, product, {
+        preserveHistory: bookingCount > 0,
+      });
+
+      if (result.deleted) {
+        onProductRemoved(productId);
+      } else if (result.product) {
+        onProductUpdated(result.product);
+      }
+
+      if ((editingProduct?.productId || editingProduct?.id) === productId) {
+        setEditingProduct(null);
+      }
+    } catch (err) {
+      console.error("Product delete failed:", err);
+      setError(err instanceof Error ? err.message : "Could not delete product.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     if (openAddProductSignal === 0) return;
@@ -1653,11 +1800,14 @@ function ProductsTab({
                 value={price}
                 onChange={setPrice}
               />
+              <p className="-mt-2 text-xs leading-5 text-gray-500 sm:col-start-2">
+                Enter the full product price. Buyers book first, then pay the remaining amount directly to you.
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <Field
-                label="Inventory"
+                label="Pieces available"
                 min="1"
                 required
                 type="number"
@@ -1678,11 +1828,14 @@ function ProductsTab({
                   className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
                 >
                   <option value="open">Open</option>
-                  <option value="hold">Hold</option>
+                  <option value="hold">Reserved</option>
                   <option value="sold">Sold</option>
                   <option value="draft">Draft</option>
                   <option value="unpublished">Unpublished</option>
                 </select>
+                <p className="mt-2 text-xs leading-5 text-gray-500">
+                  Open: buyers can book. Reserved: temporarily unavailable. Sold: no longer bookable. Draft or Unpublished: hidden from buyers.
+                </p>
               </label>
             </div>
 
@@ -1763,10 +1916,18 @@ function ProductsTab({
               onProductUpdated(product);
               setEditingProduct(null);
             }}
+            onDeleted={handleProductDeleted}
             collections={collections}
+            bookingCount={getProductBookingCount(editingProduct)}
             product={editingProduct}
             user={user}
           />
+        ) : null}
+
+        {!showForm && !editingProduct && error ? (
+          <div className="mt-5">
+            <ErrorBox message={error} />
+          </div>
         ) : null}
       </div>
 
@@ -1803,6 +1964,9 @@ function ProductsTab({
                 onEdit={() => {
                   setShowForm(false);
                   setEditingProduct(product);
+                }}
+                onDelete={() => {
+                  void handleProductDeleted(product);
                 }}
                 product={product}
               />
@@ -2173,13 +2337,17 @@ function CollectionsManager({
 }
 
 function EditProductForm({
+  bookingCount,
   collections,
+  onDeleted,
   onCancel,
   onSaved,
   product,
   user,
 }: {
+  bookingCount: number;
   collections: StoreCollection[];
+  onDeleted: (product: Product) => Promise<void>;
   onCancel: () => void;
   onSaved: (product: Product) => void;
   product: Product;
@@ -2205,8 +2373,12 @@ function EditProductForm({
   const reservedQuantity = Number(product.reservedQuantity || 0);
   const soldQuantity = Number(product.soldQuantity || 0);
   const minimumTrackedInventory = reservedQuantity + soldQuantity;
-  const formAvailableQuantity =
-    Number(inventoryQuantity || 0) - reservedQuantity - soldQuantity;
+  const currentAvailableQuantity = getAvailableQuantity(product);
+  const requestedInventoryQuantity = Number(inventoryQuantity || 0);
+  const formAvailableQuantity = Math.max(
+    0,
+    requestedInventoryQuantity - reservedQuantity - soldQuantity
+  );
   const openingWithoutStock = status === "open" && formAvailableQuantity <= 0;
 
   useEffect(() => {
@@ -2247,10 +2419,11 @@ function EditProductForm({
         collections
       );
       const requestedInventory = Number(inventoryQuantity);
-      const nextInventoryQuantity =
-        status === "open" && requestedInventory <= minimumTrackedInventory
-          ? minimumTrackedInventory + 1
-          : requestedInventory;
+
+      if (requestedInventory < minimumTrackedInventory) {
+        setError("Total stock cannot be less than reserved + sold quantity.");
+        return;
+      }
 
       const updatedProduct = await updateSellerProduct(user, product, {
         title,
@@ -2259,7 +2432,7 @@ function EditProductForm({
         category: selectedCollection.collectionName || COMPATIBILITY_COLLECTION_NAME,
         collectionId: selectedCollection.collectionId,
         collectionName: selectedCollection.collectionName,
-        inventoryQuantity: nextInventoryQuantity,
+        inventoryQuantity: requestedInventory,
         status,
         imageFiles,
       });
@@ -2268,6 +2441,19 @@ function EditProductForm({
     } catch (err) {
       console.error("Product update failed:", err);
       setError(err instanceof Error ? err.message : "Could not update product.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      setSaving(true);
+      setError("");
+      await onDeleted(product);
+    } catch (err) {
+      console.error("Product delete failed:", err);
+      setError(err instanceof Error ? err.message : "Could not delete product.");
     } finally {
       setSaving(false);
     }
@@ -2313,17 +2499,25 @@ function EditProductForm({
           value={price}
           onChange={setPrice}
         />
+        <p className="-mt-2 text-xs leading-5 text-gray-500 sm:col-start-2">
+          Enter the full product price. Buyers book first, then pay the remaining amount directly to you.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field
-          label={`Inventory (reserved ${reservedQuantity}, sold ${soldQuantity})`}
-          min={String(reservedQuantity + soldQuantity)}
-          required
-          type="number"
-          value={inventoryQuantity}
-          onChange={setInventoryQuantity}
-        />
+        <div>
+          <Field
+            label="Total stock capacity"
+            min={String(minimumTrackedInventory)}
+            required
+            type="number"
+            value={inventoryQuantity}
+            onChange={setInventoryQuantity}
+          />
+          <p className="mt-2 text-xs leading-5 text-gray-500">
+            Available now: {formAvailableQuantity} | Reserved: {reservedQuantity} | Sold: {soldQuantity}
+          </p>
+        </div>
         <CollectionSelect
           collections={collections}
           label="Collection"
@@ -2341,26 +2535,36 @@ function EditProductForm({
 
               if (
                 nextStatus === "open" &&
-                Number(inventoryQuantity || 0) <= minimumTrackedInventory
+                Number(inventoryQuantity || 0) < minimumTrackedInventory
               ) {
-                setInventoryQuantity(String(minimumTrackedInventory + 1));
+                setInventoryQuantity(String(minimumTrackedInventory));
               }
             }}
             className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
           >
             <option value="open">Open</option>
-            <option value="hold">Hold</option>
+            <option value="hold">Reserved</option>
             <option value="sold">Sold</option>
             <option value="draft">Draft</option>
             <option value="unpublished">Unpublished</option>
           </select>
+          <p className="mt-2 text-xs leading-5 text-gray-500">
+            Open: buyers can book. Reserved: temporarily unavailable. Sold: no longer bookable. Draft or Unpublished: hidden from buyers.
+          </p>
         </label>
       </div>
 
-      <PptNotice tone={openingWithoutStock ? "warning" : "info"} title="Opening this product makes it bookable again. Make sure stock is available.">
+      <div className="grid gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:grid-cols-4">
+        <Metric label="Available now" value={String(currentAvailableQuantity)} />
+        <Metric label="Reserved" value={String(reservedQuantity)} />
+        <Metric label="Sold" value={String(soldQuantity)} />
+        <Metric label="Total capacity" value={String(product.inventoryQuantity)} />
+      </div>
+
+      <PptNotice tone={openingWithoutStock ? "warning" : "info"} title="Stock follows reservations and sales.">
         {openingWithoutStock
-          ? "Saving as Open will add 1 available unit without erasing sold or reserved history."
-          : "Public checkout will stay disabled unless available quantity is above zero."}
+          ? "This product can be Open, but public checkout will stay disabled until available stock is above zero."
+          : "Public checkout uses available stock, not the original total capacity."}
       </PptNotice>
 
       <label className="text-sm font-medium text-gray-800">
@@ -2432,16 +2636,35 @@ function EditProductForm({
           {saving && imageFiles.length ? "Uploading images..." : saving ? "Saving changes..." : "Save changes"}
         </button>
       </div>
+
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+        <p className="text-sm font-semibold text-red-900">Delete product</p>
+        <p className="mt-1 text-xs leading-5 text-red-700">
+          {bookingCount > 0
+            ? "This product has booking history, so delete will hide it from the storefront and keep past records intact."
+            : "This product has no bookings, so delete will permanently remove it."}
+        </p>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={saving}
+          className="mt-3 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {bookingCount > 0 ? "Remove from storefront" : "Delete product"}
+        </button>
+      </div>
     </form>
   );
 }
 
 function ProductRow({
   collections,
+  onDelete,
   onEdit,
   product,
 }: {
   collections: StoreCollection[];
+  onDelete: () => void;
   onEdit: () => void;
   product: Product;
 }) {
@@ -2482,6 +2705,13 @@ function ProductRow({
           >
             Edit product
           </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700"
+          >
+            Delete
+          </button>
         </div>
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
           <span className="max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
@@ -2496,16 +2726,20 @@ function ProductRow({
           <p className="mt-2 text-xs text-gray-400">No description</p>
         )}
         <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-3 lg:max-w-xl">
-          <Metric label="Inventory" value={String(product.inventoryQuantity)} />
-          <Metric label="Reserved" value={String(product.reservedQuantity)} />
-          <Metric label="Sold" value={String(product.soldQuantity)} />
+          <Metric label="Available" value={String(availableQuantity)} />
+          <Metric label="Total capacity" value={String(product.inventoryQuantity)} />
+          {product.reservedQuantity > 0 ? (
+            <Metric label="Reserved" value={String(product.reservedQuantity)} />
+          ) : null}
+          {product.soldQuantity > 0 ? (
+            <Metric label="Sold" value={String(product.soldQuantity)} />
+          ) : null}
         </div>
       </div>
       <div className="grid gap-2 text-sm lg:min-w-56">
         <InfoRow label="Price" value={formatINR(product.price)} />
         <InfoRow label="Advance" value={formatINR(product.bookingAdvanceAmount)} />
         <InfoRow label="Collect" value={formatINR(product.sellerCollectAmount)} />
-        <InfoRow label="Available" value={String(availableQuantity)} />
       </div>
     </div>
   );
@@ -2525,14 +2759,17 @@ function BookingsTab({
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <h2 className="text-lg font-semibold tracking-tight">Bookings</h2>
         <p className="mt-1 text-sm text-gray-500">
-          These are checkout session leads for your store. Production orders will be backend-created later.
+          These are buyers who booked or started booking your products. Open WhatsApp to confirm delivery and collect the remaining amount directly.
         </p>
       </div>
 
       <div className="space-y-3">
         {bookings.length === 0 ? (
           <section className="rounded-2xl border border-gray-200 bg-white">
-            <EmptyState title="No booking leads yet" message="Buyer checkout sessions will appear here." />
+            <EmptyState
+              title="No bookings yet"
+              message="Buyer bookings will appear here after someone starts or completes a booking."
+            />
           </section>
         ) : (
           bookings.map((booking) => (
@@ -2561,6 +2798,9 @@ function BookingCard({
   const [copied, setCopied] = useState(false);
   const [savingAction, setSavingAction] = useState("");
   const [actionError, setActionError] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<CheckoutSession["status"] | "">(
+    booking.status || ""
+  );
   const sellerMessageInput = checkoutToSellerMessageInput(booking, store);
   const message = buildSellerPaymentCollectionMessage(sellerMessageInput);
   const deliveryMessage = buildDeliveryDetailsMessage(sellerMessageInput);
@@ -2570,19 +2810,30 @@ function BookingCard({
   const confirmedWhatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, confirmedMessage);
   const sellerUpiId = getSellerUpiId(store);
 
+  useEffect(() => {
+    setSelectedStatus(booking.status || "");
+  }, [booking.checkoutId, booking.status]);
+
   async function handleCopy() {
     await copyText(message);
     setCopied(true);
   }
 
-  async function runBookingAction(label: string, action: () => Promise<void>) {
+  async function runBookingAction(
+    nextStatus: CheckoutSession["status"],
+    action: () => Promise<void>
+  ) {
+    const previousStatus = selectedStatus;
+
     try {
-      setSavingAction(label);
+      setSavingAction(nextStatus);
+      setSelectedStatus(nextStatus);
       setActionError("");
       await action();
       await onBookingChanged();
     } catch (err) {
       console.error("Booking action failed:", err);
+      setSelectedStatus(previousStatus);
       setActionError(err instanceof Error ? err.message : "Could not update booking.");
     } finally {
       setSavingAction("");
@@ -2621,10 +2872,12 @@ function BookingCard({
           <label className="text-xs font-medium text-gray-500">
             Update status
             <select
-              value=""
+              value={selectedStatus}
               onChange={(event) => {
-                const value = event.target.value;
-                event.target.value = "";
+                const value = event.target.value as CheckoutSession["status"] | "";
+
+                if (!value || value === selectedStatus) return;
+
                 if (value === "contacted") {
                   void runBookingAction("contacted", () => markBookingContacted(booking.checkoutId));
                 }
@@ -2644,17 +2897,24 @@ function BookingCard({
               disabled={Boolean(savingAction)}
               className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-950 disabled:opacity-50"
             >
-              <option value="">{savingAction ? "Updating..." : "Choose action"}</option>
-              <option value="contacted">Mark contacted</option>
-              <option value="remaining_paid">Mark remaining paid</option>
-              <option value="confirmed">Mark confirmed</option>
-              <option value="sold" disabled={booking.status === "sold"}>Mark sold</option>
+              <option value="" disabled>{savingAction ? "Updating..." : "Choose action"}</option>
+              <option value="started" disabled={selectedStatus !== "started"}>New booking</option>
+              <option value="details_submitted" disabled={selectedStatus !== "details_submitted"}>New booking</option>
+              <option value="payment_pending" disabled={selectedStatus !== "payment_pending"}>New booking</option>
+              <option value="booking_paid" disabled={selectedStatus !== "booking_paid"}>New booking</option>
+              <option value="whatsapp_opened" disabled={selectedStatus !== "whatsapp_opened"}>Contacted</option>
+              <option value="contacted">Contacted</option>
+              <option value="remaining_paid">Remaining paid</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="sold">Sold</option>
               <option
                 value="released"
-                disabled={["sold", "cancelled", "released"].includes(booking.status)}
+                disabled={["sold", "cancelled", "released"].includes(selectedStatus)}
               >
-                Cancel / release hold
+                Released
               </option>
+              <option value="abandoned" disabled={selectedStatus !== "abandoned"}>Cancelled</option>
+              <option value="cancelled" disabled={selectedStatus !== "cancelled"}>Cancelled</option>
             </select>
           </label>
         </div>
@@ -2698,7 +2958,7 @@ function BookingCard({
             <PptBrandIcon type="whatsapp" size={15} />
             <span>Order confirmed</span>
           </a>
-          <Metric label="WhatsApp opened" value={booking.whatsappOpened ? "Yes" : "No"} />
+          <Metric label="Buyer opened WhatsApp" value={booking.whatsappOpened ? "Yes" : "No"} />
         </div>
       </details>
       {!sellerUpiId ? (
@@ -2729,15 +2989,18 @@ function CustomersTab({
   return (
     <section className="space-y-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Customers</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Buyer contacts</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Customer leads are grouped from checkout sessions until backend customer records are added.
+          View people who booked or shared details through your store. Use this list to follow up on WhatsApp, confirm orders, or message previous buyers.
+        </p>
+        <p className="mt-2 text-xs leading-5 text-gray-500">
+          Buyer details are shown here only to help you confirm bookings and follow up on orders.
         </p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white">
         {customers.length === 0 ? (
-          <EmptyState title="No customer leads yet" message="Buyer details will appear here after your first booking." />
+          <EmptyState title="No buyer contacts yet" message="Buyer details will appear here after your first booking." />
         ) : (
           <div className="divide-y divide-gray-100">
             {customers.map((customer) => (
@@ -2868,7 +3131,7 @@ function CustomerRow({
           </div>
 
           <label className="block text-xs font-medium text-gray-600">
-            Retarget with product
+            Message with product
             <select
               value={selectedProductId}
               onChange={(event) => setSelectedProductId(event.target.value)}
@@ -2897,7 +3160,7 @@ function CustomerRow({
             onClick={handleCopy}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 sm:w-fit"
           >
-            {copied ? "Retargeting message copied" : "Copy retargeting message"}
+            {copied ? "New drop message copied" : "Copy new drop message"}
           </button>
         </div>
       ) : null}
@@ -3112,7 +3375,7 @@ function StoreTab({
               />
             </label>
             <p className="mt-2 text-xs text-gray-500">
-              {logoFileName || "JPEG, PNG, or WebP. The logo is compressed before upload."}
+              {logoFileName || "JPEG, PNG, or WebP. We'll optimize your image automatically."}
             </p>
 
             <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
@@ -3227,11 +3490,14 @@ function StoreTab({
               <Field label="Hero subtitle" value={heroSubtitle} onChange={setHeroSubtitle} placeholder="Reserve with ₹20. Confirm the rest on WhatsApp." />
             </div>
             <div className="grid gap-2 text-sm sm:grid-cols-2">
-              <InfoRow label="Slug" value={storeSlug || "Not set"} />
+              <InfoRow label="Store link name" value={storeSlug || "Not set"} />
               <InfoRow label="Public link" value={storeLink || "Not set"} />
               <InfoRow label="Booking fee" value={formatINR(store?.bookingAdvanceAmount || 20)} />
               <InfoRow label="Theme" value={storefrontThemeRegistry[selectedThemeId].name} />
             </div>
+            <p className="text-xs leading-5 text-gray-500">
+              This becomes your public store link, for example paypertap.in/your-store-name.
+            </p>
           </div>
         </div>
 
@@ -3615,7 +3881,7 @@ function PaymentsTab() {
       </h2>
       <p className="mt-3 text-sm leading-6 text-gray-600">
         PayPerTap collects ₹20 from the buyer to reserve the item. You collect
-        the remaining product amount directly on WhatsApp/UPI/COD. You get a managed dashboard and verified buyers that reduces your workload and help you look more professional. 
+        the remaining product amount directly on WhatsApp/UPI/COD. You get a managed dashboard with buyer bookings, product details, and follow-up context in one place.
       </p>
       <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
         Custom booking-fee settings are not available in this booking model.
@@ -3678,13 +3944,21 @@ function Field({
       {label}
       <input
         ref={inputRef}
+        autoComplete={type === "number" ? "off" : undefined}
+        inputMode={type === "number" ? "numeric" : undefined}
         min={min}
         placeholder={placeholder}
         required={required}
         step={type === "number" ? "1" : undefined}
         type={type}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(
+            type === "number"
+              ? sanitizePositiveNumberInput(event.target.value)
+              : event.target.value
+          )
+        }
         className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
       />
     </label>

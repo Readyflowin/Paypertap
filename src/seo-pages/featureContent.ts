@@ -90,7 +90,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       "Merchants who need full ecommerce checkout and seller payout setup.",
     ],
     example:
-      "A boutique owner can put one PayPerTap link in Instagram bio and use the same link in WhatsApp status. Buyers browse product cards, book serious interest, and continue to WhatsApp for final confirmation.",
+      "A boutique owner can put one PayPerTap link in Instagram bio, organize the whole store around collections like new arrivals or festive drops, and let buyers browse product cards before booking and continuing to WhatsApp.",
     faqs: [
       {
         question: "How is PayPerTap different from a generic bio link tool?",
@@ -261,7 +261,7 @@ export const featureContent: Record<FeatureSlug, SeoPageContent> = {
       "Merchants who need a full shopping cart checkout.",
     ],
     example:
-      "When a buyer asks about a specific bag, the seller can send one PayPerTap product link instead of typing the price, size, booking rules, and WhatsApp next steps again.",
+      "When a buyer asks about a specific bag, the seller can send one individual product link instead of typing the price, size, booking rules, and WhatsApp next steps again. The buyer lands directly on that item before booking.",
     faqs: [
       {
         question: "Can I share a product link instead of my whole store?",

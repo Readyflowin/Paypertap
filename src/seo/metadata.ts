@@ -95,14 +95,18 @@ function metadata(input: {
   };
 }
 
+function withSiteNameSuffix(title: string) {
+  return title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+}
+
 const coreRouteMetadata: RouteMetadata[] = [
   metadata({
     path: "/",
     breadcrumbLabel: "Home",
     breadcrumbs: [{ label: "Home", path: "/" }],
-    title: "PayPerTap | Verified Booking Storefront for Instagram & WhatsApp Sellers",
+    title: "PayPerTap | Verified Booking Storefront",
     description:
-      "PayPerTap helps Indian Instagram and WhatsApp sellers create verified booking storefronts, collect a fixed ₹20 buyer booking, and continue order confirmation on WhatsApp.",
+      "PayPerTap helps Indian Instagram and WhatsApp sellers create booking storefronts, verify buyer intent, and continue order confirmation on WhatsApp.",
   }),
   metadata({
     path: "/pricing",
@@ -194,7 +198,7 @@ const featureRouteMetadata = (Object.entries(featureContent) as Array<[FeatureSl
         { label: "Features", path: "/features/verified-booking" },
         { label: page.h1, path: page.path },
       ],
-      title: featureTitleOverrides[slug] ?? `${page.title} | PayPerTap`,
+      title: featureTitleOverrides[slug] ?? withSiteNameSuffix(page.title),
       description: page.description,
       trust: editorialTrust(),
     }),
@@ -215,7 +219,7 @@ const useCaseRouteMetadata = (Object.entries(useCaseContent) as Array<[UseCaseSl
         { label: "For Sellers", path: "/for/instagram-sellers" },
         { label: page.h1, path: page.path },
       ],
-      title: useCaseTitleOverrides[slug] ?? `${page.title} | PayPerTap`,
+      title: useCaseTitleOverrides[slug] ?? withSiteNameSuffix(page.title),
       description: page.description,
       ogType: "article",
       trust: editorialTrust(),

@@ -204,7 +204,7 @@ export const useCaseContent: Record<UseCaseSlug, SeoPageContent> = {
       "Brands needing advanced ecommerce automation.",
     ],
     example:
-      "A boutique owner can keep products arranged in a PayPerTap store and share one link instead of sending photos manually to every buyer.",
+      "A boutique owner can list new arrivals, sizes, colors, kurtis, co-ords, or festive drops in one PayPerTap store. A buyer books the item, then the seller confirms size, delivery, and remaining payment on WhatsApp.",
     faqs: [
       {
         question: "Is PayPerTap suitable for boutique catalogs?",
@@ -261,7 +261,7 @@ export const useCaseContent: Record<UseCaseSlug, SeoPageContent> = {
       "Sellers who need PayPerTap to handle full payment or delivery.",
     ],
     example:
-      "A handmade jewelry seller can share one product page with materials and price, then continue with a buyer who has already booked.",
+      "A handmade jewelry seller can share a made-to-order product page with materials, batch limits, and price. A buyer books interest first, then the seller confirms timeline, custom details, and delivery on WhatsApp.",
     faqs: [
       {
         question: "Can handmade sellers use PayPerTap without a full website?",

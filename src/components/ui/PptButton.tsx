@@ -62,14 +62,18 @@ export function PptButton({
       disabled={disabled || loading}
       onClick={onClick}
     >
-      {loading ? (
-        <PayPerTapInlineLoader tone={variant === "secondary" || variant === "ghost" || variant === "soft" ? "brand" : "light"} />
-      ) : success ? (
-        <Check size={17} />
-      ) : (
-        icon
-      )}
-      <span>{children}</span>
+      <span className="pds-button-icon" aria-hidden={loading || success ? "true" : undefined}>
+        {loading ? (
+          <PayPerTapInlineLoader
+            tone={variant === "secondary" || variant === "ghost" || variant === "soft" ? "brand" : "light"}
+          />
+        ) : success ? (
+          <Check size={17} />
+        ) : (
+          icon
+        )}
+      </span>
+      <span className="pds-button-label">{children}</span>
       {rightIcon ? <i className="pds-button-right">{rightIcon}</i> : null}
     </button>
   );

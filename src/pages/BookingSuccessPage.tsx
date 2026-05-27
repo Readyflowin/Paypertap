@@ -136,7 +136,7 @@ export default function BookingSuccessPage() {
       <main className="pds-page grid place-items-center">
         <PptTapLoader
           title="Loading booking..."
-          description="Preparing your WhatsApp handoff."
+          description="Preparing your WhatsApp message."
         />
       </main>
     );
@@ -166,6 +166,7 @@ export default function BookingSuccessPage() {
   }
 
   const checkout = state.checkout;
+  const reservationApplied = checkout.reservationApplied !== false;
   const productImage = state.product?.images?.find(
     (image) => image.thumbUrl || image.url || image.mediumUrl
   );
@@ -178,14 +179,14 @@ export default function BookingSuccessPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[var(--pds-success-soft)] text-[var(--pds-success)]">
             <CheckCircle2 size={34} strokeWidth={2.4} aria-hidden="true" />
           </div>
-          <PptBadge tone="success" className="mt-5">
-            Booking confirmed
+          <PptBadge tone={reservationApplied ? "success" : "warning"} className="mt-5">
+            {reservationApplied ? "Booking confirmed" : "Booking recorded"}
           </PptBadge>
           <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
-            Booking confirmed
+            {reservationApplied ? "Booking confirmed" : "Booking recorded"}
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Your ₹20 booking via PayPerTap has been recorded.
+            Your ₹20 booking via PayPerTap has been recorded. Please message the seller to confirm delivery.
           </p>
 
           <div className="mt-6 flex flex-col items-center gap-3">

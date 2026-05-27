@@ -74,7 +74,7 @@ export function HomeProblemSection() {
           <div className="ppt-dm-phone">
             <div className="ppt-dm-top">
               <span />
-              <strong>DMs</strong>
+              <span className="ppt-faux-strong">DMs</span>
               <span />
             </div>
             <div className="ppt-dm-bubble is-left">Available?</div>

@@ -33,6 +33,8 @@ export type ComparisonDeepContent = {
   additionalRows: ComparisonRow[];
   answers: QuestionAnswer[];
   directAnswer: string;
+  enoughBody: string;
+  enoughTitle: string;
   example: string;
   extraFaqs: FaqItem[];
   source: SourceContext;
@@ -907,6 +909,9 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
   "/compare/paypertap-vs-linktree": {
     directAnswer:
       "Linktree is a link-in-bio tool for sharing multiple links. PayPerTap is a verified booking storefront for product sellers: buyers see product pages, supply booking context, pay the fixed ₹20 platform fee, reserve an item in the flow, and move to WhatsApp. PayPerTap is not intended as a general creator link hub.",
+    enoughTitle: "Where Linktree is enough",
+    enoughBody:
+      "Linktree can be enough when a creator, brand, or seller only needs one simple bio link that routes people to many destinations. It is useful for profile links, content, campaigns, forms, or general navigation. PayPerTap becomes more relevant when the link needs product-level booking, buyer details, reserved status, and WhatsApp context after a buyer chooses one item.",
     source: {
       before:
         "Linktree describes itself as a ",
@@ -938,10 +943,10 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
       },
     ],
     additionalRows: [
-      { label: "Link list", other: "Built to bring multiple destinations together.", paypertap: "Related pages exist, but the focus is selling products." },
-      { label: "Product pages", other: "Not the core claim of a general link hub.", paypertap: "Storefront and direct item links for buyer review." },
-      { label: "Inventory reservation", other: "Not described as a fixed booking reservation flow.", paypertap: "Item becomes reserved after the ₹20 booking in the flow." },
-      { label: "Best for", other: "Sharing several links from a profile.", paypertap: "Social product sellers needing booking before WhatsApp." },
+      { label: "Bio link depth", other: "Strong for bringing several destinations together behind one bio link.", paypertap: "One store link is focused on product browsing and booking rather than broad navigation." },
+      { label: "Product-level booking", other: "Not designed around a paid booking action for one selected item.", paypertap: "Each product can lead to the fixed ₹20 booking before WhatsApp." },
+      { label: "Buyer details", other: "A general link hub may require another tool to capture order context.", paypertap: "Buyer details stay attached to the selected product booking." },
+      { label: "Post-booking WhatsApp context", other: "Usually sends visitors onward without a booking record.", paypertap: "Handoff includes product, booking, and remaining amount context." },
     ],
     example:
       "An Instagram thrift seller who only wants buyers to find multiple social channels may choose a link-in-bio tool. If the seller wants a buyer to open one jacket page, pay the fixed ₹20 booking, reserve that item, and then continue in WhatsApp with details ready, PayPerTap fits that product-booking task.",
@@ -966,6 +971,9 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
   "/compare/paypertap-vs-whatsapp-catalog": {
     directAnswer:
       "WhatsApp Catalog helps businesses show products and services to customers inside WhatsApp. PayPerTap serves a different step: a public store or product link with a fixed ₹20 booking before WhatsApp handoff. Sellers can use PayPerTap alongside WhatsApp Business; it does not replace its broader communication or catalog capabilities.",
+    enoughTitle: "Where WhatsApp Catalog is enough",
+    enoughBody:
+      "WhatsApp Catalog can be enough when a seller already runs discovery, questions, and confirmation inside WhatsApp and wants buyers to browse products there. It is useful for WhatsApp-native selling. PayPerTap is more relevant when the seller also needs an Instagram bio or public product-link flow, a paid booking signal before chat, and lead or order context outside scattered conversations.",
     source: {
       before:
         "Official WhatsApp help explains that a ",
@@ -997,10 +1005,10 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
       },
     ],
     additionalRows: [
-      { label: "Catalog role", other: "Displays products or services to WhatsApp customers.", paypertap: "Displays products through public storefront and item links." },
-      { label: "Instagram sharing", other: "Centered on the WhatsApp experience.", paypertap: "Store or item links can be shared across social conversations." },
-      { label: "Automation", other: "Depends on the seller's WhatsApp tools and setup.", paypertap: "Does not auto-reply or send seller messages." },
-      { label: "Best for", other: "Sellers prioritizing WhatsApp-native product display.", paypertap: "Sellers needing public link plus booking before chat." },
+      { label: "Catalog browsing", other: "Good for showing products inside the WhatsApp environment.", paypertap: "Shows products through public storefront and item links before chat." },
+      { label: "Instagram bio sharing", other: "Centered on WhatsApp-native discovery.", paypertap: "Store and product links can be shared from Instagram bio, DMs, stories, or WhatsApp." },
+      { label: "Booking signal", other: "Browsing a catalog is not the same as a paid booking action.", paypertap: "Fixed ₹20 booking records stronger buyer intent before handoff." },
+      { label: "Lead/order organization", other: "Follow-up usually stays inside chat history and seller notes.", paypertap: "Buyer and product context are connected to the booking record." },
     ],
     example:
       "A WhatsApp-first seller may value a catalog for product browsing inside chat. A seller receiving interest from Instagram stories and WhatsApp status can share a PayPerTap product link, record a fixed booking before the conversation, and still use WhatsApp Business to respond and confirm directly.",
@@ -1025,6 +1033,9 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
   "/compare/paypertap-vs-google-forms": {
     directAnswer:
       "Google Forms is useful for creating forms and gathering responses. PayPerTap is for sellers who need a buyer-facing product page, fixed ₹20 verified booking, reservation context, and WhatsApp handoff. A simple interest form may be enough for some workflows; PayPerTap fits product booking rather than general data collection.",
+    enoughTitle: "Where Google Forms is enough",
+    enoughBody:
+      "Google Forms can be enough for surveys, preorder interest, waitlists, custom requests, or collecting responses before a seller decides what to do next. It is flexible for information collection. PayPerTap is more relevant when buyers need product-first browsing, product cards, reserved or sold states, buyer confidence from a clear flow, and WhatsApp continuation after a specific item is booked.",
     source: {
       before:
         "Google describes ",
@@ -1056,10 +1067,10 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
       },
     ],
     additionalRows: [
-      { label: "Primary job", other: "Build forms and gather responses.", paypertap: "Present products and record verified booking." },
-      { label: "Product-led browsing", other: "Can be configured manually by a form creator.", paypertap: "Storefront and direct product pages are central." },
-      { label: "Reservation status", other: "Not inherently a product reservation flow.", paypertap: "Booking creates reserved product context." },
-      { label: "Best for", other: "Surveys and general information collection.", paypertap: "Booking-first social product selling." },
+      { label: "Form response collection", other: "Strong for surveys, interest forms, and flexible response fields.", paypertap: "Collects booking context for a selected product, not broad survey data." },
+      { label: "Product browsing", other: "Product display must be manually built into the form.", paypertap: "Storefront cards and direct product pages are central." },
+      { label: "Buyer trust", other: "A form can feel like a request rather than a shopping flow.", paypertap: "Buyer sees product, price, booking fee, and next step before WhatsApp." },
+      { label: "WhatsApp continuation", other: "Seller usually copies response context into chat manually.", paypertap: "Booking handoff keeps product and remaining amount context ready." },
     ],
     example:
       "A student seller collecting general interest in a future merchandise design could use a form. If the item is available now and the seller wants a buyer to view that product, place a fixed ₹20 booking, and carry the order context into WhatsApp, PayPerTap addresses the more specific workflow.",
@@ -1084,6 +1095,9 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
   "/compare/paypertap-vs-shopify-starter": {
     directAnswer:
       "Shopify Starter is designed for merchants selling through social media or messaging apps using product links. PayPerTap is a lighter, booking-first storefront for Indian Instagram and WhatsApp sellers: a buyer pays fixed ₹20 before WhatsApp, while the seller collects the remaining amount directly. PayPerTap is not a full Shopify replacement.",
+    enoughTitle: "Where Shopify Starter is enough",
+    enoughBody:
+      "Shopify Starter can be enough when a seller wants a Shopify-backed commerce setup with product pages and checkout structure. It may fit sellers preparing for a broader ecommerce stack. PayPerTap is intentionally narrower: it does not replace full ecommerce, full payment processing, seller payout, or KYC workflows; it fits WhatsApp-first sellers who only need fixed booking before direct confirmation.",
     source: {
       before:
         "Shopify's official help describes ",
@@ -1115,10 +1129,10 @@ export const comparisonDeepContent: Record<string, ComparisonDeepContent> = {
       },
     ],
     additionalRows: [
-      { label: "Product links", other: "Officially supports product links for social or messaging sales.", paypertap: "Supports storefront and product links with booking." },
-      { label: "Scope", other: "Part of Shopify's broader commerce offering.", paypertap: "Narrow booking-first social seller workflow." },
-      { label: "Seller payout", other: "Depends on Shopify payment/setup choices.", paypertap: "No seller payout from ₹20 fee in Phase 1." },
-      { label: "Best for", other: "Merchants seeking broader ecommerce infrastructure.", paypertap: "Sellers confirming remaining payment on WhatsApp." },
+      { label: "Setup complexity", other: "Commerce setup may be worthwhile when the seller wants broader ecommerce structure.", paypertap: "Lighter setup for booking-first social selling." },
+      { label: "Full ecommerce depth", other: "Part of Shopify's broader commerce ecosystem.", paypertap: "Narrow storefront, booking, and WhatsApp handoff flow." },
+      { label: "Seller payout/KYC", other: "Depends on the seller's Shopify payment and operating setup.", paypertap: "No seller payout or payout KYC from the ₹20 fee in Phase 1." },
+      { label: "WhatsApp-first booking", other: "Useful when the seller wants a fuller checkout path.", paypertap: "Useful when the seller keeps remaining payment and confirmation on WhatsApp." },
     ],
     example:
       "A boutique preparing for broader ecommerce requirements may decide Shopify Starter better fits its roadmap. A small Instagram seller who wants to show an item, record a fixed ₹20 booking, and continue direct UPI or COD confirmation in WhatsApp may choose PayPerTap's narrower flow.",

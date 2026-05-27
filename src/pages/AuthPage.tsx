@@ -877,8 +877,8 @@ export default function AuthPage() {
             </div>
 
             <p className="left-sub">
-              PayPerTap gives social sellers a clean storefront, verified intent
-              through a fixed booking step, and a WhatsApp-first handoff that
+              PayPerTap gives social sellers a clean storefront, verified buyer interest
+              through a fixed booking step, and a WhatsApp-first flow that
               fits into the way they already sell.
             </p>
 
@@ -892,7 +892,7 @@ export default function AuthPage() {
 
               <StatPill
                 icon={WhatsAppLogo}
-                label="Seller handoff"
+                label="WhatsApp flow"
                 value="WhatsApp"
                 delay="0.35s"
               />
@@ -920,7 +920,7 @@ export default function AuthPage() {
 
               <div className="trust-bar-text">
                 <strong>Built for your existing workflow</strong> — share a store
-                link, verify buyer intent, then continue the conversation where
+                link, check buyer interest, then continue the conversation where
                 your customers already are.
               </div>
             </div>
@@ -935,10 +935,10 @@ export default function AuthPage() {
               Seller Portal
             </div>
 
-            <h1 className="form-title">Welcome back</h1>
+            <h1 className="form-title">Create or continue your store</h1>
 
             <p className="form-subtitle">
-              Sign in to manage your storefront, products, bookings, and customer
+              Sign in to manage your storefront, products, bookings, and buyer
               conversations.
             </p>
 

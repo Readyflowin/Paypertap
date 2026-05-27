@@ -14,23 +14,23 @@ export const storefrontThemeRegistry: Record<
 > = {
   theme1: {
     id: "theme1",
-    name: "Conversion Clean",
+    name: "Simple Shop",
     description: "Fast, focused storefront for clear product browsing and high-intent bookings.",
-    previewLabel: "Clean CRO",
+    previewLabel: "Simple Shop",
     component: Theme1,
   },
   theme2: {
     id: "theme2",
-    name: "Boutique Edit",
+    name: "Boutique Style",
     description: "Warm editorial storefront for fashion, thrift, boutique, and handmade sellers.",
-    previewLabel: "Boutique CRO",
+    previewLabel: "Boutique Style",
     component: Theme2,
   },
   theme3: {
     id: "theme3",
-    name: "Drop Mode",
+    name: "Drop Style",
     description: "Bold storefront for limited drops, creator-led launches, and urgency-led sales.",
-    previewLabel: "Drop CRO",
+    previewLabel: "Drop Style",
     component: Theme3,
   },
 };

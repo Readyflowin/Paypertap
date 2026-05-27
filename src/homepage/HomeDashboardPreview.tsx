@@ -55,12 +55,12 @@ export function HomeDashboardPreview() {
               <span />
               <span />
             </div>
-            <strong>Seller workspace</strong>
+            <span className="ppt-faux-strong">Seller workspace</span>
           </div>
 
           <div className="ppt-home-dashboard-app">
             <aside className="ppt-home-dashboard-sidebar" aria-label="Dashboard navigation preview">
-              <strong>PayPerTap</strong>
+              <span className="ppt-faux-strong">PayPerTap</span>
               {["Products", "Bookings", "Customers", "Collections", "Themes"].map((item, index) => (
                 <span className={index === 1 ? "is-active" : ""} key={item}>
                   {item}
@@ -72,7 +72,7 @@ export function HomeDashboardPreview() {
               <div className="ppt-home-dashboard-topline">
                 <div>
                   <span>Bookings</span>
-                  <strong>Reserved buyer details</strong>
+                  <span className="ppt-faux-strong">Reserved buyer details</span>
                 </div>
                 <button type="button">
                   <WhatsAppIcon size={16} />
@@ -85,21 +85,21 @@ export function HomeDashboardPreview() {
                   <Search size={15} aria-hidden="true" />
                   <span>Search products or buyers</span>
                 </div>
-                <strong>₹20 booking via PayPerTap</strong>
+                <span className="ppt-faux-strong">₹20 booking via PayPerTap</span>
               </div>
 
               <div className="ppt-home-dashboard-summary" aria-label="Dashboard capability summary">
                 <div>
                   <span>Products</span>
-                  <strong>Catalog ready</strong>
+                  <span className="ppt-faux-strong">Catalog ready</span>
                 </div>
                 <div>
                   <span>Bookings</span>
-                  <strong>Intent filtered</strong>
+                  <span className="ppt-faux-strong">Intent filtered</span>
                 </div>
                 <div>
                   <span>Follow-ups</span>
-                  <strong>WhatsApp next</strong>
+                  <span className="ppt-faux-strong">WhatsApp next</span>
                 </div>
               </div>
 
@@ -116,7 +116,7 @@ export function HomeDashboardPreview() {
                         decoding="async"
                       />
                       <div>
-                        <strong>{product.name}</strong>
+                        <span className="ppt-faux-strong">{product.name}</span>
                         <span>{product.booking} · {product.remaining}</span>
                       </div>
                       <em>{product.status}</em>
@@ -128,7 +128,7 @@ export function HomeDashboardPreview() {
                   <p>Customer leads</p>
                   {leads.map(([name, product, city]) => (
                     <div key={`${name}-${product}`}>
-                      <strong>{name}</strong>
+                      <span className="ppt-faux-strong">{name}</span>
                       <span>{product} · {city}</span>
                     </div>
                   ))}

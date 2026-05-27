@@ -155,6 +155,14 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
         </MarketingSection>
       ) : null}
 
+      {deepContent ? (
+        <MarketingSection className="ppt-core-page-section" title={deepContent.enoughTitle}>
+          <MarketingCard className="ppt-seo-lead-copy">
+            <p className="text-lg leading-8 text-neutral-700">{deepContent.enoughBody}</p>
+          </MarketingCard>
+        </MarketingSection>
+      ) : null}
+
       <MarketingSection
         className="ppt-core-page-section"
         title="What is each tool best for?"

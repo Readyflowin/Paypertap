@@ -8,6 +8,7 @@ import { MarketingCard } from "../components/marketing/MarketingCard";
 import { MarketingSection } from "../components/marketing/MarketingSection";
 import { PageTrustMeta } from "../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../components/marketing/SectionHeader";
+import { TopCreateStoreCTA } from "../components/marketing/TopCreateStoreCTA";
 import { MarketingLayout } from "../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../seo/breadcrumbs";
 import { Seo } from "../seo/Seo";
@@ -37,6 +38,7 @@ export function CompareHubPage() {
         subtitle="PayPerTap is a verified booking storefront for sellers who need product links, fixed ₹20 booking, and WhatsApp handoff. Use this hub to compare PayPerTap with link-in-bio tools, WhatsApp Catalog, forms, and Shopify Starter without pretending one tool is right for every seller."
       />
       <PageTrustMeta path="/compare" />
+      <TopCreateStoreCTA />
       <MarketingSection
         className="ppt-core-page-section"
         title="Who should compare these tools?"

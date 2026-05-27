@@ -6,11 +6,5 @@ Allow: /
 
 User-agent: *
 Allow: /
-Disallow: /auth
-Disallow: /login
-Disallow: /dashboard
-Disallow: /onboarding
-Disallow: /integration-test
-Disallow: /design-system
 
 Sitemap: https://www.paypertap.in/sitemap.xml

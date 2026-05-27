@@ -9,20 +9,13 @@ function normalizeBuyerPhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
 }
 
-export async function startMockBookingPayment(
-  input: CreateCheckoutSessionInput
-): Promise<{
-  success: true;
-  checkoutId: string;
-  checkoutSession: CheckoutSession;
-  reservationApplied: boolean;
-}> {
-  // TODO: Replace this with backend Razorpay order + payment verification later.
-  const checkoutId = await createCheckoutSessionWithReservation(input);
-  const reservationApplied = true;
-
+export function buildCheckoutSession(
+  input: CreateCheckoutSessionInput,
+  checkoutId: string
+): CheckoutSession {
   const productPrice = Math.trunc(Number(input.productPrice));
-  const checkoutSession: CheckoutSession = {
+
+  return {
     checkoutId,
     sellerId: input.sellerId,
     storeId: input.storeId,
@@ -39,15 +32,30 @@ export async function startMockBookingPayment(
     buyerPincode: input.buyerPincode.trim(),
     status: "booking_paid",
     whatsappOpened: false,
-    reservationApplied,
+    reservationApplied: true,
     reservedProductId: input.productId,
     reservedQuantity: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
+}
+
+export async function startMockBookingPayment(
+  input: CreateCheckoutSessionInput
+): Promise<{
+  success: true;
+  checkoutId: string;
+  checkoutSession: CheckoutSession;
+  reservationApplied: boolean;
+}> {
+  // TODO: Replace this with backend Razorpay order + payment verification later.
+  const checkoutId = await createCheckoutSessionWithReservation(input);
+  const checkoutSession = buildCheckoutSession(input, checkoutId);
 
   return {
     success: true,
     checkoutId,
     checkoutSession,
-    reservationApplied,
+    reservationApplied: true,
   };
 }

@@ -5,6 +5,7 @@ import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
 import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
+import { TopCreateStoreCTA } from "../../components/marketing/TopCreateStoreCTA";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
@@ -58,6 +59,11 @@ export function ContactPage() {
         subtitle="Use the PayPerTap contact page to ask about seller onboarding, verified booking storefronts, WhatsApp handoff, product setup, or founder and media queries. PayPerTap currently helps Instagram and WhatsApp sellers collect a fixed ₹20 booking before moving booked buyers to WhatsApp."
       />
       <PageTrustMeta path="/contact" />
+      <TopCreateStoreCTA
+        title="Need a store link for Instagram or WhatsApp?"
+        secondaryLabel="Read FAQ"
+        secondaryTo="/faq"
+      />
       <MarketingSection className="ppt-core-page-section">
         <div className="grid gap-4 md:grid-cols-3">
           {contactCards.map((card) => (

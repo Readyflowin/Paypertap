@@ -18,6 +18,7 @@ import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailabili
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
 import { startMockBookingPayment } from "@/services/mockPaymentService";
+import { startRazorpayBookingPayment } from "@/services/razorpayPaymentService";
 import { getSellerByUid } from "@/services/sellerService";
 import {
   sendBookingCreatedEmail,
@@ -30,9 +31,14 @@ type CheckoutStep = "details" | "payment";
 
 const BUYER_ADDRESS_MIN_LENGTH = 12;
 const BUYER_ADDRESS_MAX_LENGTH = 160;
+const PAYMENT_MODE = import.meta.env.VITE_PAYMENT_MODE === "razorpay" ? "razorpay" : "mock";
+
+function digitsOnly(value: string): string {
+  return value.replace(/[^\d]/g, "");
+}
 
 function getTenDigitIndianMobile(phone: string): string {
-  const digits = phone.replace(/[^\d]/g, "");
+  const digits = digitsOnly(phone);
 
   if (digits.length === 12 && digits.startsWith("91")) {
     return digits.slice(2);
@@ -66,6 +72,10 @@ function validateBuyerDetails(input: {
 
   if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
     throw new Error("Please enter a valid 10-digit WhatsApp mobile number.");
+  }
+
+  if (!/^\d{6}$/.test(input.buyerPincode.trim())) {
+    throw new Error("Please enter a valid 6-digit pincode.");
   }
 
   const addressLength = input.buyerAddress.trim().length;
@@ -105,12 +115,12 @@ function getCheckoutErrorMessage(error: unknown): string {
       : "";
 
   if (code === "permission-denied") {
-    return "Booking could not reserve this item. PayPerTap needs a backend reservation step or a scoped Firestore rule for this mock flow.";
+    return "Booking could not be recorded. Please try again.";
   }
 
   if (error instanceof Error && error.message) return error.message;
 
-  return "Could not start mock payment.";
+  return "Could not start booking payment.";
 }
 
 function CheckoutLoading() {
@@ -215,7 +225,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function handleMockPayment() {
+  async function handleBookingPayment() {
     if (!store || !product || !canCheckout) return;
 
     try {
@@ -230,8 +240,7 @@ export default function CheckoutPage() {
         throw new Error("This item was just reserved. Please choose another product.");
       }
 
-      // TODO: Inventory hold will move to backend/Admin SDK after real payment verification.
-      const result = await startMockBookingPayment({
+      const paymentInput = {
         sellerId: latestProduct.sellerId,
         storeId: store.storeId,
         productId: latestProduct.productId || latestProduct.id,
@@ -242,21 +251,21 @@ export default function CheckoutPage() {
         buyerAddress: buyerAddress.trim(),
         buyerCity: buyerCity.trim(),
         buyerPincode: buyerPincode.trim(),
-      });
+      };
+      const result =
+        PAYMENT_MODE === "razorpay"
+          ? await startRazorpayBookingPayment(paymentInput)
+          : await startMockBookingPayment(paymentInput);
 
       sessionStorage.setItem(
         `paypertap:checkout:${result.checkoutId}`,
         JSON.stringify(result.checkoutSession)
       );
 
-      if (!result.reservationApplied) {
-        throw new Error("This item could not be reserved. Please try another product.");
-      }
-
       void sendBookingEmails(result.checkoutSession);
       navigate(`/${storeSlug}/booking-success/${result.checkoutId}`);
     } catch (err) {
-      console.error("Mock payment failed:", err);
+      console.error("Booking payment failed:", err);
       setError(getCheckoutErrorMessage(err));
     } finally {
       setSaving(false);
@@ -415,7 +424,7 @@ export default function CheckoutPage() {
 
                   <PptButton
                     type="button"
-                    onClick={handleMockPayment}
+                    onClick={handleBookingPayment}
                     disabled={saving || !canCheckout}
                     loading={saving}
                     fullWidth
@@ -555,10 +564,10 @@ function BuyerFields({
           autoComplete="tel-national"
           inputMode="numeric"
           maxLength={14}
-          pattern="[0-9 +()-]{10,14}"
+          pattern="[0-9]{10,14}"
           helper="Enter the 10-digit number the seller can message on WhatsApp."
           value={buyerPhone}
-          onChange={(event) => setBuyerPhone(event.target.value)}
+          onChange={(event) => setBuyerPhone(digitsOnly(event.target.value).slice(0, 14))}
           required
         />
       </div>
@@ -593,7 +602,7 @@ function BuyerFields({
           maxLength={6}
           pattern="[0-9]{6}"
           value={buyerPincode}
-          onChange={(event) => setBuyerPincode(event.target.value)}
+          onChange={(event) => setBuyerPincode(digitsOnly(event.target.value).slice(0, 6))}
           required
         />
       </div>

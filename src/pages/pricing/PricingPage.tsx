@@ -7,6 +7,7 @@ import { MarketingCard } from "../../components/marketing/MarketingCard";
 import { MarketingSection } from "../../components/marketing/MarketingSection";
 import { PageTrustMeta } from "../../components/marketing/PageTrustMeta";
 import { SectionHeader } from "../../components/marketing/SectionHeader";
+import { TopCreateStoreCTA } from "../../components/marketing/TopCreateStoreCTA";
 import { MarketingLayout } from "../../layout/MarketingLayout";
 import { breadcrumbListSchema } from "../../seo/breadcrumbs";
 import { Seo } from "../../seo/Seo";
@@ -51,6 +52,7 @@ export function PricingPage() {
         subtitle="PayPerTap uses a booking-first model. Buyers pay a fixed ₹20 booking via PayPerTap to reserve a product, and PayPerTap keeps it as the platform verified-booking fee in Phase 1. The seller does not receive the ₹20 and collects the remaining amount directly."
       />
       <PageTrustMeta path="/pricing" />
+      <TopCreateStoreCTA />
       <MarketingSection className="ppt-core-page-section">
         <div className="ppt-pricing-core-grid grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <MarketingCard className="ppt-pricing-hero-card">

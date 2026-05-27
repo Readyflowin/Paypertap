@@ -29,6 +29,16 @@ type StoreOnboardingInput = {
   logoKey?: string;
 };
 
+type StoreOnboardingDebugInfo = {
+  operation: "create-slug-reservation" | "save-store" | "update-seller-onboarding";
+  attemptedStoreSlug: string;
+  storeId: string;
+  payloadKeys: string[];
+  creatingSlug: boolean;
+  creatingStore: boolean;
+  updatingSeller: boolean;
+};
+
 type FirstProductInput = {
   title?: string;
   price?: number;
@@ -48,13 +58,52 @@ type ProductOnboardingInput = {
 const BOOKING_ADVANCE_AMOUNT = 20;
 
 const DEFAULT_COLORS = {
-  primaryColor: "#111827",
-  secondaryColor: "#F9FAFB",
-  accentColor: "#2563EB",
+  primaryColor: "#111111",
+  secondaryColor: "#f7f3ea",
+  accentColor: "#7c3aed",
 };
+
+const DEFAULT_THEME_ID = "theme1";
 
 const SLUG_TAKEN_MESSAGE =
   "This store URL is already taken. Try a different store name.";
+
+class StoreOnboardingWriteError extends Error {
+  debugInfo: StoreOnboardingDebugInfo;
+
+  constructor(error: unknown, debugInfo: StoreOnboardingDebugInfo) {
+    super(error instanceof Error ? error.message : "Store onboarding write failed.");
+    this.name = "StoreOnboardingWriteError";
+    this.debugInfo = debugInfo;
+  }
+}
+
+export function getStoreOnboardingDebugInfo(
+  error: unknown
+): StoreOnboardingDebugInfo | null {
+  return error instanceof StoreOnboardingWriteError ? error.debugInfo : null;
+}
+
+function getFirebaseErrorCode(error: unknown) {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return "";
+  }
+
+  const { code } = error as { code?: unknown };
+  return typeof code === "string" ? code : "";
+}
+
+function isPermissionDenied(error: unknown) {
+  return getFirebaseErrorCode(error) === "permission-denied";
+}
+
+function createStoreOnboardingWriteError(
+  error: unknown,
+  debugInfo: StoreOnboardingDebugInfo
+) {
+  console.error("Store onboarding write failed:", debugInfo, error);
+  return new StoreOnboardingWriteError(error, debugInfo);
+}
 
 export function slugifyStoreName(name: string): string {
   return name
@@ -155,13 +204,15 @@ async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
     throw new Error(SLUG_TAKEN_MESSAGE);
   }
 
+  const slugPayload = {
+    slug,
+    storeId: slug,
+    sellerId: uid,
+    createdAt: serverTimestamp(),
+  };
+
   try {
-    await setDoc(slugRef, {
-      slug,
-      storeId: slug,
-      sellerId: uid,
-      createdAt: serverTimestamp(),
-    });
+    await setDoc(slugRef, slugPayload);
   } catch (error) {
     const latestSlugSnap = await getDoc(slugRef);
 
@@ -171,6 +222,18 @@ async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
       if (reservation.sellerId === uid) {
         return slug;
       }
+    }
+
+    if (isPermissionDenied(error)) {
+      throw createStoreOnboardingWriteError(error, {
+        operation: "create-slug-reservation",
+        attemptedStoreSlug: slug,
+        storeId: slug,
+        payloadKeys: Object.keys(slugPayload),
+        creatingSlug: true,
+        creatingStore: false,
+        updatingSeller: false,
+      });
     }
 
     console.error("Slug reservation failed:", error);
@@ -280,7 +343,8 @@ export async function completeStoreOnboarding(
     logoUrl: input.logoUrl || existingStore?.logoUrl || "",
     logoKey: input.logoKey || existingStore?.logoKey || "",
     heroImageUrl: existingStore?.heroImageUrl || "",
-    themeId: existingStore?.themeId || "minimal-clean",
+    themeId: existingStore?.themeId || DEFAULT_THEME_ID,
+    selectedThemeId: existingStore?.selectedThemeId || DEFAULT_THEME_ID,
     primaryColor: existingStore?.primaryColor || DEFAULT_COLORS.primaryColor,
     secondaryColor:
       existingStore?.secondaryColor || DEFAULT_COLORS.secondaryColor,
@@ -298,34 +362,50 @@ export async function completeStoreOnboarding(
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(
-    storeRef,
-    {
-      ...storePayload,
-      ...(!existingStore ? { createdAt: serverTimestamp() } : {}),
-    },
-    { merge: true }
-  );
+  const storeWritePayload = {
+    ...storePayload,
+    ...(!existingStore ? { createdAt: serverTimestamp() } : {}),
+  };
 
-  await setDoc(
-    sellerRef,
-    {
-      sellerId: uid,
-      authUid: uid,
-      name: seller.name || user.displayName || storeName,
-      email: seller.email || user.email || "",
-      phone,
+  try {
+    await setDoc(storeRef, storeWritePayload, { merge: true });
+  } catch (error) {
+    throw createStoreOnboardingWriteError(error, {
+      operation: "save-store",
+      attemptedStoreSlug: storeId,
       storeId,
-      status: seller.status || "active",
-      razorpayLinked: seller.razorpayLinked ?? false,
-      profileImageUrl: seller.profileImageUrl || user.photoURL || "",
-      onboardingStatus: "store_completed",
-      onboardingStep: "product",
-      createdAt: seller.createdAt || serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+      payloadKeys: Object.keys(storeWritePayload),
+      creatingSlug: false,
+      creatingStore: !existingStore,
+      updatingSeller: false,
+    });
+  }
+
+  const sellerOnboardingPayload = {
+    name: seller.name || user.displayName || storeName,
+    phone,
+    storeId,
+    status: seller.status || "active",
+    razorpayLinked: seller.razorpayLinked ?? false,
+    profileImageUrl: seller.profileImageUrl || user.photoURL || "",
+    onboardingStatus: "store_completed",
+    onboardingStep: "product",
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    await updateDoc(sellerRef, sellerOnboardingPayload);
+  } catch (error) {
+    throw createStoreOnboardingWriteError(error, {
+      operation: "update-seller-onboarding",
+      attemptedStoreSlug: storeId,
+      storeId,
+      payloadKeys: Object.keys(sellerOnboardingPayload),
+      creatingSlug: false,
+      creatingStore: false,
+      updatingSeller: true,
+    });
+  }
 
   if (!existingStore?.emailEvents?.storeCreatedSentAt) {
     const sellerForEmail: Seller = {

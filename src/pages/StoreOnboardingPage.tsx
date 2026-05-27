@@ -5,7 +5,10 @@ import { AtSign, ImageIcon, Phone, Store, UploadCloud } from "lucide-react";
 import { PptBadge, PptButton, PptField, PptNotice, PptTapLoader } from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
 import { assertValidImageFile } from "../lib/imageCompression";
-import { completeStoreOnboarding } from "../services/sellerService";
+import {
+  completeStoreOnboarding,
+  getStoreOnboardingDebugInfo,
+} from "../services/sellerService";
 import { uploadImageToR2 } from "../services/uploadService";
 
 export default function StoreOnboardingPage() {
@@ -71,6 +74,10 @@ export default function StoreOnboardingPage() {
       navigate(result.nextRoute);
     } catch (err) {
       console.error("Store onboarding failed:", err);
+      const debugInfo = getStoreOnboardingDebugInfo(err);
+      if (debugInfo) {
+        console.error("Store onboarding write context:", debugInfo);
+      }
       setError(err instanceof Error ? err.message : "Could not save your store.");
     } finally {
       setLoading(false);
@@ -124,7 +131,7 @@ export default function StoreOnboardingPage() {
             </div>
             <strong>Store logo</strong>
             <p>
-              {logoFileName ? `${logoFileName} selected.` : "JPEG, PNG, or WebP. Compressed before upload."}
+              {logoFileName ? `${logoFileName} selected.` : "JPEG, PNG, or WebP. We'll optimize your image automatically."}
             </p>
             <label className="inline-flex">
               <input

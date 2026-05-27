@@ -22,6 +22,14 @@ import {
 import { listStoreCollections } from "../services/collectionService";
 import type { StoreCollection } from "../types/firestore";
 
+function sanitizePositiveNumberInput(value: string): string {
+  const digits = value.replace(/[^\d]/g, "");
+
+  if (!digits || /^0+$/.test(digits)) return "";
+
+  return digits.replace(/^0+/, "");
+}
+
 export default function ProductOnboardingPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuthUser();
@@ -165,9 +173,12 @@ export default function ProductOnboardingPage() {
               min={21}
               step={1}
               value={price}
-              onChange={(event) => setPrice(event.target.value)}
+              onChange={(event) => setPrice(sanitizePositiveNumberInput(event.target.value))}
               placeholder="1299"
+              inputMode="numeric"
+              autoComplete="off"
               icon={<WalletCards size={17} />}
+              helper="Enter the full product price. Buyers book first, then pay the remaining amount directly to you."
             />
 
             <PptSelectField
@@ -184,12 +195,16 @@ export default function ProductOnboardingPage() {
             />
 
             <PptField
-              label="Inventory quantity"
+              label="Pieces available"
               type="number"
               min={1}
               step={1}
               value={inventoryQuantity}
-              onChange={(event) => setInventoryQuantity(event.target.value)}
+              onChange={(event) =>
+                setInventoryQuantity(sanitizePositiveNumberInput(event.target.value))
+              }
+              inputMode="numeric"
+              autoComplete="off"
             />
           </div>
 

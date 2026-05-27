@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { SharePageButton } from "../components/marketing/SharePageButton";
 import { companyLinks, legalLinks, productLinks, sellerLinks } from "./footerLinks";
 
 const logo = "/images/logo/paypertap-logo.png";
@@ -57,9 +58,12 @@ export function Footer() {
             India-first verified booking storefronts for Instagram and WhatsApp sellers.
             PayPerTap is not a full payment gateway.
           </p>
-          <p className="mt-5 text-xs text-[#070707]/40">
-            © {year} PayPerTap. All rights reserved.
-          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <SharePageButton />
+            <p className="text-xs text-[#070707]/40">
+              © {year} PayPerTap. All rights reserved.
+            </p>
+          </div>
         </div>
 
         <FooterColumn title="Product" links={productLinks} />

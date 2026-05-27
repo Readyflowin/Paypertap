@@ -1,5 +1,4 @@
-﻿import { useState } from "react";
-import { ArrowRight, Mail, Quote, UserRoundCheck } from "lucide-react";
+﻿import { ArrowRight, Mail, Quote, UserRoundCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
@@ -27,38 +26,23 @@ const founderFaqs = marketingFaqs.filter((item) =>
 );
 
 function FounderPortrait() {
-  const [showImage, setShowImage] = useState(true);
-
   return (
-    <div className="ppt-founder-portrait grid aspect-[4/5] min-w-0 place-items-center overflow-hidden rounded-[1.5rem]">
-      {showImage ? (
-        <img
-          src="/images/founder/aditya-paypertap-founder.jpg"
-          alt="Aditya, founder of PayPerTap"
-          decoding="async"
-          loading="lazy"
-          onError={() => setShowImage(false)}
-          className="h-full w-full max-w-full object-cover"
-        />
-      ) : (
-        <div
-          role="img"
-          aria-label="Aditya, founder of PayPerTap"
-          className="grid h-full w-full place-items-center p-6 text-center"
-        >
-          <div>
-            <div className="ppt-founder-initial mx-auto grid h-20 w-20 place-items-center rounded-full text-2xl font-bold">
-              A
-            </div>
-            <p className="mt-5 text-sm font-bold text-neutral-800">
-              Aditya, founder of PayPerTap
-            </p>
-            <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
-              Photo coming soon
-            </p>
-          </div>
+    <div
+      role="img"
+      aria-label="Aditya, founder of PayPerTap"
+      className="ppt-founder-portrait grid aspect-[4/5] min-w-0 place-items-center overflow-hidden rounded-[1.5rem] p-6 text-center"
+    >
+      <div>
+        <div className="ppt-founder-initial mx-auto grid h-20 w-20 place-items-center rounded-full text-2xl font-bold">
+          A
         </div>
-      )}
+        <p className="mt-5 text-sm font-bold text-neutral-800">
+          Aditya, founder of PayPerTap
+        </p>
+        <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
+          Verified booking storefront founder
+        </p>
+      </div>
     </div>
   );
 }
@@ -80,12 +64,7 @@ export function FounderPage() {
         h1="Founder of PayPerTap"
         path="/founder"
         subtitle="Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers. PayPerTap was created to help small sellers collect a fixed ₹20 booking and move booked buyers to WhatsApp with order details ready."
-      >
-        <div className="flex flex-wrap gap-3" aria-label="Founder profile links">
-          <span className="ppt-soft-status-pill">LinkedIn profile coming soon</span>
-          <span className="ppt-soft-status-pill">Instagram profile coming soon</span>
-        </div>
-      </SectionHeader>
+      />
       <PageTrustMeta path="/founder" />
 
       <MarketingSection className="ppt-core-page-section">
