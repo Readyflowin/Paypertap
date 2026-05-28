@@ -26,6 +26,7 @@ type UploadedFile = {
 type UploadFolder = "stores" | "products" | "test";
 
 function sendJson(res: any, statusCode: number, body: unknown) {
+  res.setHeader("Cache-Control", "no-store");
   res.status(statusCode).json(body);
 }
 

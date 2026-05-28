@@ -103,13 +103,26 @@ export type Seller = {
 export type ProductStatus = "draft" | "open" | "hold" | "sold" | "unpublished";
 
 export type ProductImage = {
-  url: string;
+  id?: string;
+  url?: string;
+  publicUrl?: string;
+  imageUrl?: string;
+  thumbnailUrl?: string;
   thumbUrl?: string;
+  mediumUrl?: string;
+  path?: string;
   alt?: string;
   key?: string;
   thumbKey?: string;
+  name?: string;
+  originalName?: string;
+  width?: number;
+  height?: number;
+  size?: number;
+  sizeBytes?: number;
+  mimeType?: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
   sortOrder?: number;
-  mediumUrl?: string;
+  uploadedAt?: unknown;
 };
 
 export type Product = {

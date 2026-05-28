@@ -65,6 +65,151 @@ export function getDisplayImageUrl(value: unknown) {
   });
 }
 
+type ProductImageSource = Partial<ProductImage> & {
+  publicUrl?: unknown;
+  imageUrl?: unknown;
+  thumbnailUrl?: unknown;
+  url?: unknown;
+};
+
+type ProductImageProduct = {
+  images?: unknown;
+  imageUrl?: unknown;
+  imageUrls?: unknown;
+  imagesUrls?: unknown;
+  productImages?: unknown;
+  thumbnailUrl?: unknown;
+  title?: unknown;
+  url?: unknown;
+};
+
+function removeUndefinedImageFields(image: ProductImage): ProductImage {
+  return Object.fromEntries(
+    Object.entries(image).filter(([, value]) => value !== undefined)
+  ) as ProductImage;
+}
+
+function getImagePrimaryUrl(record: ProductImageSource) {
+  return (
+    getDurableImageUrl(record.url) ||
+    getDurableImageUrl(record.publicUrl) ||
+    getDurableImageUrl(record.imageUrl)
+  );
+}
+
+function getSafeImageSortOrder(value: unknown, fallbackIndex: number) {
+  if (Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 2) {
+    return Number(value);
+  }
+
+  return Math.min(Math.max(fallbackIndex, 0), 2);
+}
+
+function getSafeImageAlt(value: unknown, productTitle: string) {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return productTitle.trim() || "Product image";
+}
+
+export function normalizeProductImages(
+  uploadResults: unknown,
+  productTitle = "Product image"
+): ProductImage[] {
+  if (!Array.isArray(uploadResults)) return [];
+
+  return uploadResults.slice(0, 3).flatMap((image, index) => {
+    if (typeof image === "string") {
+      const url = getDurableImageUrl(image);
+      return url
+        ? [
+            {
+              url,
+              thumbnailUrl: url,
+              thumbUrl: url,
+              alt: productTitle.trim() || "Product image",
+              sortOrder: index,
+            },
+          ]
+        : [];
+    }
+
+    if (!image || typeof image !== "object") return [];
+
+    const record = image as ProductImageSource;
+    const url = getImagePrimaryUrl(record);
+    if (!url) return [];
+
+    const thumbnailUrl =
+      getDurableImageUrl(record.thumbnailUrl) ||
+      getDurableImageUrl(record.thumbUrl) ||
+      url;
+    const key = typeof record.key === "string" ? record.key.trim() : "";
+    const thumbKey =
+      typeof record.thumbKey === "string" ? record.thumbKey.trim() : "";
+
+    return [
+      removeUndefinedImageFields({
+        url,
+        thumbnailUrl,
+        thumbUrl: thumbnailUrl,
+        ...(key ? { key } : {}),
+        ...(thumbKey ? { thumbKey } : {}),
+        alt: getSafeImageAlt(record.alt, productTitle),
+        sortOrder: getSafeImageSortOrder(record.sortOrder, index),
+      }),
+    ];
+  });
+}
+
+export function getProductImageUrls(product: ProductImageProduct): ProductImage[] {
+  const productTitle =
+    typeof product.title === "string" ? product.title : "Product image";
+  const images = [
+    ...normalizeProductImages(product.images, productTitle),
+    ...normalizeProductImages(product.productImages, productTitle),
+  ].slice(0, 3);
+
+  if (images.length) return images;
+
+  const legacyImages = normalizeProductImages(
+    [
+      ...(Array.isArray(product.imageUrls) ? product.imageUrls : []),
+      ...(Array.isArray(product.imagesUrls) ? product.imagesUrls : []),
+    ],
+    productTitle
+  );
+
+  if (legacyImages.length) return legacyImages;
+
+  const imageUrl =
+    getDurableImageUrl(product.imageUrl) || getDurableImageUrl(product.url);
+  if (!imageUrl) return [];
+
+  const thumbnailUrl = getDurableImageUrl(product.thumbnailUrl) || imageUrl;
+
+  return [
+    {
+      url: imageUrl,
+      thumbnailUrl,
+      thumbUrl: thumbnailUrl,
+      alt: productTitle,
+      sortOrder: 0,
+    },
+  ];
+}
+
+export function getPrimaryProductImage(product: ProductImageProduct) {
+  const images = getProductImageUrls(product);
+  const firstImage = images[0];
+
+  return (
+    getDisplayImageUrl(firstImage?.thumbnailUrl) ||
+    getDisplayImageUrl(firstImage?.thumbUrl) ||
+    getDisplayImageUrl(firstImage?.url) ||
+    getDisplayImageUrl(product.thumbnailUrl) ||
+    getDisplayImageUrl(product.imageUrl)
+  );
+}
+
 export function hasTemporaryImageUrl(value: unknown): boolean {
   if (typeof value !== "string") return false;
 
@@ -125,41 +270,5 @@ export function productHasTemporaryImageUrls(product: { images?: unknown }) {
 }
 
 export function sanitizePersistedProductImages(images: unknown): ProductImage[] {
-  if (!Array.isArray(images)) return [];
-
-  return images.flatMap((image, index) => {
-    if (!image || typeof image !== "object") return [];
-
-    const record = image as Partial<ProductImage> & {
-      thumbnailUrl?: unknown;
-    };
-    const url = getDurableImageUrl(record.url);
-    const thumbUrl =
-      getDurableImageUrl(record.thumbUrl) ||
-      getDurableImageUrl(record.thumbnailUrl) ||
-      url;
-    const mediumUrl = getDurableImageUrl(record.mediumUrl);
-
-    if (!url) return [];
-
-    return [
-      {
-        url,
-        thumbUrl,
-        alt:
-          typeof record.alt === "string" && record.alt.trim()
-            ? record.alt.trim()
-            : "Product image",
-        key: typeof record.key === "string" ? record.key : "",
-        sortOrder:
-          typeof record.sortOrder === "number" && Number.isFinite(record.sortOrder)
-            ? record.sortOrder
-            : index,
-        ...(typeof record.thumbKey === "string" && record.thumbKey
-          ? { thumbKey: record.thumbKey }
-          : {}),
-        ...(mediumUrl ? { mediumUrl } : {}),
-      },
-    ];
-  });
+  return normalizeProductImages(images);
 }

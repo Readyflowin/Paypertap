@@ -20,6 +20,7 @@ import {
   getSellerByUid,
 } from "../services/sellerService";
 import { listStoreCollections } from "../services/collectionService";
+import type { ProductSaveProgress } from "../services/productService";
 import type { StoreCollection } from "../types/firestore";
 
 function sanitizePositiveNumberInput(value: string): string {
@@ -28,6 +29,28 @@ function sanitizePositiveNumberInput(value: string): string {
   if (!digits || /^0+$/.test(digits)) return "";
 
   return digits.replace(/^0+/, "");
+}
+
+function getProductSaveStatus(
+  progress: ProductSaveProgress | null,
+  fallbackSavingLabel: string
+) {
+  if (!progress) return fallbackSavingLabel;
+
+  if (progress.phase === "saving") {
+    return progress.totalImages > 0
+      ? "Images uploaded, saving product..."
+      : fallbackSavingLabel;
+  }
+
+  if (progress.totalImages <= 0) return fallbackSavingLabel;
+
+  const activeImage = Math.min(
+    progress.totalImages,
+    progress.completedImages + 1
+  );
+
+  return `Uploading ${activeImage}/${progress.totalImages}...`;
 }
 
 export default function ProductOnboardingPage() {
@@ -43,6 +66,7 @@ export default function ProductOnboardingPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [imageFileName, setImageFileName] = useState("");
+  const [saveProgress, setSaveProgress] = useState<ProductSaveProgress | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -97,6 +121,7 @@ export default function ProductOnboardingPage() {
     try {
       setLoading(true);
       setError("");
+      setSaveProgress(null);
       const selectedCollection = collections.find(
         (collection) => collection.collectionId === collectionId
       );
@@ -112,6 +137,7 @@ export default function ProductOnboardingPage() {
               collectionName: selectedCollection?.name || "",
               inventoryQuantity: inventoryQuantity ? Number(inventoryQuantity) : undefined,
               imageFiles,
+              onProgress: setSaveProgress,
             }
           : undefined,
       });
@@ -122,6 +148,7 @@ export default function ProductOnboardingPage() {
       setError(err instanceof Error ? err.message : "Could not finish onboarding.");
     } finally {
       setLoading(false);
+      setSaveProgress(null);
     }
   }
 
@@ -224,7 +251,7 @@ export default function ProductOnboardingPage() {
             <p>
               {imageFileName
                 ? `${imageFileName} selected.`
-                : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
+                : `JPEG, PNG, or WebP. You can upload up to ${MAX_PRODUCT_IMAGE_COUNT} images per product.`}
             </p>
             <label className="inline-flex">
               <input
@@ -238,6 +265,7 @@ export default function ProductOnboardingPage() {
                     setImageFiles(files);
                     setImageFileName(files.map((file) => file.name).join(", "));
                     setError("");
+                    setSaveProgress(null);
                   } catch (err) {
                     event.target.value = "";
                     setImageFiles([]);
@@ -277,6 +305,11 @@ export default function ProductOnboardingPage() {
               {error}
             </PptNotice>
           ) : null}
+          {loading ? (
+            <p className="text-sm font-medium text-[var(--pds-muted)]">
+              {getProductSaveStatus(saveProgress, "Saving product...")}
+            </p>
+          ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <PptButton
@@ -289,11 +322,9 @@ export default function ProductOnboardingPage() {
               Skip product for now
             </PptButton>
             <PptButton type="submit" loading={loading} disabled={loading} fullWidth>
-              {loading && imageFiles.length
-                ? "Uploading images..."
-                : loading
-                  ? "Saving product..."
-                  : "Save product and continue"}
+              {loading
+                ? getProductSaveStatus(saveProgress, "Saving product...")
+                : "Save product and continue"}
             </PptButton>
           </div>
         </form>

@@ -13,7 +13,10 @@ import {
   sendSellerWelcomeEmail,
   sendStoreCreatedEmail,
 } from "./emailEventService";
-import { createSellerProduct } from "./productService";
+import {
+  createSellerProduct,
+  type ProductSaveProgress,
+} from "./productService";
 import { normalizeInstagramProfile } from "./storeService";
 
 type PrepareSellerResult = {
@@ -56,6 +59,7 @@ type FirstProductInput = {
   inventoryQuantity?: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  onProgress?: (progress: ProductSaveProgress) => void;
 };
 
 type ProductOnboardingInput = {
@@ -529,6 +533,7 @@ export async function completeProductOnboarding(
         : 1,
       imageFiles: product?.imageFiles || (product?.imageFile ? [product.imageFile] : []),
       status: "open",
+      onProgress: product?.onProgress,
     });
   }
 

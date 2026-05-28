@@ -15,7 +15,11 @@ import { db } from "../lib/firebase";
 import { COMPATIBILITY_COLLECTION_NAME } from "../lib/collections";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { MAX_PRODUCT_IMAGE_COUNT } from "../lib/imageCompression";
-import { getDurableImageUrl, sanitizePersistedProductImages } from "../lib/imageUrls";
+import {
+  getDurableImageUrl,
+  getProductImageUrls,
+  normalizeProductImages,
+} from "../lib/imageUrls";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
 import { uploadProductImages } from "./uploadService";
 
@@ -30,12 +34,23 @@ type CreateSellerProductInput = {
   inventoryQuantity?: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  onProgress?: (progress: ProductSaveProgress) => void;
 };
 
 type RuleSafeProductImage = {
-  url: string;
-  key: string;
-  alt: string;
+  url?: string;
+  thumbnailUrl?: string;
+  thumbUrl?: string;
+  key?: string;
+  thumbKey?: string;
+  alt?: string;
+  sortOrder?: number;
+};
+
+export type ProductSaveProgress = {
+  phase: "uploading" | "saving";
+  completedImages: number;
+  totalImages: number;
 };
 
 export type UpdateSellerProductInput = {
@@ -49,6 +64,7 @@ export type UpdateSellerProductInput = {
   inventoryQuantity: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  onProgress?: (progress: ProductSaveProgress) => void;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -98,8 +114,10 @@ function logProductPayloadDebug(
 ) {
   if (!import.meta.env.DEV) return;
 
-  console.info(`product ${action} keys`, Object.keys(payload));
-  console.info("undefined fields", getUndefinedFieldPaths(payload));
+  const undefinedFields = getUndefinedFieldPaths(payload);
+  if (undefinedFields.length) {
+    console.warn(`product ${action} payload has undefined fields`, undefinedFields);
+  }
 }
 
 function toPositiveInt(value: number, fieldName: string) {
@@ -126,6 +144,13 @@ function normalizeProduct(productDoc: {
     Number(data.sellerCollectAmount) ||
     Number(data.remainingAmount) ||
     getSellerCollectAmount(price);
+  const images = getProductImageUrls({
+    images: data.images,
+    imageUrl: data.imageUrl,
+    thumbnailUrl: data.thumbnailUrl,
+    title: data.title,
+  });
+  const firstImage = images[0];
 
   return {
     id: productDoc.id,
@@ -134,6 +159,14 @@ function normalizeProduct(productDoc: {
     price,
     bookingAdvanceAmount,
     sellerCollectAmount,
+    images,
+    imageUrl: firstImage?.url || getDurableImageUrl(data.imageUrl),
+    thumbnailUrl:
+      firstImage?.thumbnailUrl ||
+      firstImage?.thumbUrl ||
+      getDurableImageUrl(data.thumbnailUrl) ||
+      firstImage?.url ||
+      "",
     inventoryQuantity: Number(data.inventoryQuantity || 1),
     reservedQuantity: Number(data.reservedQuantity || 0),
     soldQuantity: Number(data.soldQuantity || 0),
@@ -158,24 +191,24 @@ function getProductImageFiles(input: {
 }
 
 function toRuleSafeProductImages(images: ProductImage[]): RuleSafeProductImage[] {
-  return images.map((image) => ({
-    url: image.url,
-    key: image.key || "",
-    alt: image.alt || "Product image",
-  }));
+  return normalizeProductImages(images);
 }
 
-function getPrimaryImageFields(images: ProductImage[]) {
+function getPrimaryImageFields(images: RuleSafeProductImage[]) {
   const firstImage = images[0];
+  const imageUrl = getDurableImageUrl(firstImage?.url);
 
   return {
-    imageUrl: firstImage?.url || "",
-    thumbnailUrl: firstImage?.thumbUrl || firstImage?.url || "",
+    imageUrl,
+    thumbnailUrl:
+      getDurableImageUrl(firstImage?.thumbnailUrl) ||
+      getDurableImageUrl(firstImage?.thumbUrl) ||
+      imageUrl,
   };
 }
 
 function getPersistedProductImages(product: Product): ProductImage[] {
-  const images = sanitizePersistedProductImages(product.images);
+  const images = getProductImageUrls(product);
 
   if (images.length) {
     return images;
@@ -189,6 +222,7 @@ function getPersistedProductImages(product: Product): ProductImage[] {
   return [
     {
       url: imageUrl,
+      thumbnailUrl: getDurableImageUrl(product.thumbnailUrl) || imageUrl,
       thumbUrl: getDurableImageUrl(product.thumbnailUrl) || imageUrl,
       alt: product.title || "Product image",
       key: "",
@@ -301,10 +335,17 @@ export async function createSellerProduct(
   const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
   const imageFiles = getProductImageFiles(input);
   const images: ProductImage[] = imageFiles.length
-    ? await uploadProductImages(imageFiles, title)
+    ? await uploadProductImages(imageFiles, title, {
+        onImageUploaded: (completedImages, totalImages) =>
+          input.onProgress?.({
+            phase: "uploading",
+            completedImages,
+            totalImages,
+          }),
+      })
     : [];
   const ruleSafeImages = toRuleSafeProductImages(images);
-  const primaryImageFields = getPrimaryImageFields(images);
+  const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
   const sortOrder = Date.now();
 
   const rawProductData = {
@@ -332,6 +373,11 @@ export async function createSellerProduct(
   };
   logProductPayloadDebug("create", rawProductData);
   const productData = removeUndefinedFields(rawProductData);
+  input.onProgress?.({
+    phase: "saving",
+    completedImages: imageFiles.length,
+    totalImages: imageFiles.length,
+  });
 
   await setDoc(productRef, productData);
 
@@ -385,11 +431,18 @@ export async function updateSellerProduct(
   const imageFiles = getProductImageFiles(input);
 
   if (imageFiles.length) {
-    images = await uploadProductImages(imageFiles, title);
+    images = await uploadProductImages(imageFiles, title, {
+      onImageUploaded: (completedImages, totalImages) =>
+        input.onProgress?.({
+          phase: "uploading",
+          completedImages,
+          totalImages,
+        }),
+    });
   }
 
   const ruleSafeImages = toRuleSafeProductImages(images);
-  const primaryImageFields = getPrimaryImageFields(images);
+  const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
 
   const productRef = doc(db, "products", product.productId || product.id);
   const rawUpdatePayload = {
@@ -407,8 +460,13 @@ export async function updateSellerProduct(
     ...primaryImageFields,
     updatedAt: serverTimestamp(),
   };
-  logProductPayloadDebug("update", rawUpdatePayload);
   const updatePayload = removeUndefinedFields(rawUpdatePayload);
+  logProductPayloadDebug("update", updatePayload);
+  input.onProgress?.({
+    phase: "saving",
+    completedImages: imageFiles.length,
+    totalImages: imageFiles.length,
+  });
 
   await updateDoc(productRef, updatePayload);
 

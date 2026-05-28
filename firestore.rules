@@ -194,6 +194,131 @@ service cloud.firestore {
         && data.reservedQuantity + data.soldQuantity <= data.inventoryQuantity;
     }
 
+    function isValidImageUrl(value) {
+      return value is string
+        && value.size() > 0
+        && value.size() <= 3000
+        && value.matches("https://.*");
+    }
+
+    function isValidOptionalImageUrl(image, field) {
+      return !(field in image)
+        || image[field] == null
+        || image[field] == ""
+        || isValidImageUrl(image[field]);
+    }
+
+    function hasDurableProductImageUrl(image) {
+      return ("url" in image && isValidImageUrl(image.url))
+        || ("publicUrl" in image && isValidImageUrl(image.publicUrl))
+        || ("imageUrl" in image && isValidImageUrl(image.imageUrl));
+    }
+
+    function isValidOptionalImageString(image, field) {
+      return !(field in image)
+        || (
+          image[field] is string
+          && image[field].size() <= 1000
+        );
+    }
+
+    function isValidOptionalImageText(image, field) {
+      return !(field in image)
+        || (
+          image[field] is string
+          && image[field].size() <= 500
+        );
+    }
+
+    function isValidOptionalImageNumber(image, field) {
+      return !(field in image)
+        || (
+          (image[field] is int || image[field] is float)
+          && image[field] >= 0
+          && image[field] <= 100000000
+        );
+    }
+
+    function isValidOptionalImageSize(image, field) {
+      return !(field in image)
+        || (
+          image[field] is int
+          && image[field] >= 0
+          && image[field] <= 10000000
+        );
+    }
+
+    function isValidProductImage(image) {
+      return image is map
+        && image.keys().hasOnly([
+          "id",
+          "url",
+          "publicUrl",
+          "imageUrl",
+          "thumbnailUrl",
+          "thumbUrl",
+          "mediumUrl",
+          "path",
+          "key",
+          "thumbKey",
+          "name",
+          "originalName",
+          "alt",
+          "width",
+          "height",
+          "size",
+          "sizeBytes",
+          "mimeType",
+          "sortOrder",
+          "uploadedAt"
+        ])
+        && hasDurableProductImageUrl(image)
+        && isValidOptionalImageUrl(image, "url")
+        && isValidOptionalImageUrl(image, "publicUrl")
+        && isValidOptionalImageUrl(image, "imageUrl")
+        && isValidOptionalImageUrl(image, "thumbnailUrl")
+        && isValidOptionalImageUrl(image, "thumbUrl")
+        && isValidOptionalImageUrl(image, "mediumUrl")
+        && isValidOptionalImageString(image, "id")
+        && isValidOptionalImageString(image, "path")
+        && isValidOptionalImageString(image, "key")
+        && isValidOptionalImageString(image, "thumbKey")
+        && isValidOptionalImageString(image, "name")
+        && isValidOptionalImageString(image, "originalName")
+        && isValidOptionalImageText(image, "alt")
+        && isValidOptionalImageNumber(image, "width")
+        && isValidOptionalImageNumber(image, "height")
+        && isValidOptionalImageSize(image, "size")
+        && isValidOptionalImageSize(image, "sizeBytes")
+        && (
+          !("mimeType" in image)
+          || image.mimeType in ["image/jpeg", "image/png", "image/webp", "image/gif"]
+        )
+        && (
+          !("sortOrder" in image)
+          || (
+            image.sortOrder is int
+            && image.sortOrder >= 0
+            && image.sortOrder <= 2
+          )
+        )
+        && (
+          !("uploadedAt" in image)
+          || image.uploadedAt is timestamp
+        );
+    }
+
+    function hasValidProductImages(data) {
+      return !("images" in data)
+        || (
+          data.images is list
+          && data.images.size() <= 3
+          && (data.images.size() < 1 || isValidProductImage(data.images[0]))
+          && (data.images.size() < 2 || isValidProductImage(data.images[1]))
+          && (data.images.size() < 3 || isValidProductImage(data.images[2]))
+        );
+    }
+
     function productAvailableFromData(data) {
       return data.inventoryQuantity - data.reservedQuantity - data.soldQuantity;
     }
@@ -507,10 +632,7 @@ service cloud.firestore {
         && request.resource.data.isFeatured is bool
         && request.resource.data.sortOrder is int
         && hasValidInventoryFields(request.resource.data)
-        && (
-          !("images" in request.resource.data)
-          || request.resource.data.images is list
-        );
+        && hasValidProductImages(request.resource.data);
 
       allow update: if (
           isOwner(resource.data.sellerId)
@@ -528,10 +650,7 @@ service cloud.firestore {
           && request.resource.data.isFeatured is bool
           && request.resource.data.sortOrder is int
           && hasValidInventoryFields(request.resource.data)
-          && (
-            !("images" in request.resource.data)
-            || request.resource.data.images is list
-          )
+          && hasValidProductImages(request.resource.data)
         )
         || isValidPublicReservationUpdate()
         || isValidSellerInventoryTransition();

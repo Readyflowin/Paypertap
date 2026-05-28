@@ -129,6 +129,7 @@ export async function uploadProductImage(
 
   return {
     url: uploadedImage.url,
+    thumbnailUrl: uploadedThumbnail.url,
     thumbUrl: uploadedThumbnail.url,
     alt: alt.trim() || file.name || "Product image",
     key: uploadedImage.key,
@@ -137,24 +138,58 @@ export async function uploadProductImage(
   };
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+
+  return results;
+}
+
 export async function uploadProductImages(
   files: File[],
-  alt = "Product image"
+  alt = "Product image",
+  options: {
+    concurrency?: number;
+    onImageUploaded?: (completedImages: number, totalImages: number) => void;
+  } = {}
 ): Promise<ProductImage[]> {
   assertValidImageFiles(files, MAX_PRODUCT_IMAGE_COUNT);
+  options.onImageUploaded?.(0, files.length);
 
-  const images = await Promise.all(
-    files.map(async (file, index) => {
-      const image = await uploadProductImage(file, alt);
-
-      return image
-        ? {
-            ...image,
-            sortOrder: index,
-          }
-        : null;
-    })
+  let completedImages = 0;
+  const concurrency = Math.min(
+    Math.max(options.concurrency ?? 2, 1),
+    MAX_PRODUCT_IMAGE_COUNT
   );
+
+  const images = await mapWithConcurrency(files, concurrency, async (file, index) => {
+    const image = await uploadProductImage(file, alt);
+    completedImages += 1;
+    options.onImageUploaded?.(completedImages, files.length);
+
+    return image
+      ? {
+          ...image,
+          sortOrder: index,
+        }
+      : null;
+  });
 
   return images.filter((image): image is ProductImage => Boolean(image));
 }

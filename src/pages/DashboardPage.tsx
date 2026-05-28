@@ -51,6 +51,8 @@ import {
 import { formatINR } from "../lib/money";
 import {
   getDisplayImageUrl,
+  getPrimaryProductImage,
+  getProductImageUrls,
   productHasTemporaryImageUrls,
 } from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
@@ -65,6 +67,7 @@ import {
   deleteSellerProduct,
   getSellerProductsForStore,
   updateSellerProduct,
+  type ProductSaveProgress,
 } from "../services/productService";
 import {
   createStoreCollection,
@@ -151,7 +154,78 @@ const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
 };
 
 function getProductImage(product: Product): string {
-  return getProductGridImageUrl(product);
+  return getPrimaryProductImage(product) || getProductGridImageUrl(product);
+}
+
+function getProductPreviewImages(product: Product): string[] {
+  return getProductImageUrls(product)
+    .map((image) => image.thumbnailUrl || image.thumbUrl || image.url || "")
+    .filter(Boolean);
+}
+
+function getProductPreviewImageItems(product: Product): Array<{ url: string; alt: string }> {
+  return getProductImageUrls(product)
+    .map((image, index) => ({
+      url: image.thumbnailUrl || image.thumbUrl || image.url || "",
+      alt: image.alt || `${product.title} image ${index + 1}`,
+    }))
+    .filter((image) => Boolean(image.url));
+}
+
+function ProductImagePreviewGrid({
+  images,
+  label,
+}: {
+  images: Array<{ url: string; alt: string }>;
+  label?: string;
+}) {
+  if (!images.length) return null;
+
+  return (
+    <div className="mt-3 min-w-0">
+      <div className="grid max-w-md min-w-0 grid-cols-3 gap-2">
+        {images.map((image, index) => (
+          <div
+            className="aspect-square min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+            key={`${image.url}-${index}`}
+          >
+            <img
+              src={image.url}
+              alt={image.alt}
+              decoding="async"
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+      {label ? (
+        <p className="mt-2 text-xs font-medium text-gray-500">{label}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function getProductSaveStatus(
+  progress: ProductSaveProgress | null,
+  fallbackSavingLabel: string
+) {
+  if (!progress) return fallbackSavingLabel;
+
+  if (progress.phase === "saving") {
+    return progress.totalImages > 0
+      ? "Images uploaded, saving product..."
+      : fallbackSavingLabel;
+  }
+
+  if (progress.totalImages <= 0) return fallbackSavingLabel;
+
+  const activeImage = Math.min(
+    progress.totalImages,
+    progress.completedImages + 1
+  );
+
+  return `Uploading ${activeImage}/${progress.totalImages}...`;
 }
 
 function getStoreLogoUrl(store?: Store | null): string {
@@ -1611,6 +1685,8 @@ function ProductsTab({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [saveProgress, setSaveProgress] = useState<ProductSaveProgress | null>(null);
+  const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const addProductFormRef = useRef<HTMLFormElement>(null);
@@ -1715,6 +1791,8 @@ function ProductsTab({
     try {
       setSaving(true);
       setError("");
+      setSuccessMessage("");
+      setSaveProgress(null);
       const selectedCollection = resolveCollectionSelection(
         collectionSelection,
         collections
@@ -1730,9 +1808,11 @@ function ProductsTab({
         inventoryQuantity: Number(inventoryQuantity),
         imageFiles,
         status,
+        onProgress: setSaveProgress,
       });
 
       onProductCreated(product);
+      setSuccessMessage("Product saved.");
       setTitle("");
       setPrice("");
       setDescription("");
@@ -1747,6 +1827,7 @@ function ProductsTab({
       setError(err instanceof Error ? err.message : "Could not add product.");
     } finally {
       setSaving(false);
+      setSaveProgress(null);
     }
   }
 
@@ -1765,6 +1846,7 @@ function ProductsTab({
               type="button"
               onClick={() => {
                 setEditingProduct(null);
+                setSuccessMessage("");
                 setShowForm((isOpen) => !isOpen);
               }}
               className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
@@ -1864,6 +1946,7 @@ function ProductsTab({
                     setImageFiles(files);
                     setImageFileName(files.map((file) => file.name).join(", "));
                     setError("");
+                    setSuccessMessage("");
                   } catch (err) {
                     event.target.value = "";
                     setImageFiles([]);
@@ -1874,31 +1957,34 @@ function ProductsTab({
                 className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
               />
               {imagePreviewUrls.length ? (
-                <div className="mt-3 grid max-w-md grid-cols-3 gap-2">
-                  {imagePreviewUrls.map((imagePreviewUrl, index) => (
-                    <div
-                      className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
-                      key={imagePreviewUrl}
-                    >
-                      <img
-                        src={imagePreviewUrl}
-                        alt={`Selected product preview ${index + 1}`}
-                        decoding="async"
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
+                <ProductImagePreviewGrid
+                  images={imagePreviewUrls.map((imagePreviewUrl, index) => ({
+                    url: imagePreviewUrl,
+                    alt: `Selected product preview ${index + 1}`,
+                  }))}
+                  label={
+                    imagePreviewUrls.length > 1
+                      ? `${imagePreviewUrls.length} images selected`
+                      : "1 image selected"
+                  }
+                />
               ) : null}
               <p className="mt-2 text-xs text-gray-500">
                 {imageFileName
                   ? `${imageFileName} selected.`
-                  : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
+                  : `JPEG, PNG, or WebP. You can upload up to ${MAX_PRODUCT_IMAGE_COUNT} images per product.`}
               </p>
             </div>
 
             {error ? <ErrorBox message={error} /> : null}
+            {successMessage ? (
+              <p className="text-sm font-medium text-emerald-700">{successMessage}</p>
+            ) : null}
+            {saving ? (
+              <p className="text-sm font-medium text-gray-700">
+                {getProductSaveStatus(saveProgress, "Saving product...")}
+              </p>
+            ) : null}
 
             <div>
               <button
@@ -1906,10 +1992,16 @@ function ProductsTab({
                 disabled={saving}
                 className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving && imageFiles.length ? "Uploading images..." : saving ? "Saving product..." : "Save product"}
+                {saving
+                  ? getProductSaveStatus(saveProgress, "Saving product...")
+                  : "Save product"}
               </button>
             </div>
           </form>
+        ) : null}
+
+        {!showForm && successMessage ? (
+          <p className="mt-4 text-sm font-medium text-emerald-700">{successMessage}</p>
         ) : null}
 
         {editingProduct ? (
@@ -1917,6 +2009,7 @@ function ProductsTab({
             onCancel={() => setEditingProduct(null)}
             onSaved={(product) => {
               onProductUpdated(product);
+              setSuccessMessage("Product saved.");
               setEditingProduct(null);
             }}
             onDeleted={handleProductDeleted}
@@ -1944,6 +2037,7 @@ function ProductsTab({
               type="button"
               onClick={() => {
                 setEditingProduct(null);
+                setSuccessMessage("");
                 setShowForm(true);
               }}
               className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white"
@@ -1966,6 +2060,7 @@ function ProductsTab({
                 collections={collections}
                 onEdit={() => {
                   setShowForm(false);
+                  setSuccessMessage("");
                   setEditingProduct(product);
                 }}
                 onDelete={() => {
@@ -2378,11 +2473,33 @@ function EditProductForm({
   const [status, setStatus] = useState<ProductStatus>(product.status);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([getProductImage(product)].filter(Boolean));
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(
+    getProductPreviewImages(product)
+  );
+  const [saveProgress, setSaveProgress] = useState<ProductSaveProgress | null>(null);
+  const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const editFormRef = useRef<HTMLFormElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
+  const savedImageItems = getProductPreviewImageItems(product);
+  const previewImageItems =
+    imageFiles.length > 0
+      ? imagePreviewUrls.map((imagePreviewUrl, index) => ({
+          url: imagePreviewUrl,
+          alt: `Selected product preview ${index + 1}`,
+        }))
+      : savedImageItems;
+  const previewLabel =
+    imageFiles.length > 0
+      ? imageFiles.length > 1
+        ? `${imageFiles.length} images selected`
+        : "1 image selected"
+      : savedImageItems.length > 1
+        ? `${savedImageItems.length} images saved`
+        : savedImageItems.length === 1
+          ? "1 image saved"
+          : "";
   const reservedQuantity = Number(product.reservedQuantity || 0);
   const soldQuantity = Number(product.soldQuantity || 0);
   const minimumTrackedInventory = reservedQuantity + soldQuantity;
@@ -2397,7 +2514,7 @@ function EditProductForm({
 
   useEffect(() => {
     if (imageFiles.length === 0) {
-      setImagePreviewUrls([getProductImage(product)].filter(Boolean));
+      setImagePreviewUrls(getProductPreviewImages(product));
       return;
     }
 
@@ -2428,6 +2545,8 @@ function EditProductForm({
     try {
       setSaving(true);
       setError("");
+      setSuccessMessage("");
+      setSaveProgress(null);
       const selectedCollection = resolveCollectionSelection(
         collectionSelection,
         collections
@@ -2449,14 +2568,19 @@ function EditProductForm({
         inventoryQuantity: requestedInventory,
         status,
         imageFiles,
+        onProgress: setSaveProgress,
       });
 
+      setImageFiles([]);
+      setImageFileName("");
+      setSuccessMessage("Product saved.");
       onSaved(updatedProduct);
     } catch (err) {
       console.error("Product update failed:", err);
       setError(err instanceof Error ? err.message : "Could not update product.");
     } finally {
       setSaving(false);
+      setSaveProgress(null);
     }
   }
 
@@ -2598,7 +2722,7 @@ function EditProductForm({
       </label>
 
       <div>
-        <label className="text-sm font-medium text-gray-800">Replace images</label>
+        <label className="text-sm font-medium text-gray-800">Replace images (up to 3 images max)</label>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -2609,6 +2733,7 @@ function EditProductForm({
               setImageFiles(files);
               setImageFileName(files.map((file) => file.name).join(", "));
               setError("");
+              setSuccessMessage("");
             } catch (err) {
               event.target.value = "";
               setImageFiles([]);
@@ -2618,34 +2743,25 @@ function EditProductForm({
           }}
           className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
         />
-        {imagePreviewUrls.length ? (
-          <div className="mt-3 grid max-w-md grid-cols-3 gap-2">
-            {imagePreviewUrls.map((imagePreviewUrl, index) => (
-              <div
-                className="aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
-                key={imagePreviewUrl}
-              >
-                <img
-                  src={imagePreviewUrl}
-                  alt={`Product preview ${index + 1}`}
-                  decoding="async"
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-        ) : null}
+        <ProductImagePreviewGrid images={previewImageItems} label={previewLabel} />
         <p className="mt-2 text-xs text-gray-500">
           {imageFileName
             ? `${imageFileName} selected.`
-            : imagePreviewUrls.length
+            : savedImageItems.length
               ? "Current image will be preserved unless you choose a new one."
-              : `JPEG, PNG, or WebP. Up to ${MAX_PRODUCT_IMAGE_COUNT} images.`}
+              : `JPEG, PNG, or WebP. You can upload up to ${MAX_PRODUCT_IMAGE_COUNT} images per product.`}
         </p>
       </div>
 
       {error ? <ErrorBox message={error} /> : null}
+      {successMessage ? (
+        <p className="text-sm font-medium text-emerald-700">{successMessage}</p>
+      ) : null}
+      {saving ? (
+        <p className="text-sm font-medium text-gray-700">
+          {getProductSaveStatus(saveProgress, "Saving changes...")}
+        </p>
+      ) : null}
 
       <div>
         <button
@@ -2653,7 +2769,9 @@ function EditProductForm({
           disabled={saving}
           className="rounded-xl bg-gray-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving && imageFiles.length ? "Uploading images..." : saving ? "Saving changes..." : "Save changes"}
+          {saving
+            ? getProductSaveStatus(saveProgress, "Saving changes...")
+            : "Save changes"}
         </button>
       </div>
 
@@ -2689,6 +2807,7 @@ function ProductRow({
   product: Product;
 }) {
   const imageUrl = getProductImage(product);
+  const productImageCount = getProductImageUrls(product).length;
   const availableQuantity = getAvailableQuantity(product);
   const badge = getProductStatusBadge(product, availableQuantity);
   const needsImageReupload = productHasTemporaryImageUrls(product);
@@ -2741,6 +2860,11 @@ function ProductRow({
           {needsImageReupload ? (
             <span className="max-w-full rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
               This image needs to be re-uploaded.
+            </span>
+          ) : null}
+          {productImageCount > 1 ? (
+            <span className="max-w-full rounded-full border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-600">
+              {productImageCount} images
             </span>
           ) : null}
         </div>
