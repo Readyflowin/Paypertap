@@ -2,6 +2,7 @@ import clsx from "clsx";
 
 import { Badge, PptBrandIcon } from "../ui";
 import { getDisplayImageUrl } from "../../lib/imageUrls";
+import { normalizeIndianMobileInput } from "../../lib/phone";
 
 import { getWhatsAppHref } from "./WhatsAppButton";
 
@@ -69,7 +70,9 @@ export function StoreIdentity({
   className,
 }: StoreIdentityProps) {
   const compact = mode === "compact";
-  const showWhatsApp = Boolean(whatsappNumber && mode !== "dashboard");
+  const showWhatsApp = Boolean(
+    mode !== "dashboard" && normalizeIndianMobileInput(whatsappNumber || "").ok
+  );
 
   return (
     <div

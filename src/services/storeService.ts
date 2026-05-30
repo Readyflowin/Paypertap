@@ -1,6 +1,7 @@
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import type { StorefrontThemeId } from "../storefront/themes/types";
 import type { Store, StoreSlugReservation } from "../types/firestore";
 
@@ -138,8 +139,42 @@ export async function updateStoreCustomization(
 
   if (input.storeName !== undefined) payload.storeName = input.storeName.trim();
   if (input.bio !== undefined) payload.bio = input.bio.trim();
-  if (input.phone !== undefined) payload.phone = input.phone.trim();
-  if (input.whatsappPhone !== undefined) payload.whatsappPhone = input.whatsappPhone.trim();
+  if (input.phone !== undefined) {
+    const phone = normalizeIndianMobileInput(input.phone);
+    if (!phone.ok || !phone.localNumber) {
+      throw new Error(phone.error || "Please enter a valid 10-digit Indian WhatsApp number.");
+    }
+    payload.phone = phone.localNumber;
+  }
+  if (input.whatsappPhone !== undefined) {
+    const whatsappPhone = normalizeIndianMobileInput(input.whatsappPhone);
+    if (!whatsappPhone.ok || !whatsappPhone.localNumber) {
+      throw new Error(
+        whatsappPhone.error || "Please enter a valid 10-digit Indian WhatsApp number."
+      );
+    }
+    payload.whatsappPhone = whatsappPhone.localNumber;
+  }
+  if (input.supportPhone !== undefined) {
+    const rawSupportPhone = input.supportPhone.trim();
+    if (rawSupportPhone) {
+      const supportPhone = normalizeIndianMobileInput(rawSupportPhone);
+      if (!supportPhone.ok || !supportPhone.localNumber) {
+        throw new Error(
+          supportPhone.error || "Please enter a valid 10-digit Indian WhatsApp number."
+        );
+      }
+      payload.supportPhone = supportPhone.localNumber;
+    } else {
+      payload.supportPhone = "";
+    }
+  }
+  if (input.ownerName !== undefined) payload.ownerName = input.ownerName.trim();
+  if (input.supportEmail !== undefined) payload.supportEmail = input.supportEmail.trim();
+  if (input.returnsPolicyType !== undefined) payload.returnsPolicyType = input.returnsPolicyType;
+  if (input.returnsPolicyNotes !== undefined) {
+    payload.returnsPolicyNotes = input.returnsPolicyNotes.trim();
+  }
   if (input.logoUrl !== undefined) {
     const logoUrl = input.logoUrl.trim();
     if (logoUrl && !getDurableImageUrl(logoUrl)) {

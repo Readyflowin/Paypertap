@@ -456,7 +456,7 @@ export default function DesignSystemPage() {
                 <Field label="Store name" placeholder="Urban Vault" icon={<Store size={17} />} />
                 <Field label="Instagram profile" placeholder="@urbanvault.in" icon={<BrandIcon type="instagram" size={17} />} />
                 <Field label="Email" placeholder="seller@example.com" icon={<Mail size={17} />} helper="Used for booking notifications." />
-                <Field label="WhatsApp number" placeholder="+91 98765 43210" icon={<BrandIcon type="whatsapp" size={17} />} error="Enter a valid WhatsApp number." />
+                <Field label="WhatsApp number" placeholder="Enter 10-digit WhatsApp number" icon={<BrandIcon type="whatsapp" size={17} />} error="Please enter a valid 10-digit Indian WhatsApp number." />
                 <SelectField
                   label="Store theme"
                   value="Soft boutique"

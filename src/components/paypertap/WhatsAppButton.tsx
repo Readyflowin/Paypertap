@@ -2,6 +2,7 @@ import { type AnchorHTMLAttributes, type ReactNode } from "react";
 import clsx from "clsx";
 
 import { PayPerTapInlineLoader, PptBrandIcon } from "@/components/ui";
+import { buildWhatsAppUrl } from "@/lib/phone";
 
 type WhatsAppButtonSize = "sm" | "md" | "lg";
 
@@ -26,19 +27,10 @@ const sizeClasses: Record<WhatsAppButtonSize, string> = {
   lg: "min-h-12 px-5 text-base",
 };
 
-function normalizePhone(phone?: string) {
-  return phone?.replace(/[^\d]/g, "") ?? "";
-}
-
 export function getWhatsAppHref({ href, phone, message }: Pick<WhatsAppButtonProps, "href" | "phone" | "message">) {
   if (href) return href;
 
-  const encodedMessage = message ? `?text=${encodeURIComponent(message)}` : "";
-  const normalizedPhone = normalizePhone(phone);
-
-  return normalizedPhone
-    ? `https://wa.me/${normalizedPhone}${encodedMessage}`
-    : `https://wa.me/${encodedMessage}`;
+  return buildWhatsAppUrl(phone || "", message || "") || "#";
 }
 
 export function WhatsAppButton({

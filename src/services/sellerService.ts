@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import type { Seller, Store, StoreSlugReservation } from "../types/firestore";
 import {
   sendSellerWelcomeEmail,
@@ -347,19 +348,18 @@ export async function completeStoreOnboarding(
   user: User,
   input: StoreOnboardingInput
 ): Promise<{ storeId: string; nextRoute: string }> {
-  const phone = input.phone.trim();
+  const phoneResult = normalizeIndianMobileInput(input.phone);
+  const phone = phoneResult.localNumber || "";
   const storeName = input.storeName.trim();
-
-  if (!phone) {
-    throw new Error("Phone number is required.");
-  }
 
   if (!storeName) {
     throw new Error("Store name is required.");
   }
 
-  if (phone.length < 8 || phone.length > 15) {
-    throw new Error("Phone number must be 8 to 15 characters.");
+  if (!phoneResult.ok || !phone) {
+    throw new Error(
+      phoneResult.error || "Please enter a valid 10-digit Indian WhatsApp number."
+    );
   }
 
   const uid = user.uid;

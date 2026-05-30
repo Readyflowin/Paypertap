@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import { getAvailableQuantity, getNextProductStatus } from "../lib/productAvailability";
 import {
   getProductVariants,
@@ -41,7 +42,9 @@ export type CreateCheckoutSessionInput = {
 };
 
 function normalizeBuyerPhone(phone: string): string {
-  return phone.replace(/[^\d]/g, "");
+  const normalizedPhone = normalizeIndianMobileInput(phone);
+
+  return normalizedPhone.localNumber || phone.replace(/[^\d]/g, "");
 }
 
 function getCanonicalVariantPayload(variant?: ProductVariant | null) {

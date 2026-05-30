@@ -1,5 +1,3 @@
-//old rules_version
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -157,6 +155,32 @@ service cloud.firestore {
 
     function isValidImageListLoose(value) {
       return value is list && value.size() <= 3;
+    }
+
+    function hasValidProductVariants(data) {
+      return (
+          !("hasVariants" in data)
+          || data.hasVariants is bool
+        )
+        && (
+          !("variantOptions" in data)
+          || (
+            data.variantOptions is list
+            && data.variantOptions.size() <= 2
+          )
+        )
+        && (
+          !("variants" in data)
+          || (
+            data.variants is list
+            && data.variants.size() <= 100
+          )
+        )
+        && (
+          !("defaultVariantId" in data)
+          || data.defaultVariantId == null
+          || data.defaultVariantId is string
+        );
     }
 
     function hasValidCollectionFields(data, storeId, collectionId) {
@@ -582,9 +606,8 @@ service cloud.firestore {
     // =========================================================
     // PRODUCTS
     // Seller manages own products.
-    // Product images are intentionally loose here:
-    // allow up to 3 image objects/strings, because the app/Cloudflare
-    // upload payload can contain changing metadata.
+    // Images stay loose/max 3 as in old working rules.
+    // Variants are only lightly capped.
     // =========================================================
 
     match /products/{productId} {
@@ -628,7 +651,8 @@ service cloud.firestore {
         && (
           !("thumbnailUrl" in request.resource.data)
           || isValidOptionalUrl(request.resource.data.thumbnailUrl)
-        );
+        )
+        && hasValidProductVariants(request.resource.data);
 
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
@@ -664,7 +688,8 @@ service cloud.firestore {
         && (
           !("thumbnailUrl" in request.resource.data)
           || isValidOptionalUrl(request.resource.data.thumbnailUrl)
-        );
+        )
+        && hasValidProductVariants(request.resource.data);
 
       allow delete: if isOwner(resource.data.sellerId) || isAdmin();
     }

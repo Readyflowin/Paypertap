@@ -4,10 +4,13 @@ import {
   type CreateCheckoutSessionInput,
 } from "./checkoutService";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import type { CheckoutSession } from "../types/firestore";
 
 function normalizeBuyerPhone(phone: string): string {
-  return phone.replace(/[^\d]/g, "");
+  const normalizedPhone = normalizeIndianMobileInput(phone);
+
+  return normalizedPhone.localNumber || phone.replace(/[^\d]/g, "");
 }
 
 export function buildCheckoutSession(

@@ -1,4 +1,4 @@
-import { type ChangeEventHandler, type ReactNode } from "react";
+import { type ChangeEventHandler, type FocusEventHandler, type ReactNode } from "react";
 import clsx from "clsx";
 
 export type PptFieldProps = {
@@ -10,6 +10,7 @@ export type PptFieldProps = {
   icon?: ReactNode;
   value?: string;
   onChange?: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
+  onBlur?: FocusEventHandler<HTMLInputElement | HTMLTextAreaElement>;
   name?: string;
   type?: string;
   min?: string | number;
@@ -32,6 +33,7 @@ export function PptField({
   icon,
   value,
   onChange,
+  onBlur,
   name,
   type = "text",
   min,
@@ -55,6 +57,7 @@ export function PptField({
             placeholder={placeholder}
             value={value}
             onChange={onChange}
+            onBlur={onBlur}
             name={name}
             autoComplete={autoComplete}
             maxLength={maxLength}
@@ -65,6 +68,7 @@ export function PptField({
             placeholder={placeholder}
             value={value}
             onChange={onChange}
+            onBlur={onBlur}
             name={name}
             type={type}
             min={min}

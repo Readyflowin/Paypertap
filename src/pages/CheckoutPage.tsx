@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { formatINR } from "@/lib/money";
+import { normalizeIndianMobileInput } from "@/lib/phone";
 import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailability";
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
@@ -45,24 +46,6 @@ const PAYMENT_MODE =
     : "razorpay";
 const REQUIRED_BOOKING_AMOUNT = 20;
 
-function digitsOnly(value: string): string {
-  return value.replace(/[^\d]/g, "");
-}
-
-function getTenDigitIndianMobile(phone: string): string {
-  const digits = digitsOnly(phone);
-
-  if (digits.length === 12 && digits.startsWith("91")) {
-    return digits.slice(2);
-  }
-
-  if (digits.length === 11 && digits.startsWith("0")) {
-    return digits.slice(1);
-  }
-
-  return digits;
-}
-
 function validateBuyerDetails(input: {
   buyerAddress: string;
   buyerCity: string;
@@ -80,10 +63,12 @@ function validateBuyerDetails(input: {
     throw new Error("Please complete all buyer details before continuing.");
   }
 
-  const normalizedPhone = getTenDigitIndianMobile(input.buyerPhone);
+  const normalizedPhone = normalizeIndianMobileInput(input.buyerPhone);
 
-  if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
-    throw new Error("Please enter a valid 10-digit WhatsApp mobile number.");
+  if (!normalizedPhone.ok || !normalizedPhone.localNumber) {
+    throw new Error(
+      normalizedPhone.error || "Please enter a valid 10-digit WhatsApp mobile number."
+    );
   }
 
   if (!/^\d{6}$/.test(input.buyerPincode.trim())) {
@@ -100,7 +85,7 @@ function validateBuyerDetails(input: {
     throw new Error("Please keep the delivery address under 160 characters.");
   }
 
-  return { normalizedPhone };
+  return { normalizedPhone: normalizedPhone.localNumber };
 }
 
 function getProductImage(product: Product): string {
@@ -654,16 +639,21 @@ function BuyerFields({
         />
         <PptField
           label="WhatsApp number"
-          placeholder="10 digit mobile number"
+          placeholder="Enter 10-digit WhatsApp number"
           type="tel"
           name="tel"
           autoComplete="tel-national"
           inputMode="numeric"
-          maxLength={14}
-          pattern="[0-9]{10,14}"
-          helper="Enter the 10-digit number the seller can message on WhatsApp."
+          maxLength={16}
+          helper="Only enter your 10-digit Indian WhatsApp number. Example: 7067508872"
           value={buyerPhone}
-          onChange={(event) => setBuyerPhone(digitsOnly(event.target.value).slice(0, 14))}
+          onChange={(event) => setBuyerPhone(event.target.value)}
+          onBlur={() => {
+            const normalizedPhone = normalizeIndianMobileInput(buyerPhone);
+            if (normalizedPhone.ok && normalizedPhone.localNumber) {
+              setBuyerPhone(normalizedPhone.localNumber);
+            }
+          }}
           required
         />
       </div>
@@ -698,7 +688,9 @@ function BuyerFields({
           maxLength={6}
           pattern="[0-9]{6}"
           value={buyerPincode}
-          onChange={(event) => setBuyerPincode(digitsOnly(event.target.value).slice(0, 6))}
+          onChange={(event) =>
+            setBuyerPincode(event.target.value.replace(/\D/g, "").slice(0, 6))
+          }
           required
         />
       </div>

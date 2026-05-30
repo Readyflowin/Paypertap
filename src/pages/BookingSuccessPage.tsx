@@ -12,13 +12,12 @@ import {
   PptTapLoader,
 } from "@/components/ui";
 import { formatINR } from "@/lib/money";
+import { buildWhatsAppUrl, normalizeIndianMobileInput } from "@/lib/phone";
 import { getVariantDetailsText } from "@/lib/productVariants";
 import { getProductById } from "@/services/productService";
 import { getStoreById } from "@/services/storeService";
 import {
   buildBuyerBookingMessage,
-  buildBuyerBookingWhatsAppUrl,
-  getStoreWhatsAppPhone,
 } from "@/services/whatsappService";
 import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
@@ -119,8 +118,17 @@ export default function BookingSuccessPage() {
   }, [state.checkout, storeSlug]);
 
   const whatsappMessage = whatsappInput ? buildBuyerBookingMessage(whatsappInput) : "";
-  const sellerWhatsAppPhone = getStoreWhatsAppPhone(state.store);
-  const whatsappUrl = whatsappInput ? buildBuyerBookingWhatsAppUrl(state.store, whatsappMessage) : "#";
+  const sellerWhatsAppPhone = [
+    state.checkout?.sellerWhatsAppPhone,
+    state.checkout?.sellerWhatsAppE164,
+    state.checkout?.sellerPhone,
+    state.store?.whatsappPhone,
+    state.store?.phone,
+  ].find((phone) => normalizeIndianMobileInput(phone || "").ok);
+  const whatsappUrl =
+    whatsappInput && sellerWhatsAppPhone
+      ? buildWhatsAppUrl(sellerWhatsAppPhone, whatsappMessage)
+      : null;
   const hasSellerPhone = Boolean(sellerWhatsAppPhone);
 
   async function handleCopyMessage() {

@@ -1,4 +1,8 @@
 import { BOOKING_ADVANCE_AMOUNT } from "../lib/money";
+import {
+  buildWhatsAppUrl,
+  normalizeIndianMobileInput,
+} from "../lib/phone";
 import { getVariantDetailsText } from "../lib/productVariants";
 import type { CheckoutSession, DerivedCustomerLead, Product, Store } from "../types/firestore";
 
@@ -44,17 +48,9 @@ function getOrigin(): string {
 }
 
 export function normalizeIndianPhone(phone?: string): string | null {
-  const digits = (phone || "").replace(/[^\d]/g, "");
+  const normalized = normalizeIndianMobileInput(phone || "");
 
-  if (digits.length === 10) {
-    return `91${digits}`;
-  }
-
-  if (digits.startsWith("91") && digits.length === 12) {
-    return digits;
-  }
-
-  return null;
+  return normalized.ok ? normalized.whatsappNumber || null : null;
 }
 
 function getStoreUpiId(store?: Store | null): string {
@@ -64,17 +60,10 @@ function getStoreUpiId(store?: Store | null): string {
 }
 
 export function getStoreWhatsAppPhone(store?: Store | null): string | null {
-  return normalizeIndianPhone(store?.whatsappPhone || store?.phone || "");
-}
+  const phone = store?.whatsappPhone || store?.phone || "";
+  const normalized = normalizeIndianMobileInput(phone);
 
-function buildWhatsAppUrl(phone: string | null, message: string): string {
-  const encodedMessage = encodeURIComponent(message);
-
-  if (!phone) {
-    return `https://wa.me/?text=${encodedMessage}`;
-  }
-
-  return `https://wa.me/${phone}?text=${encodedMessage}`;
+  return normalized.ok ? normalized.localNumber || null : null;
 }
 
 export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
@@ -105,8 +94,8 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
 export function buildBuyerBookingWhatsAppUrl(
   store: Store | null,
   message: string
-): string {
-  return buildWhatsAppUrl(getStoreWhatsAppPhone(store), message);
+): string | null {
+  return buildWhatsAppUrl(store?.whatsappPhone || store?.phone || "", message);
 }
 
 export function buildSellerPaymentCollectionMessage(
@@ -170,7 +159,7 @@ export function buildOrderConfirmedMessage(input: SellerMessageInput): string {
 }
 
 export function buildBookingWhatsAppUrl(phone: string, message: string): string {
-  return buildWhatsAppUrl(normalizeIndianPhone(phone), message);
+  return buildWhatsAppUrl(phone, message) || "#";
 }
 
 export function buildNewDropRetargetingMessage(input: RetargetingInput): string {

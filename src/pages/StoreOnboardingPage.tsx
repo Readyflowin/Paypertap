@@ -5,6 +5,7 @@ import { AtSign, ImageIcon, Phone, Store, UploadCloud } from "lucide-react";
 import { PptBadge, PptButton, PptField, PptNotice, PptTapLoader } from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
 import { assertValidImageFile } from "../lib/imageCompression";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import {
   completeStoreOnboarding,
   getStoreOnboardingDebugInfo,
@@ -24,6 +25,7 @@ export default function StoreOnboardingPage() {
   const [submitStatus, setSubmitStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,6 +56,18 @@ export default function StoreOnboardingPage() {
     try {
       setLoading(true);
       setError("");
+      setPhoneError("");
+
+      const normalizedPhone = normalizeIndianMobileInput(phone);
+
+      if (!normalizedPhone.ok || !normalizedPhone.localNumber) {
+        const message =
+          normalizedPhone.error || "Please enter a valid 10-digit Indian WhatsApp number.";
+        setPhoneError(message);
+        throw new Error(message);
+      }
+
+      setPhone(normalizedPhone.localNumber);
       let uploadedLogo: { url: string; key: string } | null = null;
 
       if (logoFile) {
@@ -64,7 +78,7 @@ export default function StoreOnboardingPage() {
       setSubmitStatus("Saving store...");
 
       const result = await completeStoreOnboarding(user, {
-        phone,
+        phone: normalizedPhone.localNumber,
         storeName,
         instagramProfile,
         logoUrl: uploadedLogo?.url,
@@ -117,9 +131,28 @@ export default function StoreOnboardingPage() {
             label="Phone number"
             type="tel"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="+91 98765 43210"
+            onChange={(event) => {
+              setPhone(event.target.value);
+              setPhoneError("");
+            }}
+            onBlur={() => {
+              if (!phone.trim()) return;
+              const normalizedPhone = normalizeIndianMobileInput(phone);
+              if (normalizedPhone.ok && normalizedPhone.localNumber) {
+                setPhone(normalizedPhone.localNumber);
+                setPhoneError("");
+              } else {
+                setPhoneError(
+                  normalizedPhone.error || "Please enter a valid 10-digit Indian WhatsApp number."
+                );
+              }
+            }}
+            placeholder="Enter 10-digit WhatsApp number"
             icon={<Phone size={17} />}
+            helper="Only enter your 10-digit Indian WhatsApp number. Example: 7067508872"
+            error={phoneError}
+            inputMode="numeric"
+            maxLength={16}
             required
           />
 

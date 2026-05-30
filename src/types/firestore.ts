@@ -213,6 +213,9 @@ export type CheckoutSession = {
   buyerName: string;
   buyerEmail?: string;
   buyerPhone: string;
+  sellerPhone?: string;
+  sellerWhatsAppPhone?: string;
+  sellerWhatsAppE164?: string;
   buyerAddress: string;
   buyerCity: string;
   buyerPincode: string;

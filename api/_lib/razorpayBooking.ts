@@ -7,6 +7,7 @@ import {
   getAdminDbIfConfigured,
   getFirebaseAdminEnvDebugState,
 } from "./firebaseAdmin.js";
+import { normalizeIndianMobileInput } from "../../src/lib/phone.js";
 
 const BOOKING_AMOUNT_RUPEES = 20;
 const BOOKING_AMOUNT_PAISE = 2000;
@@ -69,11 +70,16 @@ type ValidatedBooking = BookingInput & {
   selectedVariantId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
+  sellerPhone?: string;
+  sellerWhatsAppPhone?: string;
+  sellerWhatsAppE164?: string;
 };
 
 type StoreData = {
   sellerId?: string;
   isPublished?: boolean;
+  phone?: string;
+  whatsappPhone?: string;
 };
 
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
@@ -138,7 +144,9 @@ function toInt(value: unknown) {
 }
 
 function normalizeBuyerPhone(phone: string) {
-  return phone.replace(/[^\d]/g, "");
+  const normalizedPhone = normalizeIndianMobileInput(phone);
+
+  return normalizedPhone.localNumber || phone.replace(/[^\d]/g, "");
 }
 
 function normalizeVariantOptions(input: unknown): Array<{ name: string; values: string[] }> {
@@ -244,7 +252,11 @@ function getValidatedSelectedVariant(
 
 function withCanonicalVariant(
   input: BookingInput,
-  variant: CanonicalVariant | null
+  variant: CanonicalVariant | null,
+  sellerPhonePayload: Pick<
+    ValidatedBooking,
+    "sellerPhone" | "sellerWhatsAppPhone" | "sellerWhatsAppE164"
+  > = {}
 ): ValidatedBooking {
   if (!variant) {
     return {
@@ -261,11 +273,13 @@ function withCanonicalVariant(
       buyerCity: input.buyerCity,
       buyerPincode: input.buyerPincode,
       buyerEmail: input.buyerEmail,
+      ...sellerPhonePayload,
     };
   }
 
   return {
     ...input,
+    ...sellerPhonePayload,
     selectedVariantId: variant.variantId,
     selectedVariantLabel: variant.label || variantLabel(variant.options),
     selectedVariantOptions: variant.options,
@@ -398,8 +412,20 @@ async function validateStoreAndProduct(input: BookingInput) {
   }
 
   const selectedVariant = getValidatedSelectedVariant(input, product);
+  const sellerPhone = normalizeIndianMobileInput(store.whatsappPhone || store.phone || "");
+  const sellerPhonePayload = sellerPhone.ok && sellerPhone.localNumber
+    ? {
+        sellerPhone: sellerPhone.localNumber,
+        sellerWhatsAppPhone: sellerPhone.localNumber,
+        sellerWhatsAppE164: sellerPhone.e164,
+      }
+    : {};
 
-  return { db, product, booking: withCanonicalVariant(input, selectedVariant) };
+  return {
+    db,
+    product,
+    booking: withCanonicalVariant(input, selectedVariant, sellerPhonePayload),
+  };
 }
 
 function buildReceipt() {
@@ -465,7 +491,13 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
     }
 
     const selectedVariant = getValidatedSelectedVariant(input, product);
-    const canonicalInput = withCanonicalVariant(input, selectedVariant);
+    const canonicalInput = withCanonicalVariant(input, selectedVariant, {
+      ...(input.sellerPhone ? { sellerPhone: input.sellerPhone } : {}),
+      ...(input.sellerWhatsAppPhone
+        ? { sellerWhatsAppPhone: input.sellerWhatsAppPhone }
+        : {}),
+      ...(input.sellerWhatsAppE164 ? { sellerWhatsAppE164: input.sellerWhatsAppE164 } : {}),
+    });
     responseInput = canonicalInput;
 
     const nextReservedQuantity = Number(product.reservedQuantity || 0) + 1;
@@ -487,6 +519,13 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
       buyerName: canonicalInput.buyerName,
       ...(canonicalInput.buyerEmail ? { buyerEmail: canonicalInput.buyerEmail } : {}),
       buyerPhone: canonicalInput.buyerPhone,
+      ...(canonicalInput.sellerPhone ? { sellerPhone: canonicalInput.sellerPhone } : {}),
+      ...(canonicalInput.sellerWhatsAppPhone
+        ? { sellerWhatsAppPhone: canonicalInput.sellerWhatsAppPhone }
+        : {}),
+      ...(canonicalInput.sellerWhatsAppE164
+        ? { sellerWhatsAppE164: canonicalInput.sellerWhatsAppE164 }
+        : {}),
       buyerAddress: canonicalInput.buyerAddress,
       buyerCity: canonicalInput.buyerCity,
       buyerPincode: canonicalInput.buyerPincode,
@@ -551,6 +590,13 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
     buyerName: responseInput.buyerName,
     ...(responseInput.buyerEmail ? { buyerEmail: responseInput.buyerEmail } : {}),
     buyerPhone: responseInput.buyerPhone,
+    ...(responseInput.sellerPhone ? { sellerPhone: responseInput.sellerPhone } : {}),
+    ...(responseInput.sellerWhatsAppPhone
+      ? { sellerWhatsAppPhone: responseInput.sellerWhatsAppPhone }
+      : {}),
+    ...(responseInput.sellerWhatsAppE164
+      ? { sellerWhatsAppE164: responseInput.sellerWhatsAppE164 }
+      : {}),
     buyerAddress: responseInput.buyerAddress,
     buyerCity: responseInput.buyerCity,
     buyerPincode: responseInput.buyerPincode,

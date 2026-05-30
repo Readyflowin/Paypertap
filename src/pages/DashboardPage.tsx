@@ -49,6 +49,7 @@ import {
   normalizeCollectionName,
 } from "../lib/collections";
 import { formatINR } from "../lib/money";
+import { normalizeIndianMobileInput } from "../lib/phone";
 import {
   getDisplayImageUrl,
   getPrimaryProductImage,
@@ -1385,7 +1386,9 @@ function StoreStatusCard({
   store: Store | null;
   storeLink: string;
 }) {
-  const hasWhatsApp = Boolean(store?.whatsappPhone || store?.phone);
+  const hasWhatsApp = normalizeIndianMobileInput(
+    store?.whatsappPhone || store?.phone || ""
+  ).ok;
 
   return (
     <section className="pds-panel ppt-dashboard-store-card">
@@ -3656,6 +3659,7 @@ function StoreTab({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [whatsappPhoneError, setWhatsappPhoneError] = useState("");
   const [previewThemeId, setPreviewThemeId] = useState<StorefrontThemeId | null>(null);
   const [themeSavingId, setThemeSavingId] = useState<StorefrontThemeId | null>(null);
   const [themeSavedMessage, setThemeSavedMessage] = useState("");
@@ -3675,6 +3679,7 @@ function StoreTab({
     setReturnsPolicyNotes(store?.returnsPolicyNotes || "");
     setHeroHeading(store?.heroTitle || store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
+    setWhatsappPhoneError("");
   }, [store]);
 
   async function handleSaveStore(event: FormEvent<HTMLFormElement>) {
@@ -3686,6 +3691,19 @@ function StoreTab({
       setSaving(true);
       setSaved(false);
       setError("");
+      setWhatsappPhoneError("");
+
+      const normalizedWhatsappPhone = normalizeIndianMobileInput(whatsappPhone);
+
+      if (!normalizedWhatsappPhone.ok || !normalizedWhatsappPhone.localNumber) {
+        const message =
+          normalizedWhatsappPhone.error ||
+          "Please enter a valid 10-digit Indian WhatsApp number.";
+        setWhatsappPhoneError(message);
+        throw new Error(message);
+      }
+
+      setWhatsappPhone(normalizedWhatsappPhone.localNumber);
 
       let uploadedLogo: { url: string; key: string } | null = null;
       if (logoFile) {
@@ -3695,9 +3713,14 @@ function StoreTab({
       const updatedFields = await updateStoreCustomization(store.storeId, {
         storeName,
         bio,
-        whatsappPhone,
-        phone: store.phone || whatsappPhone,
+        whatsappPhone: normalizedWhatsappPhone.localNumber,
+        phone: normalizedWhatsappPhone.localNumber,
         instagramProfile,
+        ownerName,
+        supportEmail,
+        supportPhone,
+        returnsPolicyType,
+        returnsPolicyNotes,
         heroHeading,
         heroSubtitle,
         logoUrl: uploadedLogo?.url,
@@ -3708,9 +3731,15 @@ function StoreTab({
         ...updatedFields,
         storeName,
         bio,
-        whatsappPhone,
+        whatsappPhone: normalizedWhatsappPhone.localNumber,
+        phone: normalizedWhatsappPhone.localNumber,
         instagramUrl: String(updatedFields.instagramUrl || ""),
         instagramProfile,
+        ownerName,
+        supportEmail,
+        supportPhone: String(updatedFields.supportPhone || supportPhone),
+        returnsPolicyType,
+        returnsPolicyNotes,
         heroTitle: heroHeading,
         heroSubtitle,
         logoUrl: uploadedLogo?.url || store.logoUrl,
@@ -3859,7 +3888,33 @@ function StoreTab({
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Store name" value={storeName} onChange={setStoreName} required />
-              <Field label="WhatsApp number" value={whatsappPhone} onChange={setWhatsappPhone} />
+              <Field
+                label="WhatsApp number"
+                value={whatsappPhone}
+                onChange={(value) => {
+                  setWhatsappPhone(value);
+                  setWhatsappPhoneError("");
+                }}
+                onBlur={() => {
+                  if (!whatsappPhone.trim()) return;
+                  const normalizedWhatsappPhone = normalizeIndianMobileInput(whatsappPhone);
+                  if (normalizedWhatsappPhone.ok && normalizedWhatsappPhone.localNumber) {
+                    setWhatsappPhone(normalizedWhatsappPhone.localNumber);
+                    setWhatsappPhoneError("");
+                  } else {
+                    setWhatsappPhoneError(
+                      normalizedWhatsappPhone.error ||
+                        "Please enter a valid 10-digit Indian WhatsApp number."
+                    );
+                  }
+                }}
+                placeholder="Enter 10-digit WhatsApp number"
+                helper="Only enter your 10-digit Indian WhatsApp number. Example: 7067508872"
+                error={whatsappPhoneError}
+                type="tel"
+                inputMode="numeric"
+                maxLength={16}
+              />
             </div>
             <Field label="Tagline / bio" value={bio} onChange={setBio} />
             <Field
@@ -4360,18 +4415,28 @@ function ErrorBox({ message }: { message: string }) {
 }
 
 function Field({
+  error,
+  helper,
+  inputMode,
   inputRef,
   label,
+  maxLength,
   min,
+  onBlur,
   onChange,
   placeholder,
   required = false,
   type = "text",
   value,
 }: {
+  error?: string;
+  helper?: string;
+  inputMode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search";
   inputRef?: RefObject<HTMLInputElement | null>;
   label: string;
+  maxLength?: number;
   min?: string;
+  onBlur?: () => void;
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
@@ -4384,8 +4449,10 @@ function Field({
       <input
         ref={inputRef}
         autoComplete={type === "number" ? "off" : undefined}
-        inputMode={type === "number" ? "numeric" : undefined}
+        inputMode={inputMode || (type === "number" ? "numeric" : undefined)}
+        maxLength={maxLength}
         min={min}
+        onBlur={onBlur}
         placeholder={placeholder}
         required={required}
         step={type === "number" ? "1" : undefined}
@@ -4398,8 +4465,15 @@ function Field({
               : event.target.value
           )
         }
-        className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
+        className={`mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-gray-950 ${
+          error ? "border-red-300 bg-red-50/40" : "border-gray-300"
+        }`}
       />
+      {error ? (
+        <span className="mt-1 block text-xs font-medium text-red-700">{error}</span>
+      ) : helper ? (
+        <span className="mt-1 block text-xs leading-5 text-gray-500">{helper}</span>
+      ) : null}
     </label>
   );
 }

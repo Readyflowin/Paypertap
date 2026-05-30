@@ -1,4 +1,5 @@
 import type { Store, StoreCollection } from "@/types/firestore";
+import { buildWhatsAppUrl, normalizeIndianMobileInput } from "@/lib/phone";
 
 export type StoreContactInfo = {
   displayName: string;
@@ -41,11 +42,9 @@ function normalizePhoneForHref(value: string) {
 }
 
 function normalizePhoneForWhatsApp(value: string) {
-  const digits = value.replace(/\D/g, "");
+  const normalized = normalizeIndianMobileInput(value);
 
-  if (!digits) return "";
-  if (digits.length === 10) return `91${digits}`;
-  return digits;
+  return normalized.ok ? normalized.whatsappNumber || "" : "";
 }
 
 function normalizeEmailHref(value: string) {
@@ -217,7 +216,7 @@ export function getStoreContactInfo(store: Store): StoreContactInfo {
     supportPhone,
     supportPhoneHref: normalizePhoneForHref(supportPhone),
     whatsappPhone,
-    whatsappUrl: whatsappNormalized ? `https://wa.me/${whatsappNormalized}` : "",
+    whatsappUrl: whatsappNormalized ? buildWhatsAppUrl(whatsappPhone, "") || "" : "",
     instagramLabel: instagram.label,
     instagramUrl: instagram.url,
   };
