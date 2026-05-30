@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ImageIcon, ShieldCheck, WalletCards } from "lucide-react";
 
 import {
@@ -26,6 +26,13 @@ import {
 } from "@/services/emailEventService";
 import { markCheckoutEmailEventSent } from "@/services/checkoutService";
 import { getProductGridImageUrl } from "@/storefront/imageMedia";
+import {
+  getProductVariants,
+  getVariantDetailsText,
+  isVariantAvailable,
+  productHasVariants,
+  validateSelectedVariant,
+} from "@/lib/productVariants";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
 type CheckoutStep = "details" | "payment";
@@ -141,6 +148,7 @@ function CheckoutLoading() {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { storeSlug = "", productId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuthUser();
 
   const [store, setStore] = useState<Store | null>(null);
@@ -202,10 +210,24 @@ export default function CheckoutPage() {
   }, [authLoading, productId, storeSlug, user?.uid]);
 
   const availableQuantity = product ? getAvailableQuantity(product) : 0;
+  const selectedVariantId = searchParams.get("variantId") || "";
+  const selectedVariant =
+    product && selectedVariantId
+      ? getProductVariants(product).find(
+          (variant) => variant.variantId === selectedVariantId
+        ) || null
+      : null;
+  const variantSelectionRequired = Boolean(product && productHasVariants(product));
+  const variantSelectionValid = !variantSelectionRequired || Boolean(
+    selectedVariant &&
+      validateSelectedVariant(product, selectedVariant.options).isValid &&
+      isVariantAvailable(selectedVariant)
+  );
   const canCheckout =
     Boolean(store?.isPublished) &&
     Boolean(product && isProductBookable(product)) &&
-    !isOwnerPreview;
+    !isOwnerPreview &&
+    variantSelectionValid;
 
   function validateDetails(): { normalizedPhone: string } {
     return validateBuyerDetails({
@@ -248,6 +270,22 @@ export default function CheckoutPage() {
         throw new Error("This item was just reserved. Please choose another product.");
       }
 
+      const latestSelectedVariant = selectedVariantId
+        ? getProductVariants(latestProduct).find(
+            (variant) => variant.variantId === selectedVariantId
+          ) || null
+        : null;
+
+      if (productHasVariants(latestProduct)) {
+        const validation = latestSelectedVariant
+          ? validateSelectedVariant(latestProduct, latestSelectedVariant.options)
+          : { isValid: false, message: "Please select size/color before booking." };
+
+        if (!latestSelectedVariant || !validation.isValid) {
+          throw new Error(validation.message || "Please select size/color before booking.");
+        }
+      }
+
       const paymentInput = {
         sellerId: latestProduct.sellerId,
         storeId: store.storeId,
@@ -259,6 +297,13 @@ export default function CheckoutPage() {
         buyerAddress: buyerAddress.trim(),
         buyerCity: buyerCity.trim(),
         buyerPincode: buyerPincode.trim(),
+        ...(latestSelectedVariant
+          ? {
+              selectedVariantId: latestSelectedVariant.variantId,
+              selectedVariantLabel: latestSelectedVariant.label,
+              selectedVariantOptions: latestSelectedVariant.options,
+            }
+          : {}),
       };
       const result =
         PAYMENT_MODE === "razorpay"
@@ -412,13 +457,17 @@ export default function CheckoutPage() {
                   title={
                     isOwnerPreview
                       ? "Owner preview only"
-                      : "This item is no longer available for booking."
+                      : variantSelectionRequired && !variantSelectionValid
+                        ? "Choose size/color before booking."
+                        : "This item is no longer available for booking."
                   }
                   className="mt-5"
                 >
                   {isOwnerPreview
                     ? "Publish the store before accepting buyer reservations."
-                    : "Please go back to the store and choose another available product."}
+                    : variantSelectionRequired && !variantSelectionValid
+                      ? "Go back to the product page and select an available option."
+                      : "Please go back to the store and choose another available product."}
                 </PptNotice>
               ) : null}
 
@@ -481,6 +530,8 @@ export default function CheckoutPage() {
               storeName={store.storeName}
               imageUrl={productImageUrl}
               availableQuantity={availableQuantity}
+              selectedVariantLabel={selectedVariant?.label}
+              selectedVariantOptions={selectedVariant?.options}
             />
             <PptPriceBreakdown
               productPrice={product.price}
@@ -500,13 +551,21 @@ function ProductSummaryCard({
   storeName,
   imageUrl,
   availableQuantity,
+  selectedVariantLabel,
+  selectedVariantOptions,
 }: {
   product: Product;
   storeName: string;
   imageUrl: string;
   availableQuantity: number;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
 }) {
   const badge = getProductBadge(product, availableQuantity);
+  const variantDetails = getVariantDetailsText({
+    selectedVariantLabel,
+    selectedVariantOptions,
+  });
 
   return (
     <div className="pds-panel">
@@ -540,6 +599,11 @@ function ProductSummaryCard({
           <p className="mt-2 text-xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
             {formatINR(product.price)}
           </p>
+          {variantDetails ? (
+            <p className="mt-2 break-words text-sm font-medium text-[var(--pds-muted)]">
+              {variantDetails}
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <PptBadge tone={badge.tone}>{badge.label}</PptBadge>
             <PptBadge tone="primary">Book for ₹20</PptBadge>

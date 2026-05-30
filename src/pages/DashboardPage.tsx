@@ -57,6 +57,15 @@ import {
 } from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
 import {
+  generateVariantCombinations,
+  getVariantDetailsText,
+  getVariantSummary,
+  normalizeVariantOptions,
+  productHasVariants,
+  type ProductVariant,
+  type ProductVariantOption,
+} from "../lib/productVariants";
+import {
   getCheckoutSessionsBySellerId,
   markBookingCancelled,
   markBookingSold,
@@ -155,6 +164,77 @@ const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
 
 function getProductImage(product: Product): string {
   return getPrimaryProductImage(product) || getProductGridImageUrl(product);
+}
+
+function parseVariantValues(value: string): string[] {
+  const seen = new Set<string>();
+
+  return value
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter((item) => {
+      const key = item.toLocaleLowerCase();
+      if (!item || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 20);
+}
+
+function sanitizeNonNegativeNumberInput(value: string): string {
+  return value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
+}
+
+function getVariantOptionsFromInputs(input: {
+  sizes: string;
+  colors: string;
+}): ProductVariantOption[] {
+  return normalizeVariantOptions([
+    { name: "Size", values: parseVariantValues(input.sizes) },
+    { name: "Color", values: parseVariantValues(input.colors) },
+  ]);
+}
+
+function getVariantValuesInput(product: Product, optionName: "Size" | "Color"): string {
+  const option = normalizeVariantOptions(product.variantOptions).find(
+    (item) => item.name.toLocaleLowerCase() === optionName.toLocaleLowerCase()
+  );
+
+  return option?.values.join(", ") || "";
+}
+
+function getVariantPayload(input: {
+  hasVariants: boolean;
+  sizeValues: string;
+  colorValues: string;
+  variantRows: ProductVariant[];
+}) {
+  const variantOptions = getVariantOptionsFromInputs({
+    sizes: input.sizeValues,
+    colors: input.colorValues,
+  });
+  const variants = input.hasVariants
+    ? generateVariantCombinations(variantOptions, input.variantRows)
+    : [];
+
+  return {
+    hasVariants: Boolean(input.hasVariants && variantOptions.length > 0),
+    variantOptions: input.hasVariants ? variantOptions : [],
+    variants: input.hasVariants ? variants : [],
+    defaultVariantId: variants.find((variant) => variant.isAvailable !== false)?.variantId || "",
+  };
+}
+
+function BookingVariantLine({ booking }: { booking: CheckoutSession }) {
+  const details = getVariantDetailsText(booking);
+
+  if (!details) return null;
+
+  return (
+    <span className="mt-1 block break-words text-xs font-medium text-gray-600">
+      {details}
+    </span>
+  );
 }
 
 function getProductPreviewImages(product: Product): string[] {
@@ -358,6 +438,8 @@ function deriveCustomerLeads(bookings: CheckoutSession[]): DerivedCustomerLead[]
         totalBookings: 1,
         lastProductTitle: booking.productTitle,
         lastProductId: booking.productId,
+        lastVariantLabel: booking.selectedVariantLabel,
+        lastVariantOptions: booking.selectedVariantOptions,
         lastBookingStatus: booking.status,
         lastCreatedAt: booking.createdAt,
       });
@@ -372,6 +454,8 @@ function deriveCustomerLeads(bookings: CheckoutSession[]): DerivedCustomerLead[]
       existing.buyerPincode = booking.buyerPincode || existing.buyerPincode;
       existing.lastProductTitle = booking.productTitle;
       existing.lastProductId = booking.productId;
+      existing.lastVariantLabel = booking.selectedVariantLabel;
+      existing.lastVariantOptions = booking.selectedVariantOptions;
       existing.lastBookingStatus = booking.status;
       existing.lastCreatedAt = booking.createdAt;
     }
@@ -1142,6 +1226,7 @@ function CompactRecentActivity({
                 <div className="min-w-0">
                   <strong>{booking.buyerName || "Buyer"}</strong>
                   <span>{booking.productTitle}</span>
+                  <BookingVariantLine booking={booking} />
                   <small>
                     Collect {formatINR(booking.sellerCollectAmount)} - {getShortDate(booking.createdAt)}
                   </small>
@@ -1445,6 +1530,7 @@ function RecentBookingsCard({
                 <div className="min-w-0">
                   <strong>{booking.buyerName || "Buyer"}</strong>
                   <span>{booking.productTitle}</span>
+                  <BookingVariantLine booking={booking} />
                   <small>
                     {booking.buyerPhone} · Remaining {formatINR(booking.sellerCollectAmount)}
                   </small>
@@ -1651,6 +1737,173 @@ function getCollectionProductCount(
   }).length;
 }
 
+function ProductVariantEditor({
+  colorValues,
+  hasVariants,
+  onColorValuesChange,
+  onHasVariantsChange,
+  onSizeValuesChange,
+  onVariantRowsChange,
+  sizeValues,
+  variantRows,
+}: {
+  colorValues: string;
+  hasVariants: boolean;
+  onColorValuesChange: (value: string) => void;
+  onHasVariantsChange: (value: boolean) => void;
+  onSizeValuesChange: (value: string) => void;
+  onVariantRowsChange: (variants: ProductVariant[]) => void;
+  sizeValues: string;
+  variantRows: ProductVariant[];
+}) {
+  const variantOptions = getVariantOptionsFromInputs({
+    sizes: sizeValues,
+    colors: colorValues,
+  });
+  const variants = hasVariants
+    ? generateVariantCombinations(variantOptions, variantRows)
+    : [];
+  const combinationCount = variantOptions.reduce(
+    (total, option) => total * Math.max(option.values.length, 1),
+    variantOptions.length ? 1 : 0
+  );
+
+  function updateVariant(
+    variantId: string,
+    updates: Pick<ProductVariant, "isAvailable"> | Pick<ProductVariant, "inventoryQuantity">
+  ) {
+    const nextVariants = variants.map((variant) =>
+      variant.variantId === variantId ? { ...variant, ...updates } : variant
+    );
+
+    onVariantRowsChange(nextVariants);
+  }
+
+  return (
+    <section className="grid gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+      <label className="flex min-w-0 items-start gap-3 text-sm font-medium text-gray-900">
+        <input
+          type="checkbox"
+          checked={hasVariants}
+          onChange={(event) => onHasVariantsChange(event.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-gray-300"
+        />
+        <span className="min-w-0">
+          <span className="block">This product has size/color options</span>
+          <span className="mt-1 block text-xs font-normal leading-5 text-gray-500">
+            Keep pricing at product level. Buyers select the exact piece before booking.
+          </span>
+        </span>
+      </label>
+
+      {hasVariants ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium text-gray-800">
+              Sizes
+              <input
+                value={sizeValues}
+                onChange={(event) => onSizeValuesChange(event.target.value)}
+                placeholder="XS, S, M, L, XL"
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
+              />
+              <span className="mt-1 block text-xs leading-5 text-gray-500">
+                Try XS, S, M, L, XL or 28, 30, 32, 34, 36.
+              </span>
+            </label>
+            <label className="text-sm font-medium text-gray-800">
+              Colors
+              <input
+                value={colorValues}
+                onChange={(event) => onColorValuesChange(event.target.value)}
+                placeholder="Black, Blue, Vintage blue"
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
+              />
+              <span className="mt-1 block text-xs leading-5 text-gray-500">
+                Use comma-separated values. Custom names are okay.
+              </span>
+            </label>
+          </div>
+
+          {combinationCount > 100 ? (
+            <PptNotice tone="warning" title="Too many variants">
+              Please keep generated combinations under 100.
+            </PptNotice>
+          ) : null}
+
+          {variants.length ? (
+            <div className="grid gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <PptBadge tone="primary">{variants.length} variants</PptBadge>
+                <span className="text-xs font-medium text-gray-500">
+                  Mark unavailable pieces before saving. Variant quantity controls availability display only; product stock still controls reservation count.
+                </span>
+              </div>
+              <div className="grid max-h-72 gap-2 overflow-y-auto pr-1">
+                {variants.map((variant) => (
+                  <div
+                    key={variant.variantId}
+                    className="grid min-w-0 gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_120px_120px] sm:items-center"
+                  >
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-gray-950">
+                        {variant.label}
+                      </p>
+                      <p className="mt-1 break-words text-xs text-gray-500">
+                        {Object.entries(variant.options)
+                          .map(([name, value]) => `${name}: ${value}`)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={variant.isAvailable !== false}
+                        onChange={(event) =>
+                          updateVariant(variant.variantId, {
+                            isAvailable: event.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      Available
+                    </label>
+                    <label className="text-xs font-medium text-gray-700">
+                      Display qty
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={
+                          typeof variant.inventoryQuantity === "number"
+                            ? String(variant.inventoryQuantity)
+                            : ""
+                        }
+                        onChange={(event) => {
+                          const value = sanitizeNonNegativeNumberInput(event.target.value);
+                          updateVariant(variant.variantId, {
+                            inventoryQuantity: value ? Number(value) : undefined,
+                          });
+                        }}
+                        placeholder="Optional"
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm outline-none focus:border-gray-950"
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs leading-5 text-gray-500">
+              Add at least one size or color to generate options.
+            </p>
+          )}
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 function ProductsTab({
   bookings,
   collections,
@@ -1682,6 +1935,10 @@ function ProductsTab({
   const [collectionSelection, setCollectionSelection] = useState(NO_COLLECTION_VALUE);
   const [inventoryQuantity, setInventoryQuantity] = useState("1");
   const [status, setStatus] = useState<ProductStatus>("open");
+  const [hasVariants, setHasVariants] = useState(false);
+  const [sizeValues, setSizeValues] = useState("");
+  const [colorValues, setColorValues] = useState("");
+  const [variantRows, setVariantRows] = useState<ProductVariant[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
@@ -1808,6 +2065,12 @@ function ProductsTab({
         inventoryQuantity: Number(inventoryQuantity),
         imageFiles,
         status,
+        ...getVariantPayload({
+          hasVariants,
+          sizeValues,
+          colorValues,
+          variantRows,
+        }),
         onProgress: setSaveProgress,
       });
 
@@ -1819,6 +2082,10 @@ function ProductsTab({
       setCollectionSelection(NO_COLLECTION_VALUE);
       setInventoryQuantity("1");
       setStatus("open");
+      setHasVariants(false);
+      setSizeValues("");
+      setColorValues("");
+      setVariantRows([]);
       setImageFiles([]);
       setImageFileName("");
       setShowForm(false);
@@ -1933,6 +2200,17 @@ function ProductsTab({
                 className="mt-2 w-full resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-950"
               />
             </label>
+
+            <ProductVariantEditor
+              hasVariants={hasVariants}
+              onHasVariantsChange={setHasVariants}
+              sizeValues={sizeValues}
+              onSizeValuesChange={setSizeValues}
+              colorValues={colorValues}
+              onColorValuesChange={setColorValues}
+              variantRows={variantRows}
+              onVariantRowsChange={setVariantRows}
+            />
 
             <div>
               <label className="text-sm font-medium text-gray-800">Images</label>
@@ -2471,6 +2749,12 @@ function EditProductForm({
     String(product.inventoryQuantity)
   );
   const [status, setStatus] = useState<ProductStatus>(product.status);
+  const [hasVariants, setHasVariants] = useState(productHasVariants(product));
+  const [sizeValues, setSizeValues] = useState(getVariantValuesInput(product, "Size"));
+  const [colorValues, setColorValues] = useState(getVariantValuesInput(product, "Color"));
+  const [variantRows, setVariantRows] = useState<ProductVariant[]>(
+    product.variants || []
+  );
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(
@@ -2568,6 +2852,12 @@ function EditProductForm({
         inventoryQuantity: requestedInventory,
         status,
         imageFiles,
+        ...getVariantPayload({
+          hasVariants,
+          sizeValues,
+          colorValues,
+          variantRows,
+        }),
         onProgress: setSaveProgress,
       });
 
@@ -2721,6 +3011,17 @@ function EditProductForm({
         />
       </label>
 
+      <ProductVariantEditor
+        hasVariants={hasVariants}
+        onHasVariantsChange={setHasVariants}
+        sizeValues={sizeValues}
+        onSizeValuesChange={setSizeValues}
+        colorValues={colorValues}
+        onColorValuesChange={setColorValues}
+        variantRows={variantRows}
+        onVariantRowsChange={setVariantRows}
+      />
+
       <div>
         <label className="text-sm font-medium text-gray-800">Replace images (up to 3 images max)</label>
         <input
@@ -2867,6 +3168,11 @@ function ProductRow({
               {productImageCount} images
             </span>
           ) : null}
+          {productHasVariants(product) ? (
+            <span className="max-w-full rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+              {getVariantSummary(product)}
+            </span>
+          ) : null}
         </div>
         {product.description ? (
           <p className="mt-2 line-clamp-2 min-w-0 break-words text-xs leading-5 text-gray-500">
@@ -3005,6 +3311,7 @@ function BookingCard({
           <p className="mt-2 break-words text-sm text-gray-600">
             {booking.buyerName} - {booking.buyerPhone}
           </p>
+          <BookingVariantLine booking={booking} />
           <p className="mt-1 text-xs text-gray-500">
             {booking.buyerCity} {booking.buyerPincode} - Created {formatDate(booking.createdAt)}
           </p>
@@ -3049,6 +3356,9 @@ function BookingCard({
 
       <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
         <Metric label="Product price" value={formatINR(booking.productPrice)} />
+        {getVariantDetailsText(booking) ? (
+          <Metric label="Variant" value={getVariantDetailsText(booking)} />
+        ) : null}
         <Metric label="PayPerTap booking fee" value={formatINR(booking.bookingAdvanceAmount)} />
         <Metric label="Collect from buyer" value={formatINR(booking.sellerCollectAmount)} />
       </div>
@@ -3207,6 +3517,17 @@ function CustomerRow({
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
             <span>{customer.totalBookings} booking{customer.totalBookings === 1 ? "" : "s"}</span>
             <span>Last: {customer.lastProductTitle}</span>
+            {getVariantDetailsText({
+              selectedVariantLabel: customer.lastVariantLabel,
+              selectedVariantOptions: customer.lastVariantOptions,
+            }) ? (
+              <span>
+                {getVariantDetailsText({
+                  selectedVariantLabel: customer.lastVariantLabel,
+                  selectedVariantOptions: customer.lastVariantOptions,
+                })}
+              </span>
+            ) : null}
             <span>{getShortDate(customer.lastCreatedAt)}</span>
           </div>
         </div>
@@ -3248,6 +3569,7 @@ function CustomerRow({
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm"
                 >
                   <span className="font-medium text-gray-950">{booking.productTitle}</span>
+                  <BookingVariantLine booking={booking} />
                   <span className="text-xs text-gray-500">{formatDate(booking.createdAt)}</span>
                   <PptBadge tone={getCheckoutStatusTone(booking.status)}>
                     {getStatusLabel(booking.status)}

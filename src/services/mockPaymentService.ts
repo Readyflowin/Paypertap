@@ -1,5 +1,6 @@
 import {
   createCheckoutSessionWithReservation,
+  getCheckoutSessionById,
   type CreateCheckoutSessionInput,
 } from "./checkoutService";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
@@ -30,6 +31,13 @@ export function buildCheckoutSession(
     buyerAddress: input.buyerAddress.trim(),
     buyerCity: input.buyerCity.trim(),
     buyerPincode: input.buyerPincode.trim(),
+    ...(input.selectedVariantId
+      ? {
+          selectedVariantId: input.selectedVariantId,
+          selectedVariantLabel: input.selectedVariantLabel || "",
+          selectedVariantOptions: input.selectedVariantOptions || {},
+        }
+      : {}),
     status: "booking_paid",
     whatsappOpened: false,
     reservationApplied: true,
@@ -50,7 +58,8 @@ export async function startMockBookingPayment(
 }> {
   // TODO: Replace this with backend Razorpay order + payment verification later.
   const checkoutId = await createCheckoutSessionWithReservation(input);
-  const checkoutSession = buildCheckoutSession(input, checkoutId);
+  const checkoutSession =
+    (await getCheckoutSessionById(checkoutId)) || buildCheckoutSession(input, checkoutId);
 
   return {
     success: true,

@@ -1,4 +1,5 @@
 import { BOOKING_ADVANCE_AMOUNT } from "../lib/money";
+import { getVariantDetailsText } from "../lib/productVariants";
 import type { CheckoutSession, DerivedCustomerLead, Product, Store } from "../types/firestore";
 
 type BuyerBookingInput = {
@@ -13,6 +14,9 @@ type BuyerBookingInput = {
   buyerAddress: string;
   buyerCity: string;
   buyerPincode: string;
+  selectedVariantId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
 };
 
 type SellerMessageInput = {
@@ -21,6 +25,8 @@ type SellerMessageInput = {
   sellerCollectAmount: number;
   bookingAdvanceAmount?: number;
   sellerUpiId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
 };
 
 type RetargetingInput = {
@@ -73,15 +79,17 @@ function buildWhatsAppUrl(phone: string | null, message: string): string {
 
 export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
   const productUrl = `${getOrigin()}/${input.storeSlug}/product/${input.productId}`;
+  const variantDetails = getVariantDetailsText(input);
 
   return [
-    "Hi, I just booked this item from your PayPerTap store.",
+    "Hi, I booked this product on PayPerTap:",
     "",
     `Product: ${input.productTitle}`,
+    ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     `Product link: ${productUrl}`,
-    `Product price: ₹${input.productPrice}`,
-    `₹20 booking paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
-    `Remaining amount: ₹${input.sellerCollectAmount}`,
+    `Price: ₹${input.productPrice}`,
+    `Booking paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
+    `Remaining: ₹${input.sellerCollectAmount}`,
     "",
     "My details:",
     `Name: ${input.buyerName}`,
@@ -104,8 +112,10 @@ export function buildBuyerBookingWhatsAppUrl(
 export function buildSellerPaymentCollectionMessage(
   input: SellerMessageInput
 ): string {
+  const variantDetails = getVariantDetailsText(input);
   const base = [
     `Hi ${input.buyerName}, thanks for booking ${input.productTitle} from our PayPerTap store.`,
+    ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     "",
     `Your ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT} booking via PayPerTap is recorded.`,
     `Remaining amount: ₹${input.sellerCollectAmount}.`,
@@ -130,8 +140,11 @@ export function buildSellerPaymentCollectionMessage(
 }
 
 export function buildDeliveryDetailsMessage(input: SellerMessageInput): string {
+  const variantDetails = getVariantDetailsText(input);
+
   return [
     `Hi ${input.buyerName}, please confirm your delivery details:`,
+    ...(variantDetails ? [`Product option: ${variantDetails}`] : []),
     "",
     "Name:",
     "Phone:",
@@ -144,10 +157,13 @@ export function buildDeliveryDetailsMessage(input: SellerMessageInput): string {
 }
 
 export function buildOrderConfirmedMessage(input: SellerMessageInput): string {
+  const variantDetails = getVariantDetailsText(input);
+
   return [
     "Your order is confirmed. Thank you for shopping with us.",
     "",
     `Product: ${input.productTitle}`,
+    ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     "",
     "We will update you shortly with delivery details.",
   ].join("\n");
@@ -208,6 +224,8 @@ export function checkoutToSellerMessageInput(
     productTitle: checkoutSession.productTitle,
     sellerCollectAmount: checkoutSession.sellerCollectAmount,
     bookingAdvanceAmount: checkoutSession.bookingAdvanceAmount,
+    selectedVariantLabel: checkoutSession.selectedVariantLabel,
+    selectedVariantOptions: checkoutSession.selectedVariantOptions,
     sellerUpiId: getStoreUpiId(store),
   };
 }

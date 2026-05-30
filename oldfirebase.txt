@@ -1,3 +1,5 @@
+//old rules_version
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -25,6 +27,14 @@ service cloud.firestore {
 
     function isValidString(value) {
       return value is string && value.size() > 0 && value.size() <= 500;
+    }
+
+    function isValidOptionalString(value) {
+      return value == null || (value is string && value.size() <= 1000);
+    }
+
+    function isValidOptionalShortString(value) {
+      return value == null || (value is string && value.size() <= 200);
     }
 
     function isValidPhone(value) {
@@ -104,6 +114,10 @@ service cloud.firestore {
       ];
     }
 
+    function isValidPaymentStatus(value) {
+      return value in ["pending", "booking_paid", "failed", "refunded"];
+    }
+
     function isValidWhatsappStatus(value) {
       return value in ["not_opened", "opened", "message_sent"];
     }
@@ -118,6 +132,31 @@ service cloud.firestore {
 
     function isValidCollectionDescription(value) {
       return value is string && value.size() <= 500;
+    }
+
+    function isDurableImageUrl(value) {
+      return value is string
+        && value.size() > 0
+        && value.size() <= 3000
+        && value.matches('^https://.+');
+    }
+
+    function isValidOptionalUrl(value) {
+      return value == null
+        || (
+          value is string
+          && (
+            value.size() == 0
+            || (
+              value.size() <= 3000
+              && value.matches('^https://.+')
+            )
+          )
+        );
+    }
+
+    function isValidImageListLoose(value) {
+      return value is list && value.size() <= 3;
     }
 
     function hasValidCollectionFields(data, storeId, collectionId) {
@@ -194,320 +233,6 @@ service cloud.firestore {
         && data.reservedQuantity + data.soldQuantity <= data.inventoryQuantity;
     }
 
-    function isValidImageUrl(value) {
-      return value is string
-        && value.size() > 0
-        && value.size() <= 3000
-        && value.matches("https://.*");
-    }
-
-    function isValidOptionalImageUrl(image, field) {
-      return !(field in image)
-        || image[field] == null
-        || image[field] == ""
-        || isValidImageUrl(image[field]);
-    }
-
-    function hasDurableProductImageUrl(image) {
-      return ("url" in image && isValidImageUrl(image.url))
-        || ("publicUrl" in image && isValidImageUrl(image.publicUrl))
-        || ("imageUrl" in image && isValidImageUrl(image.imageUrl));
-    }
-
-    function isValidOptionalImageString(image, field) {
-      return !(field in image)
-        || (
-          image[field] is string
-          && image[field].size() <= 1000
-        );
-    }
-
-    function isValidOptionalImageText(image, field) {
-      return !(field in image)
-        || (
-          image[field] is string
-          && image[field].size() <= 500
-        );
-    }
-
-    function isValidOptionalImageNumber(image, field) {
-      return !(field in image)
-        || (
-          (image[field] is int || image[field] is float)
-          && image[field] >= 0
-          && image[field] <= 100000000
-        );
-    }
-
-    function isValidOptionalImageSize(image, field) {
-      return !(field in image)
-        || (
-          image[field] is int
-          && image[field] >= 0
-          && image[field] <= 10000000
-        );
-    }
-
-    function isValidProductImage(image) {
-      return image is map
-        && image.keys().hasOnly([
-          "id",
-          "url",
-          "publicUrl",
-          "imageUrl",
-          "thumbnailUrl",
-          "thumbUrl",
-          "mediumUrl",
-          "path",
-          "key",
-          "thumbKey",
-          "name",
-          "originalName",
-          "alt",
-          "width",
-          "height",
-          "size",
-          "sizeBytes",
-          "mimeType",
-          "sortOrder",
-          "uploadedAt"
-        ])
-        && hasDurableProductImageUrl(image)
-        && isValidOptionalImageUrl(image, "url")
-        && isValidOptionalImageUrl(image, "publicUrl")
-        && isValidOptionalImageUrl(image, "imageUrl")
-        && isValidOptionalImageUrl(image, "thumbnailUrl")
-        && isValidOptionalImageUrl(image, "thumbUrl")
-        && isValidOptionalImageUrl(image, "mediumUrl")
-        && isValidOptionalImageString(image, "id")
-        && isValidOptionalImageString(image, "path")
-        && isValidOptionalImageString(image, "key")
-        && isValidOptionalImageString(image, "thumbKey")
-        && isValidOptionalImageString(image, "name")
-        && isValidOptionalImageString(image, "originalName")
-        && isValidOptionalImageText(image, "alt")
-        && isValidOptionalImageNumber(image, "width")
-        && isValidOptionalImageNumber(image, "height")
-        && isValidOptionalImageSize(image, "size")
-        && isValidOptionalImageSize(image, "sizeBytes")
-        && (
-          !("mimeType" in image)
-          || image.mimeType in ["image/jpeg", "image/png", "image/webp", "image/gif"]
-        )
-        && (
-          !("sortOrder" in image)
-          || (
-            image.sortOrder is int
-            && image.sortOrder >= 0
-            && image.sortOrder <= 2
-          )
-        )
-        && (
-          !("uploadedAt" in image)
-          || image.uploadedAt is timestamp
-        );
-    }
-
-    function hasValidProductImages(data) {
-      return !("images" in data)
-        || (
-          data.images is list
-          && data.images.size() <= 3
-          && (data.images.size() < 1 || isValidProductImage(data.images[0]))
-          && (data.images.size() < 2 || isValidProductImage(data.images[1]))
-          && (data.images.size() < 3 || isValidProductImage(data.images[2]))
-        );
-    }
-
-    function hasValidProductVariants(data) {
-      return (
-          !("hasVariants" in data)
-          || data.hasVariants is bool
-        )
-        && (
-          !("variantOptions" in data)
-          || (
-            data.variantOptions is list
-            && data.variantOptions.size() <= 2
-          )
-        )
-        && (
-          !("variants" in data)
-          || (
-            data.variants is list
-            && data.variants.size() <= 100
-          )
-        )
-        && (
-          !("defaultVariantId" in data)
-          || data.defaultVariantId is string
-        );
-    }
-
-    function hasValidSelectedVariantFields(data) {
-      return (
-          !("selectedVariantId" in data)
-          || data.selectedVariantId is string
-        )
-        && (
-          !("selectedVariantLabel" in data)
-          || data.selectedVariantLabel is string
-        )
-        && (
-          !("selectedVariantOptions" in data)
-          || data.selectedVariantOptions is map
-        );
-    }
-
-    function hasNoSelectedVariantFields(data) {
-      return !("selectedVariantId" in data)
-        && !("selectedVariantLabel" in data)
-        && !("selectedVariantOptions" in data);
-    }
-
-    function checkoutVariantFieldsAreSafe(data) {
-      return (
-          !("hasVariants" in productData(data.productId))
-          || productData(data.productId).hasVariants != true
-        )
-        && hasNoSelectedVariantFields(data);
-    }
-
-    function selectedVariantFieldsUnchanged() {
-      return (
-          (
-            !("selectedVariantId" in resource.data)
-            && !("selectedVariantId" in request.resource.data)
-          )
-          || (
-            ("selectedVariantId" in resource.data)
-            && ("selectedVariantId" in request.resource.data)
-            && request.resource.data.selectedVariantId == resource.data.selectedVariantId
-          )
-        )
-        && (
-          (
-            !("selectedVariantLabel" in resource.data)
-            && !("selectedVariantLabel" in request.resource.data)
-          )
-          || (
-            ("selectedVariantLabel" in resource.data)
-            && ("selectedVariantLabel" in request.resource.data)
-            && request.resource.data.selectedVariantLabel == resource.data.selectedVariantLabel
-          )
-        )
-        && (
-          (
-            !("selectedVariantOptions" in resource.data)
-            && !("selectedVariantOptions" in request.resource.data)
-          )
-          || (
-            ("selectedVariantOptions" in resource.data)
-            && ("selectedVariantOptions" in request.resource.data)
-            && request.resource.data.selectedVariantOptions == resource.data.selectedVariantOptions
-          )
-        );
-    }
-
-    function productAvailableFromData(data) {
-      return data.inventoryQuantity - data.reservedQuantity - data.soldQuantity;
-    }
-
-    function productAfterReservation(productId) {
-      return getAfter(/databases/$(database)/documents/products/$(productId)).data;
-    }
-
-    function publicReservationNextStatus() {
-      return resource.data.inventoryQuantity
-        - (resource.data.reservedQuantity + 1)
-        - resource.data.soldQuantity > 0
-          ? "open"
-          : "hold";
-    }
-
-    function productStatusForInventory(data) {
-      return data.inventoryQuantity > 0
-        && data.soldQuantity >= data.inventoryQuantity
-          ? "sold"
-          : productAvailableFromData(data) > 0
-            ? "open"
-            : data.reservedQuantity > 0
-              ? "hold"
-              : "open";
-    }
-
-    function isValidPublicReservationUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "reservedQuantity",
-          "status",
-          "updatedAt"
-        ])
-        && resource.data.status == "open"
-        && isPublishedStore(resource.data.storeId)
-        && hasValidInventoryFields(resource.data)
-        && productAvailableFromData(resource.data) > 0
-        && request.resource.data.inventoryQuantity == resource.data.inventoryQuantity
-        && request.resource.data.soldQuantity == resource.data.soldQuantity
-        && request.resource.data.reservedQuantity == resource.data.reservedQuantity + 1
-        && request.resource.data.status == publicReservationNextStatus()
-        && request.resource.data.updatedAt == request.time;
-    }
-
-    function isValidSellerInventoryTransition() {
-      return isOwner(resource.data.sellerId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "reservedQuantity",
-          "soldQuantity",
-          "status",
-          "updatedAt"
-        ])
-        && hasValidInventoryFields(resource.data)
-        && hasValidInventoryFields(request.resource.data)
-        && resource.data.reservedQuantity > 0
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.status == productStatusForInventory(request.resource.data)
-        && (
-          (
-            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
-            && request.resource.data.soldQuantity == resource.data.soldQuantity + 1
-          )
-          || (
-            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
-            && request.resource.data.soldQuantity == resource.data.soldQuantity
-          )
-        );
-    }
-
-    function checkoutHasValidReservationFields(data, checkoutId) {
-      return data.checkoutId == checkoutId
-        && data.status == "booking_paid"
-        && data.whatsappOpened == false
-        && data.reservationApplied == true
-        && data.reservedProductId == data.productId
-        && data.reservedQuantity == 1;
-    }
-
-    function checkoutMatchesReservedProduct(data) {
-      let beforeProduct = productData(data.productId);
-      let afterProduct = productAfterReservation(data.productId);
-
-      return data.sellerId == beforeProduct.sellerId
-        && data.storeId == beforeProduct.storeId
-        && data.productTitle == beforeProduct.title
-        && data.productPrice == beforeProduct.price
-        && afterProduct.inventoryQuantity == beforeProduct.inventoryQuantity
-        && afterProduct.soldQuantity == beforeProduct.soldQuantity
-        && afterProduct.reservedQuantity == beforeProduct.reservedQuantity + 1
-        && afterProduct.status ==
-          (
-            beforeProduct.inventoryQuantity
-            - (beforeProduct.reservedQuantity + 1)
-            - beforeProduct.soldQuantity > 0
-              ? "open"
-              : "hold"
-          );
-    }
-
     function isOpenProductInPublishedStore(productId, storeId) {
       return productExists(productId)
         && productData(productId).storeId == storeId
@@ -534,15 +259,6 @@ service cloud.firestore {
         && slugReservationData(slug).sellerId == request.auth.uid;
     }
 
-    function hasValidSellerEmailEvents(data) {
-      return data is map
-        && data.keys().hasOnly(["welcomeSentAt"])
-        && (
-          !("welcomeSentAt" in data)
-          || data.welcomeSentAt is timestamp
-        );
-    }
-
     function hasOnlySellerMutableFields() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         "name",
@@ -553,8 +269,37 @@ service cloud.firestore {
         "profileImageUrl",
         "onboardingStatus",
         "onboardingStep",
-        "updatedAt",
-        "emailEvents"
+        "updatedAt"
+      ]);
+    }
+
+    function hasOnlyStoreMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "storeName",
+        "storeDescription",
+        "description",
+        "bio",
+        "phone",
+        "whatsappPhone",
+        "logoUrl",
+        "storeLogoUrl",
+        "heroTitle",
+        "heroSubtitle",
+        "heroImageUrl",
+        "instagramProfile",
+        "instagramUrl",
+        "themeId",
+        "primaryColor",
+        "secondaryColor",
+        "accentColor",
+        "isPublished",
+        "bookingAdvanceAmount",
+        "paymentMethods",
+        "upiId",
+        "googlePayNumber",
+        "phonePeNumber",
+        "paymentNote",
+        "updatedAt"
       ]);
     }
 
@@ -573,6 +318,150 @@ service cloud.firestore {
         "notes",
         "updatedAt"
       ]);
+    }
+
+    function hasOnlyCheckoutSellerMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "status",
+        "whatsappOpened",
+        "whatsappStatus",
+        "sellerNotes",
+        "updatedAt"
+      ]);
+    }
+
+    function hasValidStoreCreateKeys(data) {
+      return data.keys().hasOnly([
+        "storeId",
+        "sellerId",
+        "storeSlug",
+        "storeName",
+        "storeDescription",
+        "description",
+        "bio",
+        "phone",
+        "whatsappPhone",
+        "logoUrl",
+        "storeLogoUrl",
+        "heroTitle",
+        "heroSubtitle",
+        "heroImageUrl",
+        "instagramProfile",
+        "instagramUrl",
+        "themeId",
+        "primaryColor",
+        "secondaryColor",
+        "accentColor",
+        "isPublished",
+        "bookingAdvanceAmount",
+        "paymentMethods",
+        "upiId",
+        "googlePayNumber",
+        "phonePeNumber",
+        "paymentNote",
+        "createdAt",
+        "updatedAt"
+      ]);
+    }
+
+    function hasValidStoreOptionalFields(data) {
+      return (
+          !("storeDescription" in data)
+          || isValidOptionalString(data.storeDescription)
+        )
+        && (
+          !("description" in data)
+          || isValidOptionalString(data.description)
+        )
+        && (
+          !("bio" in data)
+          || isValidOptionalString(data.bio)
+        )
+        && (
+          !("phone" in data)
+          || isValidOptionalString(data.phone)
+        )
+        && (
+          !("whatsappPhone" in data)
+          || isValidOptionalString(data.whatsappPhone)
+        )
+        && (
+          !("logoUrl" in data)
+          || isValidOptionalUrl(data.logoUrl)
+        )
+        && (
+          !("storeLogoUrl" in data)
+          || isValidOptionalUrl(data.storeLogoUrl)
+        )
+        && (
+          !("heroTitle" in data)
+          || isValidOptionalString(data.heroTitle)
+        )
+        && (
+          !("heroSubtitle" in data)
+          || isValidOptionalString(data.heroSubtitle)
+        )
+        && (
+          !("heroImageUrl" in data)
+          || isValidOptionalUrl(data.heroImageUrl)
+        )
+        && (
+          !("instagramProfile" in data)
+          || isValidOptionalString(data.instagramProfile)
+        )
+        && (
+          !("instagramUrl" in data)
+          || isValidOptionalString(data.instagramUrl)
+        )
+        && (
+          !("themeId" in data)
+          || data.themeId is string
+        )
+        && (
+          !("primaryColor" in data)
+          || data.primaryColor is string
+        )
+        && (
+          !("secondaryColor" in data)
+          || data.secondaryColor is string
+        )
+        && (
+          !("accentColor" in data)
+          || data.accentColor is string
+        )
+        && (
+          !("bookingAdvanceAmount" in data)
+          || isPhaseOneBookingAmount(data.bookingAdvanceAmount)
+        )
+        && (
+          !("paymentMethods" in data)
+          || data.paymentMethods is list
+          || data.paymentMethods is map
+        )
+        && (
+          !("upiId" in data)
+          || isValidOptionalString(data.upiId)
+        )
+        && (
+          !("googlePayNumber" in data)
+          || isValidOptionalString(data.googlePayNumber)
+        )
+        && (
+          !("phonePeNumber" in data)
+          || isValidOptionalString(data.phonePeNumber)
+        )
+        && (
+          !("paymentNote" in data)
+          || isValidOptionalString(data.paymentNote)
+        )
+        && (
+          !("createdAt" in data)
+          || data.createdAt is timestamp
+        )
+        && (
+          !("updatedAt" in data)
+          || data.updatedAt is timestamp
+        );
     }
 
     // =========================================================
@@ -597,8 +486,8 @@ service cloud.firestore {
         && isValidOnboardingStatus(request.resource.data.onboardingStatus)
         && isValidOnboardingStep(request.resource.data.onboardingStep)
         && (
-          !("emailEvents" in request.resource.data)
-          || hasValidSellerEmailEvents(request.resource.data.emailEvents)
+          !("profileImageUrl" in request.resource.data)
+          || isValidOptionalUrl(request.resource.data.profileImageUrl)
         )
         && hasOnlySellerMutableFields();
 
@@ -634,6 +523,7 @@ service cloud.firestore {
         || isAdmin();
 
       allow create: if signedIn()
+        && hasValidStoreCreateKeys(request.resource.data)
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.storeId == storeId
         && request.resource.data.storeSlug == storeId
@@ -644,10 +534,7 @@ service cloud.firestore {
         && request.resource.data.primaryColor is string
         && request.resource.data.secondaryColor is string
         && request.resource.data.accentColor is string
-        && (
-          !("bookingAdvanceAmount" in request.resource.data)
-          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        );
+        && hasValidStoreOptionalFields(request.resource.data);
 
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
@@ -655,10 +542,8 @@ service cloud.firestore {
         && request.resource.data.storeSlug == resource.data.storeSlug
         && isValidString(request.resource.data.storeName)
         && request.resource.data.isPublished is bool
-        && (
-          !("bookingAdvanceAmount" in request.resource.data)
-          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        );
+        && hasOnlyStoreMutableFields()
+        && hasValidStoreOptionalFields(request.resource.data);
 
       allow delete: if isAdmin();
     }
@@ -696,6 +581,10 @@ service cloud.firestore {
 
     // =========================================================
     // PRODUCTS
+    // Seller manages own products.
+    // Product images are intentionally loose here:
+    // allow up to 3 image objects/strings, because the app/Cloudflare
+    // upload payload can contain changing metadata.
     // =========================================================
 
     match /products/{productId} {
@@ -710,9 +599,15 @@ service cloud.firestore {
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.storeId is string
         && isStoreOwner(request.resource.data.storeId)
+        && (
+          !("productId" in request.resource.data)
+          || request.resource.data.productId == productId
+        )
         && isValidString(request.resource.data.title)
         && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
         && request.resource.data.category is string
+        && request.resource.data.category.size() <= 120
         && isValidPositiveAmount(request.resource.data.price)
         && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
         && isValidAmount(request.resource.data.sellerCollectAmount)
@@ -722,132 +617,113 @@ service cloud.firestore {
         && request.resource.data.isFeatured is bool
         && request.resource.data.sortOrder is int
         && hasValidInventoryFields(request.resource.data)
-        && hasValidProductImages(request.resource.data)
-        && hasValidProductVariants(request.resource.data);
-
-      allow update: if (
-          isOwner(resource.data.sellerId)
-          && request.resource.data.sellerId == resource.data.sellerId
-          && request.resource.data.storeId == resource.data.storeId
-          && isValidString(request.resource.data.title)
-          && request.resource.data.description is string
-          && request.resource.data.category is string
-          && isValidPositiveAmount(request.resource.data.price)
-          && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-          && isValidAmount(request.resource.data.sellerCollectAmount)
-          && request.resource.data.sellerCollectAmount ==
-            request.resource.data.price - phaseOneBookingAdvance()
-          && isValidProductStatus(request.resource.data.status)
-          && request.resource.data.isFeatured is bool
-          && request.resource.data.sortOrder is int
-          && hasValidInventoryFields(request.resource.data)
-          && hasValidProductImages(request.resource.data)
-          && hasValidProductVariants(request.resource.data)
+        && (
+          !("images" in request.resource.data)
+          || isValidImageListLoose(request.resource.data.images)
         )
-        || isValidPublicReservationUpdate()
-        || isValidSellerInventoryTransition();
+        && (
+          !("imageUrl" in request.resource.data)
+          || isValidOptionalUrl(request.resource.data.imageUrl)
+        )
+        && (
+          !("thumbnailUrl" in request.resource.data)
+          || isValidOptionalUrl(request.resource.data.thumbnailUrl)
+        );
+
+      allow update: if isOwner(resource.data.sellerId)
+        && request.resource.data.sellerId == resource.data.sellerId
+        && request.resource.data.storeId == resource.data.storeId
+        && (
+          !("productId" in resource.data)
+          || request.resource.data.productId == resource.data.productId
+        )
+        && request.resource.data.reservedQuantity == resource.data.reservedQuantity
+        && request.resource.data.soldQuantity == resource.data.soldQuantity
+        && isValidString(request.resource.data.title)
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.category is string
+        && request.resource.data.category.size() <= 120
+        && isValidPositiveAmount(request.resource.data.price)
+        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
+        && isValidAmount(request.resource.data.sellerCollectAmount)
+        && request.resource.data.sellerCollectAmount ==
+          request.resource.data.price - phaseOneBookingAdvance()
+        && isValidProductStatus(request.resource.data.status)
+        && request.resource.data.isFeatured is bool
+        && request.resource.data.sortOrder is int
+        && hasValidInventoryFields(request.resource.data)
+        && (
+          !("images" in request.resource.data)
+          || isValidImageListLoose(request.resource.data.images)
+        )
+        && (
+          !("imageUrl" in request.resource.data)
+          || isValidOptionalUrl(request.resource.data.imageUrl)
+        )
+        && (
+          !("thumbnailUrl" in request.resource.data)
+          || isValidOptionalUrl(request.resource.data.thumbnailUrl)
+        );
 
       allow delete: if isOwner(resource.data.sellerId) || isAdmin();
     }
 
     // =========================================================
     // CHECKOUT SESSIONS
+    // Backend/Admin creates paid sessions only after verified Razorpay payment.
+    // Browser cannot create booking_paid checkout sessions.
+    // Seller can only update operational follow-up fields.
     // =========================================================
 
     match /checkoutSessions/{checkoutId} {
-      allow create: if
-        request.resource.data.keys().hasOnly([
-          "checkoutId",
-          "sellerId",
-          "storeId",
-          "productId",
-          "productTitle",
-          "productPrice",
-          "bookingAdvanceAmount",
-          "sellerCollectAmount",
-          "buyerName",
-          "buyerEmail",
-          "buyerPhone",
-          "buyerAddress",
-          "buyerCity",
-          "buyerPincode",
-          "status",
-          "whatsappOpened",
-          "reservationApplied",
-          "reservedProductId",
-          "reservedQuantity",
-          "selectedVariantId",
-          "selectedVariantLabel",
-          "selectedVariantOptions",
-          "createdAt",
-          "updatedAt"
-        ])
-        && request.resource.data.keys().hasAll([
-          "checkoutId",
-          "sellerId",
-          "storeId",
-          "productId",
-          "productTitle",
-          "productPrice",
-          "bookingAdvanceAmount",
-          "sellerCollectAmount",
-          "buyerName",
-          "buyerPhone",
-          "buyerAddress",
-          "buyerCity",
-          "buyerPincode",
-          "status",
-          "whatsappOpened",
-          "reservationApplied",
-          "reservedProductId",
-          "reservedQuantity",
-          "createdAt",
-          "updatedAt"
-        ])
-        && checkoutHasValidReservationFields(request.resource.data, checkoutId)
-        && request.resource.data.sellerId == storeOwner(request.resource.data.storeId)
-        && isOpenProductInPublishedStore(
-          request.resource.data.productId,
-          request.resource.data.storeId
-        )
-        && checkoutMatchesReservedProduct(request.resource.data)
-        && request.resource.data.productTitle is string
-        && isValidPositiveAmount(request.resource.data.productPrice)
-        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        && isValidAmount(request.resource.data.sellerCollectAmount)
-        && request.resource.data.sellerCollectAmount ==
-          request.resource.data.productPrice - phaseOneBookingAdvance()
-        && request.resource.data.buyerName is string
-        && (
-          !("buyerEmail" in request.resource.data)
-          || request.resource.data.buyerEmail is string
-        )
-        && isValidPhone(request.resource.data.buyerPhone)
-        && request.resource.data.buyerAddress is string
-        && request.resource.data.buyerCity is string
-        && isValidPincode(request.resource.data.buyerPincode)
-        && hasValidSelectedVariantFields(request.resource.data)
-        && checkoutVariantFieldsAreSafe(request.resource.data)
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+      allow create: if false;
 
       allow read: if isOwner(resource.data.sellerId) || isAdmin();
 
       allow update: if isOwner(resource.data.sellerId)
+        && hasOnlyCheckoutSellerMutableFields()
         && request.resource.data.sellerId == resource.data.sellerId
         && request.resource.data.storeId == resource.data.storeId
         && request.resource.data.productId == resource.data.productId
-        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
+        && request.resource.data.productTitle == resource.data.productTitle
         && request.resource.data.productPrice == resource.data.productPrice
+        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
         && request.resource.data.sellerCollectAmount == resource.data.sellerCollectAmount
-        && selectedVariantFieldsUnchanged()
-        && isValidCheckoutStatus(request.resource.data.status);
+        && request.resource.data.buyerName == resource.data.buyerName
+        && request.resource.data.buyerPhone == resource.data.buyerPhone
+        && request.resource.data.buyerAddress == resource.data.buyerAddress
+        && request.resource.data.buyerCity == resource.data.buyerCity
+        && request.resource.data.buyerPincode == resource.data.buyerPincode
+        && (
+          !("buyerEmail" in resource.data)
+          || request.resource.data.buyerEmail == resource.data.buyerEmail
+        )
+        && isValidCheckoutStatus(request.resource.data.status)
+        && (
+          !("whatsappOpened" in request.resource.data)
+          || request.resource.data.whatsappOpened is bool
+        )
+        && (
+          !("whatsappStatus" in request.resource.data)
+          || isValidWhatsappStatus(request.resource.data.whatsappStatus)
+        )
+        && (
+          !("sellerNotes" in request.resource.data)
+          || request.resource.data.sellerNotes is string
+        )
+        && (
+          !("updatedAt" in request.resource.data)
+          || request.resource.data.updatedAt is timestamp
+        );
 
       allow delete: if isAdmin();
     }
 
     // =========================================================
     // ORDERS / BOOKINGS
+    // Backend creates orders after verified ₹20 booking payment.
+    // Seller can read and update only operational status fields.
     // =========================================================
 
     match /orders/{orderId} {
@@ -872,6 +748,8 @@ service cloud.firestore {
 
     // =========================================================
     // CUSTOMERS / LEADS
+    // Backend creates/updates customer records from paid bookings.
+    // Seller can read and tag/note customers.
     // =========================================================
 
     match /customers/{customerId} {
@@ -888,6 +766,7 @@ service cloud.firestore {
 
     // =========================================================
     // PAYMENTS
+    // Backend/webhook only. Frontend never writes payment records.
     // =========================================================
 
     match /payments/{paymentId} {
@@ -898,12 +777,25 @@ service cloud.firestore {
 
     // =========================================================
     // EVENTS
+    // Public can create limited analytics events only for published stores.
+    // These events are not trusted payment/order records.
     // =========================================================
 
     match /events/{eventId} {
-      allow create: if
-        request.resource.data.sellerId is string
+      allow create: if request.resource.data.keys().hasOnly([
+          "sellerId",
+          "storeId",
+          "productId",
+          "checkoutId",
+          "eventType",
+          "page",
+          "source",
+          "createdAt"
+        ])
+        && request.resource.data.sellerId is string
         && request.resource.data.storeId is string
+        && isPublishedStore(request.resource.data.storeId)
+        && request.resource.data.sellerId == storeOwner(request.resource.data.storeId)
         && request.resource.data.eventType in [
           "store_view",
           "product_click",
@@ -912,7 +804,33 @@ service cloud.firestore {
           "payment_initiated",
           "booking_paid",
           "whatsapp_open"
-        ];
+        ]
+        && (
+          !("productId" in request.resource.data)
+          || (
+            request.resource.data.productId is string
+            && productExists(request.resource.data.productId)
+            && productData(request.resource.data.productId).storeId == request.resource.data.storeId
+            && productData(request.resource.data.productId).sellerId == request.resource.data.sellerId
+            && isPublicProductStatus(productData(request.resource.data.productId).status)
+          )
+        )
+        && (
+          !("checkoutId" in request.resource.data)
+          || request.resource.data.checkoutId is string
+        )
+        && (
+          !("page" in request.resource.data)
+          || isValidOptionalString(request.resource.data.page)
+        )
+        && (
+          !("source" in request.resource.data)
+          || isValidOptionalString(request.resource.data.source)
+        )
+        && (
+          !("createdAt" in request.resource.data)
+          || request.resource.data.createdAt == request.time
+        );
 
       allow read: if isOwner(resource.data.sellerId) || isAdmin();
 

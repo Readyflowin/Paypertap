@@ -41,6 +41,7 @@ type RazorpayOptions = {
     sellerId: string;
     storeId: string;
     productId: string;
+    selectedVariantId?: string;
   };
   theme: {
     color: string;
@@ -140,6 +141,9 @@ function openRazorpayCheckout(
         sellerId: input.sellerId,
         storeId: input.storeId,
         productId: input.productId,
+        ...(input.selectedVariantId
+          ? { selectedVariantId: input.selectedVariantId }
+          : {}),
       },
       theme: {
         color: "#7c3aed",
@@ -186,6 +190,13 @@ export async function startRazorpayBookingPayment(
     buyerAddress: input.buyerAddress,
     buyerCity: input.buyerCity,
     buyerPincode: input.buyerPincode,
+    ...(input.selectedVariantId
+      ? {
+          selectedVariantId: input.selectedVariantId,
+          selectedVariantLabel: input.selectedVariantLabel || "",
+          selectedVariantOptions: input.selectedVariantOptions || {},
+        }
+      : {}),
     ...(input.buyerEmail ? { buyerEmail: input.buyerEmail } : {}),
   };
 

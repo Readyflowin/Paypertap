@@ -20,6 +20,12 @@ import {
   getProductImageUrls,
   normalizeProductImages,
 } from "../lib/imageUrls";
+import {
+  generateVariantCombinations,
+  normalizeVariantOptions,
+  type ProductVariant,
+  type ProductVariantOption,
+} from "../lib/productVariants";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
 import { uploadProductImages } from "./uploadService";
 
@@ -34,6 +40,10 @@ type CreateSellerProductInput = {
   inventoryQuantity?: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  hasVariants?: boolean;
+  variantOptions?: ProductVariantOption[];
+  variants?: ProductVariant[];
+  defaultVariantId?: string;
   onProgress?: (progress: ProductSaveProgress) => void;
 };
 
@@ -64,6 +74,10 @@ export type UpdateSellerProductInput = {
   inventoryQuantity: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  hasVariants?: boolean;
+  variantOptions?: ProductVariantOption[];
+  variants?: ProductVariant[];
+  defaultVariantId?: string;
   onProgress?: (progress: ProductSaveProgress) => void;
 };
 
@@ -128,6 +142,48 @@ function toPositiveInt(value: number, fieldName: string) {
   }
 
   return amount;
+}
+
+function normalizeProductVariantPayload(input: {
+  hasVariants?: boolean;
+  variantOptions?: ProductVariantOption[];
+  variants?: ProductVariant[];
+  defaultVariantId?: string;
+}) {
+  const variantOptions = normalizeVariantOptions(input.variantOptions);
+  const hasVariants = Boolean(input.hasVariants && variantOptions.length > 0);
+
+  if (!hasVariants) {
+    return {
+      hasVariants: false,
+      variantOptions: [],
+      variants: [],
+      defaultVariantId: "",
+    };
+  }
+
+  const combinationCount = variantOptions.reduce(
+    (total, option) => total * Math.max(option.values.length, 1),
+    1
+  );
+
+  if (combinationCount > 100) {
+    throw new Error("Please keep variants under 100 combinations.");
+  }
+
+  const variants = generateVariantCombinations(variantOptions, input.variants);
+
+  return {
+    hasVariants: true,
+    variantOptions,
+    variants,
+    defaultVariantId:
+      input.defaultVariantId && variants.some((variant) => variant.variantId === input.defaultVariantId)
+        ? input.defaultVariantId
+        : variants.find((variant) => variant.isAvailable !== false)?.variantId ||
+          variants[0]?.variantId ||
+          "",
+  };
 }
 
 function normalizeProduct(productDoc: {
@@ -347,6 +403,7 @@ export async function createSellerProduct(
   const ruleSafeImages = toRuleSafeProductImages(images);
   const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
   const sortOrder = Date.now();
+  const variantPayload = normalizeProductVariantPayload(input);
 
   const rawProductData = {
     productId,
@@ -368,6 +425,7 @@ export async function createSellerProduct(
     inventoryQuantity,
     reservedQuantity: 0,
     soldQuantity: 0,
+    ...variantPayload,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -443,6 +501,7 @@ export async function updateSellerProduct(
 
   const ruleSafeImages = toRuleSafeProductImages(images);
   const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
+  const variantPayload = normalizeProductVariantPayload(input);
 
   const productRef = doc(db, "products", product.productId || product.id);
   const rawUpdatePayload = {
@@ -458,6 +517,7 @@ export async function updateSellerProduct(
     status: input.status,
     images: ruleSafeImages,
     ...primaryImageFields,
+    ...variantPayload,
     updatedAt: serverTimestamp(),
   };
   const updatePayload = removeUndefinedFields(rawUpdatePayload);

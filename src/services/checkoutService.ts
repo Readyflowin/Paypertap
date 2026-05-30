@@ -12,7 +12,15 @@ import {
 import { db } from "../lib/firebase";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { getAvailableQuantity, getNextProductStatus } from "../lib/productAvailability";
-import type { CheckoutSession, CheckoutSessionStatus } from "../types/firestore";
+import {
+  getProductVariants,
+  getSelectedVariant,
+  getVariantLabel,
+  isVariantAvailable,
+  productHasVariants,
+  type ProductVariant,
+} from "../lib/productVariants";
+import type { CheckoutSession, CheckoutSessionStatus, Product } from "../types/firestore";
 
 export type CreateCheckoutSessionInput = {
   sellerId: string;
@@ -26,11 +34,24 @@ export type CreateCheckoutSessionInput = {
   buyerCity: string;
   buyerPincode: string;
   buyerEmail?: string;
+  selectedVariantId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
   status?: CheckoutSessionStatus;
 };
 
 function normalizeBuyerPhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
+}
+
+function getCanonicalVariantPayload(variant?: ProductVariant | null) {
+  if (!variant) return {};
+
+  return {
+    selectedVariantId: variant.variantId,
+    selectedVariantLabel: getVariantLabel(variant),
+    selectedVariantOptions: variant.options,
+  };
 }
 
 export async function createCheckoutSessionWithReservation(
@@ -57,6 +78,9 @@ export async function createCheckoutSessionWithReservation(
       inventoryQuantity?: number;
       reservedQuantity?: number;
       soldQuantity?: number;
+      hasVariants?: boolean;
+      variantOptions?: unknown;
+      variants?: unknown;
     };
 
     if (product.sellerId !== input.sellerId || product.storeId !== input.storeId) {
@@ -74,6 +98,31 @@ export async function createCheckoutSessionWithReservation(
 
     if (product.status !== "open" || availableQuantity <= 0) {
       throw new Error("This item was just reserved. Please choose another product.");
+    }
+
+    const productWithVariants = product as Partial<Product>;
+    let canonicalVariant: ProductVariant | null = null;
+
+    if (productHasVariants(productWithVariants)) {
+      const selectedVariantByOptions = getSelectedVariant(
+        productWithVariants,
+        input.selectedVariantOptions || {}
+      );
+      const selectedVariantById = getProductVariants(productWithVariants).find(
+        (variant) => variant.variantId === input.selectedVariantId
+      );
+
+      if (
+        !input.selectedVariantId ||
+        !selectedVariantByOptions ||
+        !selectedVariantById ||
+        selectedVariantByOptions.variantId !== selectedVariantById.variantId ||
+        !isVariantAvailable(selectedVariantById)
+      ) {
+        throw new Error("Please select an available size/color option.");
+      }
+
+      canonicalVariant = selectedVariantById;
     }
 
     const nextReservedQuantity = reservedQuantity + 1;
@@ -98,6 +147,7 @@ export async function createCheckoutSessionWithReservation(
       buyerAddress: input.buyerAddress.trim(),
       buyerCity: input.buyerCity.trim(),
       buyerPincode: input.buyerPincode.trim(),
+      ...getCanonicalVariantPayload(canonicalVariant),
       status: "booking_paid",
       whatsappOpened: false,
       reservationApplied: true,

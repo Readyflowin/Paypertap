@@ -125,6 +125,20 @@ export type ProductImage = {
   uploadedAt?: unknown;
 };
 
+export type ProductVariantOption = {
+  name: string;
+  values: string[];
+};
+
+export type ProductVariant = {
+  variantId: string;
+  label: string;
+  options: Record<string, string>;
+  inventoryQuantity?: number;
+  isAvailable?: boolean;
+  sortOrder?: number;
+};
+
 export type Product = {
   id: string;
   productId: string;
@@ -148,6 +162,10 @@ export type Product = {
   inventoryQuantity: number;
   reservedQuantity: number;
   soldQuantity: number;
+  hasVariants?: boolean;
+  variantOptions?: ProductVariantOption[];
+  variants?: ProductVariant[];
+  defaultVariantId?: string;
   advanceAmount?: number;
   remainingAmount?: number;
   emailEvents?: {
@@ -203,6 +221,9 @@ export type CheckoutSession = {
   reservationApplied?: boolean;
   reservedProductId?: string;
   reservedQuantity?: number;
+  selectedVariantId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   emailEvents?: {
@@ -221,6 +242,8 @@ export type DerivedCustomerLead = {
   totalBookings: number;
   lastProductTitle: string;
   lastProductId: string;
+  lastVariantLabel?: string;
+  lastVariantOptions?: Record<string, string>;
   lastBookingStatus: CheckoutSessionStatus;
   lastCreatedAt?: unknown;
 };

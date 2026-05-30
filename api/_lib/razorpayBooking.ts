@@ -30,6 +30,9 @@ type BookingInput = {
   buyerCity: string;
   buyerPincode: string;
   buyerEmail?: string;
+  selectedVariantId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
 };
 
 type ProductData = {
@@ -43,6 +46,29 @@ type ProductData = {
   inventoryQuantity?: number;
   reservedQuantity?: number;
   soldQuantity?: number;
+  hasVariants?: boolean;
+  variantOptions?: Array<{ name?: string; values?: string[] }>;
+  variants?: Array<{
+    variantId?: string;
+    label?: string;
+    options?: Record<string, string>;
+    inventoryQuantity?: number;
+    isAvailable?: boolean;
+  }>;
+};
+
+type CanonicalVariant = {
+  variantId: string;
+  label: string;
+  options: Record<string, string>;
+  inventoryQuantity?: number;
+  isAvailable?: boolean;
+};
+
+type ValidatedBooking = BookingInput & {
+  selectedVariantId?: string;
+  selectedVariantLabel?: string;
+  selectedVariantOptions?: Record<string, string>;
 };
 
 type StoreData = {
@@ -115,6 +141,137 @@ function normalizeBuyerPhone(phone: string) {
   return phone.replace(/[^\d]/g, "");
 }
 
+function normalizeVariantOptions(input: unknown): Array<{ name: string; values: string[] }> {
+  if (!Array.isArray(input)) return [];
+
+  return input
+    .slice(0, 2)
+    .map((option, index) => {
+      const rawOption =
+        option && typeof option === "object" ? (option as Record<string, unknown>) : {};
+      const name =
+        typeof rawOption.name === "string" && rawOption.name.trim()
+          ? rawOption.name.trim()
+          : index === 0
+            ? "Size"
+            : "Color";
+      const values = Array.isArray(rawOption.values)
+        ? rawOption.values
+            .filter((value): value is string => typeof value === "string")
+            .map((value) => value.trim())
+            .filter(Boolean)
+            .slice(0, 20)
+        : [];
+
+      return { name, values };
+    })
+    .filter((option) => option.values.length > 0);
+}
+
+function productHasVariants(product: ProductData) {
+  return product.hasVariants === true;
+}
+
+function variantLabel(options: Record<string, string>) {
+  return Object.values(options).filter(Boolean).join(" / ");
+}
+
+function variantSignature(options: Record<string, string>) {
+  return Object.entries(options)
+    .map(([name, value]) => `${name.toLocaleLowerCase()}:${String(value).toLocaleLowerCase()}`)
+    .sort()
+    .join("|");
+}
+
+function getStoredProductVariants(product: ProductData): CanonicalVariant[] {
+  if (!productHasVariants(product)) return [];
+
+  if (Array.isArray(product.variants) && product.variants.length) {
+    return product.variants.slice(0, 100).map((variant, index) => ({
+      variantId: toText(variant.variantId) || `variant-${index + 1}`,
+      label: toText(variant.label) || variantLabel(variant.options || {}),
+      options: variant.options || {},
+      inventoryQuantity: variant.inventoryQuantity,
+      isAvailable: variant.isAvailable !== false,
+    }));
+  }
+
+  return [];
+}
+
+function isVariantAvailable(variant: {
+  inventoryQuantity?: number;
+  isAvailable?: boolean;
+}) {
+  if (variant.isAvailable === false) return false;
+  if (typeof variant.inventoryQuantity === "number") return variant.inventoryQuantity > 0;
+  return true;
+}
+
+function normalizeSelectedVariantOptions(input: unknown): Record<string, string> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>)
+      .map(([name, value]) => [toText(name), toText(value)])
+      .filter(([name, value]) => Boolean(name && value))
+  );
+}
+
+function getValidatedSelectedVariant(
+  input: BookingInput,
+  product: ProductData
+): CanonicalVariant | null {
+  if (!productHasVariants(product)) return null;
+
+  const selectedOptions = input.selectedVariantOptions || {};
+  const selectedSignature = variantSignature(selectedOptions);
+  const selectedVariant = getStoredProductVariants(product).find(
+    (variant) => variant.variantId === input.selectedVariantId
+  );
+
+  if (
+    !input.selectedVariantId ||
+    !selectedVariant ||
+    variantSignature(selectedVariant.options) !== selectedSignature ||
+    !isVariantAvailable(selectedVariant)
+  ) {
+    throw new Error("Please select an available size/color option.");
+  }
+
+  return selectedVariant;
+}
+
+function withCanonicalVariant(
+  input: BookingInput,
+  variant: CanonicalVariant | null
+): ValidatedBooking {
+  if (!variant) {
+    return {
+      sellerId: input.sellerId,
+      storeId: input.storeId,
+      productId: input.productId,
+      productTitle: input.productTitle,
+      productPrice: input.productPrice,
+      bookingAdvanceAmount: input.bookingAdvanceAmount,
+      sellerCollectAmount: input.sellerCollectAmount,
+      buyerName: input.buyerName,
+      buyerPhone: input.buyerPhone,
+      buyerAddress: input.buyerAddress,
+      buyerCity: input.buyerCity,
+      buyerPincode: input.buyerPincode,
+      buyerEmail: input.buyerEmail,
+    };
+  }
+
+  return {
+    ...input,
+    selectedVariantId: variant.variantId,
+    selectedVariantLabel: variant.label || variantLabel(variant.options),
+    selectedVariantOptions: variant.options,
+  };
+}
+
 function getSellerCollectAmount(productPrice: number) {
   return Math.max(productPrice - BOOKING_AMOUNT_RUPEES, 0);
 }
@@ -159,6 +316,9 @@ function getBookingInput(payload: Record<string, unknown>): BookingInput {
     buyerCity: toText(payload.buyerCity),
     buyerPincode: toText(payload.buyerPincode),
     buyerEmail: toText(payload.buyerEmail),
+    selectedVariantId: toText(payload.selectedVariantId),
+    selectedVariantLabel: toText(payload.selectedVariantLabel),
+    selectedVariantOptions: normalizeSelectedVariantOptions(payload.selectedVariantOptions),
   };
 }
 
@@ -237,7 +397,9 @@ async function validateStoreAndProduct(input: BookingInput) {
     throw new Error("This item was just reserved. Please choose another product.");
   }
 
-  return { db, product };
+  const selectedVariant = getValidatedSelectedVariant(input, product);
+
+  return { db, product, booking: withCanonicalVariant(input, selectedVariant) };
 }
 
 function buildReceipt() {
@@ -261,16 +423,17 @@ function signaturesMatch(expected: string, received: string) {
   return timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
-async function finalizeVerifiedBooking(input: BookingInput, payment: {
+async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
   razorpayOrderId: string;
   razorpayPaymentId: string;
   razorpaySignature: string;
 }) {
-  const { db } = await validateStoreAndProduct(input);
+  const { db, booking: input } = await validateStoreAndProduct(rawInput);
   const checkoutRef = db.collection("checkoutSessions").doc();
   const productRef = db.collection("products").doc(input.productId);
   const paymentRef = db.collection("payments").doc(payment.razorpayPaymentId);
   const checkoutId = checkoutRef.id;
+  let responseInput = input;
 
   await db.runTransaction(async (transaction) => {
     const [productSnap, paymentSnap] = await Promise.all([
@@ -301,6 +464,10 @@ async function finalizeVerifiedBooking(input: BookingInput, payment: {
       throw new Error("This item was just reserved. Please choose another product.");
     }
 
+    const selectedVariant = getValidatedSelectedVariant(input, product);
+    const canonicalInput = withCanonicalVariant(input, selectedVariant);
+    responseInput = canonicalInput;
+
     const nextReservedQuantity = Number(product.reservedQuantity || 0) + 1;
     const nextProduct = {
       ...product,
@@ -310,19 +477,26 @@ async function finalizeVerifiedBooking(input: BookingInput, payment: {
 
     transaction.set(checkoutRef, {
       checkoutId,
-      sellerId: input.sellerId,
-      storeId: input.storeId,
-      productId: input.productId,
-      productTitle: input.productTitle,
-      productPrice: input.productPrice,
+      sellerId: canonicalInput.sellerId,
+      storeId: canonicalInput.storeId,
+      productId: canonicalInput.productId,
+      productTitle: canonicalInput.productTitle,
+      productPrice: canonicalInput.productPrice,
       bookingAdvanceAmount: BOOKING_AMOUNT_RUPEES,
-      sellerCollectAmount: input.sellerCollectAmount,
-      buyerName: input.buyerName,
-      ...(input.buyerEmail ? { buyerEmail: input.buyerEmail } : {}),
-      buyerPhone: input.buyerPhone,
-      buyerAddress: input.buyerAddress,
-      buyerCity: input.buyerCity,
-      buyerPincode: input.buyerPincode,
+      sellerCollectAmount: canonicalInput.sellerCollectAmount,
+      buyerName: canonicalInput.buyerName,
+      ...(canonicalInput.buyerEmail ? { buyerEmail: canonicalInput.buyerEmail } : {}),
+      buyerPhone: canonicalInput.buyerPhone,
+      buyerAddress: canonicalInput.buyerAddress,
+      buyerCity: canonicalInput.buyerCity,
+      buyerPincode: canonicalInput.buyerPincode,
+      ...(canonicalInput.selectedVariantId
+        ? {
+            selectedVariantId: canonicalInput.selectedVariantId,
+            selectedVariantLabel: canonicalInput.selectedVariantLabel || "",
+            selectedVariantOptions: canonicalInput.selectedVariantOptions || {},
+          }
+        : {}),
       status: "booking_paid",
       whatsappOpened: false,
       reservationApplied: true,
@@ -337,10 +511,17 @@ async function finalizeVerifiedBooking(input: BookingInput, payment: {
     transaction.set(paymentRef, {
       paymentId: payment.razorpayPaymentId,
       provider: "razorpay",
-      sellerId: input.sellerId,
-      storeId: input.storeId,
-      productId: input.productId,
+      sellerId: canonicalInput.sellerId,
+      storeId: canonicalInput.storeId,
+      productId: canonicalInput.productId,
       checkoutId,
+      ...(canonicalInput.selectedVariantId
+        ? {
+            selectedVariantId: canonicalInput.selectedVariantId,
+            selectedVariantLabel: canonicalInput.selectedVariantLabel || "",
+            selectedVariantOptions: canonicalInput.selectedVariantOptions || {},
+          }
+        : {}),
       razorpayOrderId: payment.razorpayOrderId,
       razorpayPaymentId: payment.razorpayPaymentId,
       amount: BOOKING_AMOUNT_RUPEES,
@@ -360,19 +541,26 @@ async function finalizeVerifiedBooking(input: BookingInput, payment: {
 
   const responseSession = {
     checkoutId,
-    sellerId: input.sellerId,
-    storeId: input.storeId,
-    productId: input.productId,
-    productTitle: input.productTitle,
-    productPrice: input.productPrice,
+    sellerId: responseInput.sellerId,
+    storeId: responseInput.storeId,
+    productId: responseInput.productId,
+    productTitle: responseInput.productTitle,
+    productPrice: responseInput.productPrice,
     bookingAdvanceAmount: BOOKING_AMOUNT_RUPEES,
-    sellerCollectAmount: input.sellerCollectAmount,
-    buyerName: input.buyerName,
-    ...(input.buyerEmail ? { buyerEmail: input.buyerEmail } : {}),
-    buyerPhone: input.buyerPhone,
-    buyerAddress: input.buyerAddress,
-    buyerCity: input.buyerCity,
-    buyerPincode: input.buyerPincode,
+    sellerCollectAmount: responseInput.sellerCollectAmount,
+    buyerName: responseInput.buyerName,
+    ...(responseInput.buyerEmail ? { buyerEmail: responseInput.buyerEmail } : {}),
+    buyerPhone: responseInput.buyerPhone,
+    buyerAddress: responseInput.buyerAddress,
+    buyerCity: responseInput.buyerCity,
+    buyerPincode: responseInput.buyerPincode,
+    ...(responseInput.selectedVariantId
+      ? {
+          selectedVariantId: responseInput.selectedVariantId,
+          selectedVariantLabel: responseInput.selectedVariantLabel || "",
+          selectedVariantOptions: responseInput.selectedVariantOptions || {},
+        }
+      : {}),
     status: "booking_paid",
     whatsappOpened: false,
     reservationApplied: true,
@@ -414,16 +602,19 @@ export async function createRazorpayOrderHandler(req: any, res: JsonResponse) {
   try {
     const input = getBookingInput(body);
     validateBuyerInput(input);
-    await validateStoreAndProduct(input);
+    const { booking } = await validateStoreAndProduct(input);
 
     const order = await client.orders.create({
       amount: BOOKING_AMOUNT_PAISE,
       currency: CURRENCY,
       receipt: buildReceipt(),
       notes: {
-        sellerId: safeNoteValue(input.sellerId),
-        storeId: safeNoteValue(input.storeId),
-        productId: safeNoteValue(input.productId),
+        sellerId: safeNoteValue(booking.sellerId),
+        storeId: safeNoteValue(booking.storeId),
+        productId: safeNoteValue(booking.productId),
+        ...(booking.selectedVariantId
+          ? { selectedVariantId: safeNoteValue(booking.selectedVariantId) }
+          : {}),
         bookingAmount: String(BOOKING_AMOUNT_RUPEES),
       },
     });
@@ -497,7 +688,10 @@ export async function verifyRazorpayPaymentHandler(req: any, res: JsonResponse) 
       order.currency !== CURRENCY ||
       toText(notes.sellerId) !== input.sellerId ||
       toText(notes.storeId) !== input.storeId ||
-      toText(notes.productId) !== input.productId
+      toText(notes.productId) !== input.productId ||
+      (input.selectedVariantId
+        ? toText(notes.selectedVariantId) !== input.selectedVariantId
+        : Boolean(toText(notes.selectedVariantId)))
     ) {
       sendJson(res, 400, {
         success: false,

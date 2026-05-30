@@ -12,6 +12,7 @@ import {
   PptTapLoader,
 } from "@/components/ui";
 import { formatINR } from "@/lib/money";
+import { getVariantDetailsText } from "@/lib/productVariants";
 import { getProductById } from "@/services/productService";
 import { getStoreById } from "@/services/storeService";
 import {
@@ -111,6 +112,9 @@ export default function BookingSuccessPage() {
       buyerAddress: state.checkout.buyerAddress,
       buyerCity: state.checkout.buyerCity,
       buyerPincode: state.checkout.buyerPincode,
+      selectedVariantId: state.checkout.selectedVariantId,
+      selectedVariantLabel: state.checkout.selectedVariantLabel,
+      selectedVariantOptions: state.checkout.selectedVariantOptions,
     };
   }, [state.checkout, storeSlug]);
 
@@ -172,6 +176,7 @@ export default function BookingSuccessPage() {
     (image) => image.thumbUrl || image.url || image.mediumUrl
   );
   const productImageUrl = state.product ? getProductGridImageUrl(state.product) : "";
+  const variantDetails = getVariantDetailsText(checkout);
 
   return (
     <main className="pds-page">
@@ -246,6 +251,11 @@ export default function BookingSuccessPage() {
                 <p className="mt-1 text-sm font-light text-[var(--pds-muted)]">
                   {state.store?.storeName || "Seller store"}
                 </p>
+                {variantDetails ? (
+                  <p className="mt-2 break-words text-sm font-medium text-[var(--pds-muted)]">
+                    {variantDetails}
+                  </p>
+                ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <PptBadge tone="neutral">Price {formatINR(checkout.productPrice)}</PptBadge>
                   <PptBadge tone="primary">

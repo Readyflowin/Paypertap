@@ -29,6 +29,14 @@ import { getPublicStoreData } from "@/services/publicStoreService";
 import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
 import { getProductDetailImageUrls } from "@/storefront/imageMedia";
 import { getDisplayImageUrl } from "@/lib/imageUrls";
+import {
+  getAvailableOptions,
+  getSelectedVariant,
+  isVariantAvailable,
+  normalizeVariantOptions,
+  productHasVariants,
+  validateSelectedVariant,
+} from "@/lib/productVariants";
 import type { Product, Store } from "@/types/firestore";
 
 type PageThemeId = "theme1" | "theme2" | "theme3";
@@ -167,6 +175,112 @@ function getStatusBadge(product: Product, isReserved: boolean): { label: string;
   return { label: "Unavailable", tone: "neutral" };
 }
 
+function getCssColor(value: string): string | null {
+  const color = value.trim().toLocaleLowerCase();
+  const knownColors: Record<string, string> = {
+    black: "#111827",
+    white: "#ffffff",
+    blue: "#2563eb",
+    navy: "#1e3a8a",
+    red: "#dc2626",
+    green: "#16a34a",
+    yellow: "#facc15",
+    pink: "#ec4899",
+    purple: "#7c3aed",
+    grey: "#6b7280",
+    gray: "#6b7280",
+    brown: "#92400e",
+    beige: "#d6c7a1",
+    cream: "#f5f5dc",
+    orange: "#f97316",
+  };
+
+  return knownColors[color] || null;
+}
+
+function ProductVariantSelector({
+  classes,
+  onChange,
+  product,
+  selectedOptions,
+}: {
+  classes: ThemeClasses;
+  onChange: (options: Record<string, string>) => void;
+  product: Product;
+  selectedOptions: Record<string, string>;
+}) {
+  const optionGroups = normalizeVariantOptions(product.variantOptions);
+  const availableOptions = getAvailableOptions(product, selectedOptions);
+  const selectedVariant = getSelectedVariant(product, selectedOptions);
+  const validation = validateSelectedVariant(product, selectedOptions);
+  const hasCompleteSelection = optionGroups.every((option) => selectedOptions[option.name]);
+  const showUnavailableMessage =
+    hasCompleteSelection && (!selectedVariant || !isVariantAvailable(selectedVariant));
+
+  if (!productHasVariants(product)) return null;
+
+  return (
+    <section className="mt-5 grid min-w-0 gap-4">
+      {optionGroups.map((option) => {
+        const isColor = option.name.toLocaleLowerCase() === "color";
+
+        return (
+          <div key={option.name} className="min-w-0">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+              <p className={`text-sm font-semibold ${classes.title}`}>{option.name}</p>
+              {selectedOptions[option.name] ? (
+                <span className={`truncate text-xs ${classes.muted}`}>
+                  {selectedOptions[option.name]}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-wrap gap-2">
+              {option.values.map((value) => {
+                const cssColor = isColor ? getCssColor(value) : null;
+                const isSelected = selectedOptions[option.name] === value;
+                const isAvailable = availableOptions[option.name]?.has(value) ?? false;
+
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isAvailable}
+                    onClick={() =>
+                      onChange({
+                        ...selectedOptions,
+                        [option.name]: value,
+                      })
+                    }
+                    className={`inline-flex min-h-10 min-w-0 max-w-full items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition ${
+                      isSelected
+                        ? classes.primaryCta
+                        : `${classes.bookingBox} hover:opacity-90`
+                    } ${!isAvailable ? "cursor-not-allowed opacity-45" : ""}`}
+                  >
+                    {isColor ? (
+                      <span
+                        className="h-4 w-4 shrink-0 rounded-full border border-black/10"
+                        style={{ backgroundColor: cssColor || "#e5e7eb" }}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <span className="truncate">{value}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {showUnavailableMessage || (!validation.isValid && hasCompleteSelection) ? (
+        <p className={`rounded-2xl border px-4 py-3 text-sm ${classes.bookingBox}`}>
+          This option is not available
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function ProductDetailLoading() {
   return (
     <main className="grid min-h-screen place-items-center overflow-x-hidden bg-[#f7f7f8] px-4 py-8">
@@ -252,6 +366,8 @@ export default function ProductDetailPage() {
     loading: true,
     error: "",
   });
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [variantError, setVariantError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -277,6 +393,8 @@ export default function ProductDetailPage() {
         }
 
         if (!cancelled) {
+          setSelectedOptions({});
+          setVariantError("");
           setState({
             store: storeData.store,
             product,
@@ -352,6 +470,24 @@ export default function ProductDetailPage() {
         ? "Currently reserved"
       : getProductUnavailableLabel(product);
   const sellerCollectAmount = Math.max(0, product.price - BOOKING_ADVANCE_AMOUNT);
+
+  function handleBook() {
+    if (!isAvailable) return;
+
+    const validation = validateSelectedVariant(product, selectedOptions);
+
+    if (!validation.isValid) {
+      setVariantError(validation.message || "Please select an available option.");
+      return;
+    }
+
+    const nextHref =
+      validation.variant
+        ? `${checkoutHref}?variantId=${encodeURIComponent(validation.variant.variantId)}`
+        : checkoutHref;
+
+    navigate(nextHref);
+  }
 
   return (
     <main className={`min-h-screen overflow-x-hidden px-3 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-6 ${classes.main}`}>
@@ -446,6 +582,22 @@ export default function ProductDetailPage() {
                 
               </div>
 
+              <ProductVariantSelector
+                classes={classes}
+                product={product}
+                selectedOptions={selectedOptions}
+                onChange={(nextOptions) => {
+                  setSelectedOptions(nextOptions);
+                  setVariantError("");
+                }}
+              />
+
+              {variantError ? (
+                <p className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${classes.bookingBox}`}>
+                  {variantError}
+                </p>
+              ) : null}
+
               {!isAvailable ? (
                 <p className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${classes.bookingBox}`}>
                   {isReserved
@@ -466,12 +618,13 @@ export default function ProductDetailPage() {
 
               <div className="mt-5 hidden gap-3 sm:grid">
                 {isAvailable ? (
-                  <Link
-                    to={checkoutHref}
+                  <button
+                    type="button"
+                    onClick={handleBook}
                     className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3 text-center text-sm font-semibold ${classes.primaryCta}`}
                   >
                     Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
-                  </Link>
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -502,12 +655,13 @@ export default function ProductDetailPage() {
             </p>
           </div>
           {isAvailable ? (
-            <Link
-              to={checkoutHref}
+            <button
+              type="button"
+              onClick={handleBook}
               className={`inline-flex min-h-11 max-w-[58%] shrink-0 items-center justify-center truncate rounded-2xl px-3 text-sm font-semibold ${classes.primaryCta}`}
             >
               Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
-            </Link>
+            </button>
           ) : (
             <button
               type="button"
