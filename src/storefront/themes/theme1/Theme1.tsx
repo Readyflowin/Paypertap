@@ -19,6 +19,12 @@ import {
 } from "@/lib/productAvailability";
 import { PaymentTrustStrip } from "../../PaymentTrustStrip";
 import {
+  getStoreConfirmationAdvanceBreakdown,
+  getStorefrontConfirmationPolicyText,
+  getStorefrontPaymentSubtext,
+  StorefrontPaymentBreakdown,
+} from "../../StorefrontPaymentBreakdown";
+import {
   getProductDetailImageUrls,
   getProductGridImageUrl,
   getStorefrontImageFetchPriority,
@@ -122,12 +128,6 @@ function getProductBadge(product: StorefrontProduct) {
   return { label: "Available", tone: "success" as const };
 }
 
-function getSellerCollectAmount(price: number) {
-  return Number.isFinite(price) && price > BOOKING_ADVANCE_AMOUNT
-    ? price - BOOKING_ADVANCE_AMOUNT
-    : null;
-}
-
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
   if (status === "hold" || status === "reserved") return "Currently reserved";
@@ -139,6 +139,7 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
   const initials = getInitials(storeName);
   const contact = getStoreContactInfo(store);
   const logoUrl = getStoreLogoUrl(store);
+  const confirmationPolicyText = getStorefrontConfirmationPolicyText(store);
 
   return (
     <header className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_18px_50px_rgba(17,18,23,0.07)]">
@@ -188,7 +189,7 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-neutral-500">
-            Pay {formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
+            {confirmationPolicyText}
           </p>
           <a
             href="#products"
@@ -236,6 +237,7 @@ function Theme1Hero({ store }: { store: StorefrontThemeProps["store"] }) {
 function Theme1Header({ store }: { store: StorefrontThemeProps["store"] }) {
   const initials = getInitials(store.storeName || "Store");
   const logoUrl = getStoreLogoUrl(store);
+  const confirmationPolicyText = getStorefrontConfirmationPolicyText(store);
 
   return (
     <header className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-[0_16px_44px_rgba(17,18,23,0.06)] sm:p-6">
@@ -277,7 +279,7 @@ function Theme1Header({ store }: { store: StorefrontThemeProps["store"] }) {
           Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
         </div>
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-          Pay the remaining amount directly to the seller
+          {confirmationPolicyText}
         </div>
       </div>
 
@@ -644,6 +646,7 @@ function Theme1ProductDetail({
   onClose,
   onToggleSaved,
   product,
+  store,
   storeSlug,
 }: {
   fallbackIndex: number;
@@ -651,17 +654,22 @@ function Theme1ProductDetail({
   onClose: () => void;
   onToggleSaved: (product: StorefrontProduct, fallbackIndex?: number) => void;
   product: StorefrontProduct;
+  store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const images = getProductDetailImageUrls(product);
   const title = getProductTitle(product);
   const price = getProductPrice(product);
-  const sellerCollectAmount = getSellerCollectAmount(price);
   const description = getProductDescription(product);
   const productId = getProductId(product);
   const bookable = Boolean(productId && isBookable(product));
   const unavailableCtaLabel = getUnavailableCtaLabel(product);
   const checkoutHref = `/${storeSlug}/checkout/${productId}`;
+  const paymentBreakdown = getStoreConfirmationAdvanceBreakdown({
+    productPrice: price,
+    store,
+  });
+  const stickyPaymentSubtext = getStorefrontPaymentSubtext(paymentBreakdown);
   const imageSlots = images.length ? images : [""];
   const imageGridClass =
     imageSlots.length === 1
@@ -756,15 +764,22 @@ function Theme1ProductDetail({
               </p>
             ) : null}
 
-            <div className="mt-5 min-w-0 max-w-full rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
-              <strong className="block font-medium text-neutral-950">
-                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
-              </strong>
-              {sellerCollectAmount !== null
-                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
-                : "Pay the remaining amount directly to the seller."}
-              <span className="block">WhatsApp opens with the product and buyer details ready.</span>
-            </div>
+            <StorefrontPaymentBreakdown
+              classes={{
+                shell: "mt-5 min-w-0 max-w-full rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-600",
+                icon: "grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-neutral-950",
+                title: "text-base font-medium leading-6 text-neutral-950",
+                text: "mt-1 text-sm leading-6",
+                panel: "mt-3 rounded-2xl border border-neutral-200 bg-white/70 p-3",
+                eyebrow: "mb-2 text-[11px] font-semibold uppercase text-neutral-400",
+                rowLabel: "min-w-0 truncate text-xs",
+                rowValue: "shrink-0 text-sm text-neutral-950",
+                featuredValue: "shrink-0 text-base text-neutral-950",
+                note: "mt-3 text-xs leading-5",
+              }}
+              productPrice={price}
+              store={store}
+            />
 
             <div className="mt-4">
               <PaymentTrustStrip compact variant="theme1" />
@@ -819,10 +834,7 @@ function Theme1ProductDetail({
             )}
           </div>
           <p className="mt-2 break-words text-center text-xs font-medium text-neutral-500">
-            {sellerCollectAmount !== null
-              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
-              : "Pay the remaining amount directly to the seller"}
-            <span className="block">Continue on WhatsApp</span>
+            {stickyPaymentSubtext}
           </p>
         </div>
       </div>
@@ -836,6 +848,7 @@ function Theme1ProductPageSheet({
   onClose,
   onToggleSaved,
   product,
+  store,
   storeSlug,
 }: {
   fallbackIndex: number;
@@ -843,18 +856,23 @@ function Theme1ProductPageSheet({
   onClose: () => void;
   onToggleSaved: (product: StorefrontProduct, fallbackIndex?: number) => void;
   product: StorefrontProduct;
+  store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const images = getProductDetailImageUrls(product);
   const imageSlots = images.length ? images : [""];
   const title = getProductTitle(product);
   const price = getProductPrice(product);
-  const sellerCollectAmount = getSellerCollectAmount(price);
   const description = getProductDescription(product);
   const productId = getProductId(product);
   const bookable = Boolean(productId && isBookable(product));
   const unavailableCtaLabel = getUnavailableCtaLabel(product);
   const checkoutHref = `/${storeSlug}/checkout/${productId}`;
+  const paymentBreakdown = getStoreConfirmationAdvanceBreakdown({
+    productPrice: price,
+    store,
+  });
+  const stickyPaymentSubtext = getStorefrontPaymentSubtext(paymentBreakdown);
 
   return (
     <div className="fixed inset-0 z-50 box-border overflow-x-hidden overflow-y-auto bg-neutral-950/42 px-3 py-4 backdrop-blur-sm sm:py-6">
@@ -960,15 +978,22 @@ function Theme1ProductPageSheet({
               </p>
             ) : null}
 
-            <div className="mt-6 min-w-0 max-w-full rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-600">
-              <strong className="block font-medium text-neutral-950">
-                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
-              </strong>
-              {sellerCollectAmount !== null
-                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
-                : "Pay the remaining amount directly to the seller."}
-              <span className="block">Continue on WhatsApp to confirm delivery.</span>
-            </div>
+            <StorefrontPaymentBreakdown
+              classes={{
+                shell: "mt-6 min-w-0 max-w-full rounded-[20px] border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-600",
+                icon: "grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-neutral-950",
+                title: "text-base font-medium leading-6 text-neutral-950",
+                text: "mt-1 text-sm leading-6",
+                panel: "mt-3 rounded-2xl border border-neutral-200 bg-white/70 p-3",
+                eyebrow: "mb-2 text-[11px] font-semibold uppercase text-neutral-400",
+                rowLabel: "min-w-0 truncate text-xs",
+                rowValue: "shrink-0 text-sm text-neutral-950",
+                featuredValue: "shrink-0 text-base text-neutral-950",
+                note: "mt-3 text-xs leading-5",
+              }}
+              productPrice={price}
+              store={store}
+            />
 
             <div className="mt-4">
               <PaymentTrustStrip compact variant="theme1" />
@@ -988,8 +1013,7 @@ function Theme1ProductPageSheet({
                 </PptButton>
               )}
               <p className="flex items-center justify-center gap-2 text-center text-xs font-medium text-neutral-500">
-                <PptBrandIcon type="whatsapp" size={14} />
-                Continue on WhatsApp
+                Chat with seller after booking.
               </p>
             </div>
           </section>
@@ -1023,10 +1047,7 @@ function Theme1ProductPageSheet({
             )}
           </div>
           <p className="mt-2 break-words text-center text-xs font-medium text-neutral-500">
-            {sellerCollectAmount !== null
-              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
-              : "Pay the remaining amount directly to the seller"}
-            <span className="block">Continue on WhatsApp</span>
+            {stickyPaymentSubtext}
           </p>
         </div>
       </div>
@@ -1366,6 +1387,7 @@ export default function Theme1({
           isSaved={wishlist.isWishlisted(selectedProduct, selectedProductFallbackIndex)}
           onToggleSaved={wishlist.toggleWishlistItem}
           product={selectedProduct}
+          store={store}
           storeSlug={storeSlug}
           onClose={() => setSelectedProduct(null)}
         />

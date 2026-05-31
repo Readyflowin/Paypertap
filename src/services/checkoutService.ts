@@ -12,6 +12,7 @@ import {
 import { db } from "../lib/firebase";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { normalizeIndianMobileInput } from "../lib/phone";
+import type { SellerConfirmationAdvanceType } from "../lib/confirmationAdvance";
 import { getAvailableQuantity, getNextProductStatus } from "../lib/productAvailability";
 import {
   getProductVariants,
@@ -35,6 +36,10 @@ export type CreateCheckoutSessionInput = {
   buyerCity: string;
   buyerPincode: string;
   buyerEmail?: string;
+  confirmationAdvanceType?: SellerConfirmationAdvanceType;
+  totalConfirmationAdvance?: number;
+  sellerConfirmationAmountPending?: number;
+  finalBalanceAfterConfirmation?: number;
   selectedVariantId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
@@ -144,6 +149,20 @@ export async function createCheckoutSessionWithReservation(
       productPrice,
       bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
       sellerCollectAmount: getSellerCollectAmount(productPrice),
+      ...(input.confirmationAdvanceType
+        ? {
+            confirmationAdvanceType: input.confirmationAdvanceType,
+            totalConfirmationAdvance: Math.round(
+              Number(input.totalConfirmationAdvance) || BOOKING_ADVANCE_AMOUNT
+            ),
+            sellerConfirmationAmountPending: Math.round(
+              Number(input.sellerConfirmationAmountPending) || 0
+            ),
+            finalBalanceAfterConfirmation: Math.round(
+              Number(input.finalBalanceAfterConfirmation) || getSellerCollectAmount(productPrice)
+            ),
+          }
+        : {}),
       buyerName: input.buyerName.trim(),
       ...(input.buyerEmail?.trim() ? { buyerEmail: input.buyerEmail.trim() } : {}),
       buyerPhone,

@@ -28,6 +28,20 @@ export function buildCheckoutSession(
     productPrice,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     sellerCollectAmount: getSellerCollectAmount(productPrice),
+    ...(input.confirmationAdvanceType
+      ? {
+          confirmationAdvanceType: input.confirmationAdvanceType,
+          totalConfirmationAdvance: Math.round(
+            Number(input.totalConfirmationAdvance) || BOOKING_ADVANCE_AMOUNT
+          ),
+          sellerConfirmationAmountPending: Math.round(
+            Number(input.sellerConfirmationAmountPending) || 0
+          ),
+          finalBalanceAfterConfirmation: Math.round(
+            Number(input.finalBalanceAfterConfirmation) || getSellerCollectAmount(productPrice)
+          ),
+        }
+      : {}),
     buyerName: input.buyerName.trim(),
     ...(input.buyerEmail?.trim() ? { buyerEmail: input.buyerEmail.trim() } : {}),
     buyerPhone: normalizeBuyerPhone(input.buyerPhone),

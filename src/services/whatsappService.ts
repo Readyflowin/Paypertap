@@ -21,6 +21,10 @@ type BuyerBookingInput = {
   productPrice: number;
   bookingAdvanceAmount: number;
   sellerCollectAmount: number;
+  confirmationAdvanceType?: SellerConfirmationAdvanceType | string;
+  totalConfirmationAdvance?: number;
+  sellerConfirmationAmountPending?: number;
+  finalBalanceAfterConfirmation?: number;
   buyerName: string;
   buyerPhone: string;
   buyerAddress: string;
@@ -80,27 +84,40 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
   const storeName = input.storeName?.trim() || "this store";
   const confirmationAdvance = calculateConfirmationAdvance({
     productPrice: input.productPrice,
-    type: input.sellerConfirmationAdvanceType,
-    fixedAmount: input.sellerConfirmationAdvanceFixedAmount,
-    percent: input.sellerConfirmationAdvancePercent,
+    sellerConfirmationAdvanceType: input.sellerConfirmationAdvanceType,
+    sellerConfirmationAdvanceFixedAmount: input.sellerConfirmationAdvanceFixedAmount,
+    sellerConfirmationAdvancePercent: input.sellerConfirmationAdvancePercent,
     bookingPaid: input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
   });
+  const hasConfirmationSnapshot =
+    typeof input.sellerConfirmationAmountPending === "number" &&
+    typeof input.finalBalanceAfterConfirmation === "number" &&
+    typeof input.totalConfirmationAdvance === "number";
+  const paymentBreakdown = hasConfirmationSnapshot
+    ? {
+        ...confirmationAdvance,
+        sellerConfirmationAdvanceType:
+          input.confirmationAdvanceType || confirmationAdvance.sellerConfirmationAdvanceType,
+        paypertapBookingPaid: input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
+        totalConfirmationAdvance:
+          input.totalConfirmationAdvance || input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
+        sellerConfirmationAmountPending: input.sellerConfirmationAmountPending || 0,
+        finalBalanceAfterConfirmation: input.finalBalanceAfterConfirmation || 0,
+      }
+    : confirmationAdvance;
   const paymentLines =
-    confirmationAdvance.sellerConfirmationAmountPending > 0
+    paymentBreakdown.sellerConfirmationAmountPending > 0
       ? [
-          `Paid on PayPerTap: ₹${confirmationAdvance.paypertapBookingPaid}`,
-          `Seller confirmation amount pending: ₹${confirmationAdvance.sellerConfirmationAmountPending}`,
-          `Remaining on COD  after confirmation: ₹${confirmationAdvance.finalBalanceAfterConfirmation}`,
+          `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
+          `Seller confirmation amount pending: ₹${paymentBreakdown.sellerConfirmationAmountPending}`,
+          `Final balance after confirmation: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
         ]
       : [
-          `Paid on PayPerTap: ₹${confirmationAdvance.paypertapBookingPaid}`,
-          `Remaining amount to seller: ₹${Math.max(
-            input.productPrice - confirmationAdvance.paypertapBookingPaid,
-            0
-          )}`,
+          `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
+          `Remaining amount to seller: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
         ];
   const closingLine =
-    confirmationAdvance.sellerConfirmationAmountPending > 0
+    paymentBreakdown.sellerConfirmationAmountPending > 0
       ? "Please share your UPI/payment details so I can complete the confirmation amount and confirm delivery."
       : "Please confirm delivery and the remaining payment details.";
 

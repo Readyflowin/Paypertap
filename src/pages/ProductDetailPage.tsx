@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ImageIcon,
   Package,
-  ShieldCheck,
   Store as StoreIcon,
 } from "lucide-react";
 
@@ -18,7 +17,6 @@ import {
 } from "@/components/ui";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
-import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import {
   getAvailableQuantity,
   getProductUnavailableLabel,
@@ -27,6 +25,11 @@ import {
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
 import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
+import {
+  getStoreConfirmationAdvanceBreakdown,
+  getStorefrontPaymentSubtext,
+  StorefrontPaymentBreakdown,
+} from "@/storefront/StorefrontPaymentBreakdown";
 import { getProductDetailImageUrls } from "@/storefront/imageMedia";
 import { getDisplayImageUrl } from "@/lib/imageUrls";
 import {
@@ -287,90 +290,6 @@ function ProductVariantSelector({
   );
 }
 
-function ProductPaymentBreakdown({
-  classes,
-  productPrice,
-  sellerConfirmationAmountPending,
-  finalBalanceAfterConfirmation,
-  paypertapBookingPaid,
-}: {
-  classes: ThemeClasses;
-  productPrice: number;
-  sellerConfirmationAmountPending: number;
-  finalBalanceAfterConfirmation: number;
-  paypertapBookingPaid: number;
-}) {
-  const sellerLaterAmount = Math.max(productPrice - paypertapBookingPaid, 0);
-  const hasSellerConfirmation = sellerConfirmationAmountPending > 0;
-  const rows = hasSellerConfirmation
-    ? [
-        { label: "Pay now", value: formatINR(paypertapBookingPaid), featured: true },
-        {
-          label: "Confirm on WhatsApp",
-          value: formatINR(sellerConfirmationAmountPending),
-        },
-        { label: "Remaining on COD ", value: formatINR(finalBalanceAfterConfirmation) },
-      ]
-    : [
-        { label: "Pay now", value: formatINR(paypertapBookingPaid), featured: true },
-        { label: "Pay seller later", value: formatINR(sellerLaterAmount) },
-      ];
-
-  return (
-    <section className={`mt-5 min-w-0 rounded-[22px] border p-4 ${classes.bookingBox}`}>
-      <div className="flex items-start gap-3">
-        <div
-          className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${classes.bookingStrong} bg-white/65`}
-        >
-          <ShieldCheck size={17} aria-hidden="true" />
-        </div>
-        <div className="min-w-0">
-          <h2 className={`text-base font-semibold leading-6 ${classes.bookingStrong}`}>
-            Reserve this item
-          </h2>
-          <p className="mt-1 text-sm leading-6">
-            {hasSellerConfirmation
-              ? `Pay ${formatINR(
-                  paypertapBookingPaid
-                )} now to hold it. Then pay ${formatINR(
-                  sellerConfirmationAmountPending
-                )} on WhatsApp to confirm with the seller.`
-              : `Pay ${formatINR(
-                  paypertapBookingPaid
-                )} now to hold it. The seller will collect the remaining ${formatINR(
-                  sellerLaterAmount
-                )} on WhatsApp.`}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-2xl border border-current/10 bg-white/55 p-3">
-        <p className={`mb-2 text-[11px] font-semibold uppercase ${classes.eyebrow}`}>
-          Payment breakdown
-        </p>
-        <div className="grid gap-2">
-          {rows.map((row) => (
-            <div key={row.label} className="flex min-w-0 items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-xs">{row.label}</span>
-              <strong
-                className={`shrink-0 text-sm ${
-                  row.featured ? `text-base ${classes.bookingStrong}` : classes.bookingStrong
-                }`}
-              >
-                {row.value}
-              </strong>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="mt-3 text-xs leading-5">
-        Details are sent to the seller after booking.
-      </p>
-    </section>
-  );
-}
-
 function ProductDetailLoading() {
   return (
     <main className="grid min-h-screen place-items-center overflow-x-hidden bg-[#f7f7f8] px-4 py-8">
@@ -560,20 +479,11 @@ export default function ProductDetailPage() {
       : isReserved
         ? "Currently reserved"
       : getProductUnavailableLabel(product);
-  const confirmationAdvance = calculateConfirmationAdvance({
+  const confirmationAdvance = getStoreConfirmationAdvanceBreakdown({
     productPrice: product.price,
-    type: store.sellerConfirmationAdvanceType,
-    fixedAmount: store.sellerConfirmationAdvanceFixedAmount,
-    percent: store.sellerConfirmationAdvancePercent,
+    store,
   });
-  const stickyPaymentSubtext =
-    confirmationAdvance.sellerConfirmationAmountPending > 0
-      ? `${formatINR(confirmationAdvance.paypertapBookingPaid)} now · ${formatINR(
-          confirmationAdvance.sellerConfirmationAmountPending
-        )} on WhatsApp`
-      : `${formatINR(
-          confirmationAdvance.paypertapBookingPaid
-        )} now · remaining on WhatsApp`;
+  const stickyPaymentSubtext = getStorefrontPaymentSubtext(confirmationAdvance);
 
   function handleBook() {
     if (!isAvailable) return;
@@ -682,16 +592,21 @@ export default function ProductDetailPage() {
                 {formatINR(product.price)}
               </p>
 
-              <ProductPaymentBreakdown
-                classes={classes}
+              <StorefrontPaymentBreakdown
+                classes={{
+                  shell: `mt-5 min-w-0 rounded-[22px] border p-4 ${classes.bookingBox}`,
+                  icon: `grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${classes.bookingStrong} bg-white/65`,
+                  title: `text-base font-semibold leading-6 ${classes.bookingStrong}`,
+                  text: "mt-1 text-sm leading-6",
+                  panel: "mt-3 rounded-2xl border border-current/10 bg-white/55 p-3",
+                  eyebrow: `mb-2 text-[11px] font-semibold uppercase ${classes.eyebrow}`,
+                  rowLabel: "min-w-0 truncate text-xs",
+                  rowValue: `shrink-0 text-sm ${classes.bookingStrong}`,
+                  featuredValue: `shrink-0 text-base ${classes.bookingStrong}`,
+                  note: "mt-3 text-xs leading-5",
+                }}
                 productPrice={product.price}
-                paypertapBookingPaid={confirmationAdvance.paypertapBookingPaid}
-                sellerConfirmationAmountPending={
-                  confirmationAdvance.sellerConfirmationAmountPending
-                }
-                finalBalanceAfterConfirmation={
-                  confirmationAdvance.finalBalanceAfterConfirmation
-                }
+                store={store}
               />
 
               <div ref={variantSelectorRef}>

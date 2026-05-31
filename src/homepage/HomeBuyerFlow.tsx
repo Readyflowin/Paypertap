@@ -60,7 +60,7 @@ export function HomeBuyerFlow() {
             <span className="ppt-faux-strong">WhatsApp message ready</span>
           </div>
           <div className="ppt-whatsapp-bubble">
-            <p>Hi, I booked this product on PayPerTap. Please share UPI/payment details and delivery confirmation.</p>
+            <p>Hi, I booked this product on Aditya Thrift. Please share UPI/payment details and delivery confirmation.</p>
             <div className="ppt-whatsapp-rows">
               {messageRows.map(([label, value]) => (
                 <div key={label}>

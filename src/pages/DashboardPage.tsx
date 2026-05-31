@@ -97,6 +97,7 @@ import {
   updateStorePublishStatus,
 } from "../services/storeService";
 import { ThemeRenderer } from "../storefront/ThemeRenderer";
+import { getStorefrontConfirmationPolicyText } from "../storefront/StorefrontPaymentBreakdown";
 import { getProductGridImageUrl } from "../storefront/imageMedia";
 import {
   DEFAULT_STOREFRONT_THEME_ID,
@@ -3680,7 +3681,36 @@ function StoreTab({
   const [themeSavedMessage, setThemeSavedMessage] = useState("");
   const [themeError, setThemeError] = useState("");
   const selectedThemeId = getSelectedStorefrontThemeId(store);
-  const safeLogoUrl = getStoreLogoUrl(store);
+  const draftFixedAmount =
+    confirmationAdvanceType === "fixed"
+      ? Math.max(20, Math.round(Number(confirmationFixedAmount) || 20))
+      : null;
+  const draftPercent =
+    confirmationAdvanceType === "percentage"
+      ? Math.max(1, Math.round(Number(confirmationPercent) || 0))
+      : null;
+  const draftStore: Store | null = store
+    ? {
+        ...store,
+        storeName,
+        bio,
+        whatsappPhone,
+        phone: whatsappPhone,
+        instagramProfile,
+        ownerName,
+        supportEmail,
+        supportPhone,
+        returnsPolicyType,
+        returnsPolicyNotes,
+        sellerConfirmationAdvanceType: confirmationAdvanceType,
+        sellerConfirmationAdvanceFixedAmount: draftFixedAmount,
+        sellerConfirmationAdvancePercent: draftPercent,
+        heroTitle: heroHeading,
+        heroSubtitle,
+      }
+    : null;
+  const safeLogoUrl = getStoreLogoUrl(draftStore || store);
+  const confirmationPolicyText = getStorefrontConfirmationPolicyText(draftStore || store);
 
   useEffect(() => {
     setStoreName(store?.storeName || "");
@@ -3765,30 +3795,17 @@ function StoreTab({
         logoUrl: uploadedLogo?.url,
       });
 
-      onStoreUpdated({
-        ...store,
-        ...updatedFields,
-        storeName,
-        bio,
-        whatsappPhone: normalizedWhatsappPhone.localNumber,
-        phone: normalizedWhatsappPhone.localNumber,
-        instagramUrl: String(updatedFields.instagramUrl || ""),
-        instagramProfile,
-        ownerName,
-        supportEmail,
-        supportPhone: String(updatedFields.supportPhone || supportPhone),
-        returnsPolicyType,
-        returnsPolicyNotes,
-        sellerConfirmationAdvanceType: confirmationAdvanceType,
-        sellerConfirmationAdvanceFixedAmount:
-          confirmationAdvanceType === "fixed" ? fixedAmount : null,
-        sellerConfirmationAdvancePercent:
-          confirmationAdvanceType === "percentage" ? percent : null,
-        heroTitle: heroHeading,
-        heroSubtitle,
-        logoUrl: uploadedLogo?.url || store.logoUrl,
-        storeLogoUrl: uploadedLogo?.url || store.storeLogoUrl,
-      });
+      if (
+        updatedFields.sellerConfirmationAdvanceType !== confirmationAdvanceType ||
+        (confirmationAdvanceType === "fixed" &&
+          Number(updatedFields.sellerConfirmationAdvanceFixedAmount) !== fixedAmount) ||
+        (confirmationAdvanceType === "percentage" &&
+          Number(updatedFields.sellerConfirmationAdvancePercent) !== percent)
+      ) {
+        throw new Error("Store saved, but confirmation advance did not persist. Please try again.");
+      }
+
+      onStoreUpdated(updatedFields);
       setLogoFile(null);
       setLogoFileName("");
       setSaved(true);
@@ -3914,7 +3931,7 @@ function StoreTab({
                 {heroHeading || "Fresh drops are live"}
               </h3>
               <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
-                {heroSubtitle || "Reserve with ₹20 and confirm the rest on WhatsApp."}
+                {heroSubtitle || confirmationPolicyText}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <PptBadge tone={store?.isPublished ? "success" : "warning"}>
@@ -4071,19 +4088,19 @@ function StoreTab({
         onPreviewTheme={setPreviewThemeId}
         products={products}
         savingThemeId={themeSavingId}
-        store={store}
+        store={draftStore}
         storeSlug={storeSlug}
         successMessage={themeSavedMessage}
       />
 
-      {previewThemeId && store ? (
+      {previewThemeId && draftStore ? (
         <ThemePreviewModal
           onApply={() => handleApplyTheme(previewThemeId)}
           onClose={() => setPreviewThemeId(null)}
           products={products}
           collections={collections}
           saving={themeSavingId === previewThemeId}
-          store={store}
+          store={draftStore}
           storeSlug={storeSlug}
           themeId={previewThemeId}
         />

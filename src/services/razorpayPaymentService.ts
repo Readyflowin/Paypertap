@@ -185,6 +185,14 @@ export async function startRazorpayBookingPayment(
     productPrice: input.productPrice,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     sellerCollectAmount: getSellerCollectAmount(input.productPrice),
+    ...(input.confirmationAdvanceType
+      ? {
+          confirmationAdvanceType: input.confirmationAdvanceType,
+          totalConfirmationAdvance: input.totalConfirmationAdvance,
+          sellerConfirmationAmountPending: input.sellerConfirmationAmountPending,
+          finalBalanceAfterConfirmation: input.finalBalanceAfterConfirmation,
+        }
+      : {}),
     buyerName: input.buyerName,
     buyerPhone: input.buyerPhone,
     buyerAddress: input.buyerAddress,

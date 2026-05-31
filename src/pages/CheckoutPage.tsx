@@ -272,6 +272,12 @@ export default function CheckoutPage() {
         }
       }
 
+      const confirmationSnapshot = calculateConfirmationAdvance({
+        productPrice: latestProduct.price,
+        sellerConfirmationAdvanceType: store.sellerConfirmationAdvanceType,
+        sellerConfirmationAdvanceFixedAmount: store.sellerConfirmationAdvanceFixedAmount,
+        sellerConfirmationAdvancePercent: store.sellerConfirmationAdvancePercent,
+      });
       const paymentInput = {
         sellerId: latestProduct.sellerId,
         storeId: store.storeId,
@@ -283,6 +289,12 @@ export default function CheckoutPage() {
         buyerAddress: buyerAddress.trim(),
         buyerCity: buyerCity.trim(),
         buyerPincode: buyerPincode.trim(),
+        confirmationAdvanceType: confirmationSnapshot.sellerConfirmationAdvanceType,
+        totalConfirmationAdvance: confirmationSnapshot.totalConfirmationAdvance,
+        sellerConfirmationAmountPending:
+          confirmationSnapshot.sellerConfirmationAmountPending,
+        finalBalanceAfterConfirmation:
+          confirmationSnapshot.finalBalanceAfterConfirmation,
         ...(latestSelectedVariant
           ? {
               selectedVariantId: latestSelectedVariant.variantId,
@@ -400,9 +412,9 @@ export default function CheckoutPage() {
   const productImageUrl = getProductImage(product);
   const confirmationAdvance = calculateConfirmationAdvance({
     productPrice: product.price,
-    type: store.sellerConfirmationAdvanceType,
-    fixedAmount: store.sellerConfirmationAdvanceFixedAmount,
-    percent: store.sellerConfirmationAdvancePercent,
+    sellerConfirmationAdvanceType: store.sellerConfirmationAdvanceType,
+    sellerConfirmationAdvanceFixedAmount: store.sellerConfirmationAdvanceFixedAmount,
+    sellerConfirmationAdvancePercent: store.sellerConfirmationAdvancePercent,
   });
 
   return (
@@ -533,8 +545,39 @@ export default function CheckoutPage() {
             />
             <PptPriceBreakdown
               productPrice={product.price}
-              advanceAmount={product.bookingAdvanceAmount || 20}
+              advanceAmount={confirmationAdvance.paypertapBookingPaid}
               currency="₹"
+              rows={
+                confirmationAdvance.sellerConfirmationAmountPending > 0
+                  ? [
+                      { label: "Product price", amount: product.price },
+                      {
+                        label: "Pay now",
+                        amount: confirmationAdvance.paypertapBookingPaid,
+                      },
+                      {
+                        label: "Confirm on WhatsApp",
+                        amount: confirmationAdvance.sellerConfirmationAmountPending,
+                      },
+                      {
+                        label: "Final balance",
+                        amount: confirmationAdvance.finalBalanceAfterConfirmation,
+                        featured: true,
+                      },
+                    ]
+                  : [
+                      { label: "Product price", amount: product.price },
+                      {
+                        label: "Pay now",
+                        amount: confirmationAdvance.paypertapBookingPaid,
+                      },
+                      {
+                        label: "Final balance",
+                        amount: confirmationAdvance.finalBalanceAfterConfirmation,
+                        featured: true,
+                      },
+                    ]
+              }
               note={
                 confirmationAdvance.sellerConfirmationAmountPending > 0
                   ? `Pay ${formatINR(

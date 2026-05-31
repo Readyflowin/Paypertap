@@ -27,6 +27,14 @@ service cloud.firestore {
       return value is string && value.size() > 0 && value.size() <= 500;
     }
 
+    function isValidOptionalString(value) {
+      return value == null || (value is string && value.size() <= 1000);
+    }
+
+    function isValidOptionalShortString(value) {
+      return value == null || (value is string && value.size() <= 200);
+    }
+
     function isValidPhone(value) {
       return value is string && value.size() >= 8 && value.size() <= 15;
     }
@@ -49,6 +57,10 @@ service cloud.firestore {
 
     function isValidSellerConfirmationAdvanceType(value) {
       return value in ["paypertap_only", "fixed", "percentage"];
+    }
+
+    function isValidReturnsPolicyType(value) {
+      return value in ["returns_accepted", "exchange_only", "no_returns"];
     }
 
     function hasValidSellerConfirmationAdvanceFields(data) {
@@ -93,6 +105,29 @@ service cloud.firestore {
             && data.sellerConfirmationAdvancePercent > 0
             && data.sellerConfirmationAdvancePercent <= 100
           )
+        );
+    }
+
+    function hasValidStoreContactAndPolicyFields(data) {
+      return (
+          !("ownerName" in data)
+          || isValidOptionalShortString(data.ownerName)
+        )
+        && (
+          !("supportEmail" in data)
+          || isValidOptionalShortString(data.supportEmail)
+        )
+        && (
+          !("supportPhone" in data)
+          || isValidOptionalShortString(data.supportPhone)
+        )
+        && (
+          !("returnsPolicyType" in data)
+          || isValidReturnsPolicyType(data.returnsPolicyType)
+        )
+        && (
+          !("returnsPolicyNotes" in data)
+          || isValidOptionalString(data.returnsPolicyNotes)
         );
     }
 
@@ -607,6 +642,44 @@ service cloud.firestore {
       ]);
     }
 
+    function hasOnlyStoreSellerMutableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "storeName",
+        "storeDescription",
+        "description",
+        "bio",
+        "phone",
+        "whatsappPhone",
+        "logoUrl",
+        "storeLogoUrl",
+        "heroTitle",
+        "heroSubtitle",
+        "heroImageUrl",
+        "instagramProfile",
+        "instagramUrl",
+        "themeId",
+        "primaryColor",
+        "secondaryColor",
+        "accentColor",
+        "isPublished",
+        "bookingAdvanceAmount",
+        "sellerConfirmationAdvanceType",
+        "sellerConfirmationAdvanceFixedAmount",
+        "sellerConfirmationAdvancePercent",
+        "ownerName",
+        "supportEmail",
+        "supportPhone",
+        "returnsPolicyType",
+        "returnsPolicyNotes",
+        "paymentMethods",
+        "upiId",
+        "googlePayNumber",
+        "phonePeNumber",
+        "paymentNote",
+        "updatedAt"
+      ]);
+    }
+
     function hasOnlyOrderSellerMutableFields() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         "orderStatus",
@@ -697,7 +770,8 @@ service cloud.firestore {
           !("bookingAdvanceAmount" in request.resource.data)
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
         )
-        && hasValidSellerConfirmationAdvanceFields(request.resource.data);
+        && hasValidSellerConfirmationAdvanceFields(request.resource.data)
+        && hasValidStoreContactAndPolicyFields(request.resource.data);
 
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
@@ -705,11 +779,13 @@ service cloud.firestore {
         && request.resource.data.storeSlug == resource.data.storeSlug
         && isValidString(request.resource.data.storeName)
         && request.resource.data.isPublished is bool
+        && hasOnlyStoreSellerMutableFields()
         && (
           !("bookingAdvanceAmount" in request.resource.data)
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
         )
-        && hasValidSellerConfirmationAdvanceFields(request.resource.data);
+        && hasValidSellerConfirmationAdvanceFields(request.resource.data)
+        && hasValidStoreContactAndPolicyFields(request.resource.data);
 
       allow delete: if isAdmin();
     }
@@ -816,6 +892,10 @@ service cloud.firestore {
           "productPrice",
           "bookingAdvanceAmount",
           "sellerCollectAmount",
+          "confirmationAdvanceType",
+          "totalConfirmationAdvance",
+          "sellerConfirmationAmountPending",
+          "finalBalanceAfterConfirmation",
           "buyerName",
           "buyerEmail",
           "buyerPhone",
@@ -842,6 +922,10 @@ service cloud.firestore {
           "productPrice",
           "bookingAdvanceAmount",
           "sellerCollectAmount",
+          "confirmationAdvanceType",
+          "totalConfirmationAdvance",
+          "sellerConfirmationAmountPending",
+          "finalBalanceAfterConfirmation",
           "buyerName",
           "buyerPhone",
           "buyerAddress",
@@ -868,6 +952,36 @@ service cloud.firestore {
         && isValidAmount(request.resource.data.sellerCollectAmount)
         && request.resource.data.sellerCollectAmount ==
           request.resource.data.productPrice - phaseOneBookingAdvance()
+        && (
+          !("confirmationAdvanceType" in request.resource.data)
+          || isValidSellerConfirmationAdvanceType(request.resource.data.confirmationAdvanceType)
+        )
+        && (
+          !("totalConfirmationAdvance" in request.resource.data)
+          || isValidAmount(request.resource.data.totalConfirmationAdvance)
+        )
+        && (
+          !("sellerConfirmationAmountPending" in request.resource.data)
+          || isValidAmount(request.resource.data.sellerConfirmationAmountPending)
+        )
+        && (
+          !("finalBalanceAfterConfirmation" in request.resource.data)
+          || isValidAmount(request.resource.data.finalBalanceAfterConfirmation)
+        )
+        && (
+          !("totalConfirmationAdvance" in request.resource.data)
+          || !("sellerConfirmationAmountPending" in request.resource.data)
+          || !("finalBalanceAfterConfirmation" in request.resource.data)
+          || (
+            request.resource.data.bookingAdvanceAmount +
+            request.resource.data.sellerConfirmationAmountPending +
+            request.resource.data.finalBalanceAfterConfirmation ==
+            request.resource.data.productPrice
+            && request.resource.data.totalConfirmationAdvance ==
+              request.resource.data.bookingAdvanceAmount +
+              request.resource.data.sellerConfirmationAmountPending
+          )
+        )
         && request.resource.data.buyerName is string
         && (
           !("buyerEmail" in request.resource.data)

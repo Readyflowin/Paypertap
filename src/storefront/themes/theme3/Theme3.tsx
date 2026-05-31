@@ -20,6 +20,12 @@ import {
 } from "@/lib/productAvailability";
 import { PaymentTrustStrip } from "../../PaymentTrustStrip";
 import {
+  getStoreConfirmationAdvanceBreakdown,
+  getStorefrontConfirmationPolicyText,
+  getStorefrontPaymentSubtext,
+  StorefrontPaymentBreakdown,
+} from "../../StorefrontPaymentBreakdown";
+import {
   getProductDetailImageUrls,
   getProductGridImageUrl,
   getStorefrontImageFetchPriority,
@@ -133,12 +139,6 @@ function getProductBadge(product: StorefrontProduct) {
   return { label: "Available", tone: "success" as const };
 }
 
-function getSellerCollectAmount(price: number) {
-  return Number.isFinite(price) && price > BOOKING_ADVANCE_AMOUNT
-    ? price - BOOKING_ADVANCE_AMOUNT
-    : null;
-}
-
 function getUnavailableCtaLabel(product: StorefrontProduct) {
   const status = getProductStatus(product);
   if (status === "hold" || status === "reserved") return "Currently reserved";
@@ -150,6 +150,7 @@ function Theme3DropHero({ store }: { store: StorefrontThemeProps["store"] }) {
   const initials = getInitials(storeName);
   const contact = getStoreContactInfo(store);
   const logoUrl = getStoreLogoUrl(store);
+  const confirmationPolicyText = getStorefrontConfirmationPolicyText(store);
 
   return (
     <header className="overflow-hidden rounded-[30px] border border-white/10 bg-[#050507] text-white shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
@@ -201,7 +202,7 @@ function Theme3DropHero({ store }: { store: StorefrontThemeProps["store"] }) {
             {getStoreTagline(store)}
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/54">
-            Pay {formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
+            {confirmationPolicyText}
           </p>
           <a
             href="#products"
@@ -678,6 +679,7 @@ function Theme3ProductDetail({
   onClose,
   onToggleSaved,
   product,
+  store,
   storeSlug,
 }: {
   fallbackIndex: number;
@@ -685,18 +687,23 @@ function Theme3ProductDetail({
   onClose: () => void;
   onToggleSaved: (product: StorefrontProduct, fallbackIndex?: number) => void;
   product: StorefrontProduct;
+  store: StorefrontThemeProps["store"];
   storeSlug: string;
 }) {
   const images = getProductDetailImageUrls(product);
   const imageSlots = images.length ? images : [""];
   const title = getProductTitle(product);
   const price = getProductPrice(product);
-  const sellerCollectAmount = getSellerCollectAmount(price);
   const description = getProductDescription(product);
   const productId = getProductId(product);
   const bookable = Boolean(productId && isBookable(product));
   const unavailableCtaLabel = getUnavailableCtaLabel(product);
   const checkoutHref = `/${storeSlug}/checkout/${productId}`;
+  const paymentBreakdown = getStoreConfirmationAdvanceBreakdown({
+    productPrice: price,
+    store,
+  });
+  const stickyPaymentSubtext = getStorefrontPaymentSubtext(paymentBreakdown);
   const showBadge = hasExplicitAvailability(product);
   const badge = getProductBadge(product);
 
@@ -814,15 +821,22 @@ function Theme3ProductDetail({
               </p>
             ) : null}
 
-            <div className="mt-6 min-w-0 max-w-full rounded-[20px] border border-white/10 bg-white/7 p-4 text-sm leading-6 text-white/64">
-              <strong className="block font-semibold text-white">
-                Book this item with {formatINR(BOOKING_ADVANCE_AMOUNT)}.
-              </strong>
-              {sellerCollectAmount !== null
-                ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller.`
-                : "Pay the remaining amount directly to the seller."}
-              <span className="block">WhatsApp opens with the product and buyer details ready.</span>
-            </div>
+            <StorefrontPaymentBreakdown
+              classes={{
+                shell: "mt-6 min-w-0 max-w-full rounded-[20px] border border-white/10 bg-white/7 p-4 text-sm leading-6 text-white/64",
+                icon: "grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-neutral-950",
+                title: "text-base font-semibold leading-6 text-white",
+                text: "mt-1 text-sm leading-6",
+                panel: "mt-3 rounded-2xl border border-white/10 bg-neutral-950/55 p-3",
+                eyebrow: "mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-white/34",
+                rowLabel: "min-w-0 truncate text-xs",
+                rowValue: "shrink-0 text-sm text-white",
+                featuredValue: "shrink-0 text-base text-white",
+                note: "mt-3 text-xs leading-5",
+              }}
+              productPrice={price}
+              store={store}
+            />
 
             <div className="mt-4">
               <PaymentTrustStrip compact variant="theme3" />
@@ -881,10 +895,7 @@ function Theme3ProductDetail({
             )}
           </div>
           <p className="mt-2 break-words text-center text-[10px] font-bold uppercase tracking-[0.1em] text-white/45">
-            {sellerCollectAmount !== null
-              ? `Pay ${formatINR(sellerCollectAmount)} directly to the seller`
-              : "Pay the remaining amount directly to the seller"}
-            <span className="block">Continue on WhatsApp</span>
+            {stickyPaymentSubtext}
           </p>
         </div>
       </div>
@@ -1241,6 +1252,7 @@ export default function Theme3({
           isSaved={wishlist.isWishlisted(selectedProduct, selectedProductFallbackIndex)}
           onToggleSaved={wishlist.toggleWishlistItem}
           product={selectedProduct}
+          store={store}
           storeSlug={storeSlug}
           onClose={() => setSelectedProduct(null)}
         />

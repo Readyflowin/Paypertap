@@ -8,6 +8,7 @@ import {
   getFirebaseAdminEnvDebugState,
 } from "./firebaseAdmin.js";
 import { normalizeIndianMobileInput } from "../../src/lib/phone.js";
+import { calculateConfirmationAdvance } from "../../src/lib/confirmationAdvance.js";
 
 const BOOKING_AMOUNT_RUPEES = 20;
 const BOOKING_AMOUNT_PAISE = 2000;
@@ -67,6 +68,10 @@ type CanonicalVariant = {
 };
 
 type ValidatedBooking = BookingInput & {
+  confirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
+  totalConfirmationAdvance?: number;
+  sellerConfirmationAmountPending?: number;
+  finalBalanceAfterConfirmation?: number;
   selectedVariantId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
@@ -80,6 +85,9 @@ type StoreData = {
   isPublished?: boolean;
   phone?: string;
   whatsappPhone?: string;
+  sellerConfirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
 };
 
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
@@ -256,6 +264,13 @@ function withCanonicalVariant(
   sellerPhonePayload: Pick<
     ValidatedBooking,
     "sellerPhone" | "sellerWhatsAppPhone" | "sellerWhatsAppE164"
+  > = {},
+  confirmationPayload: Pick<
+    ValidatedBooking,
+    | "confirmationAdvanceType"
+    | "totalConfirmationAdvance"
+    | "sellerConfirmationAmountPending"
+    | "finalBalanceAfterConfirmation"
   > = {}
 ): ValidatedBooking {
   if (!variant) {
@@ -274,15 +289,33 @@ function withCanonicalVariant(
       buyerPincode: input.buyerPincode,
       buyerEmail: input.buyerEmail,
       ...sellerPhonePayload,
+      ...confirmationPayload,
     };
   }
 
   return {
     ...input,
     ...sellerPhonePayload,
+    ...confirmationPayload,
     selectedVariantId: variant.variantId,
     selectedVariantLabel: variant.label || variantLabel(variant.options),
     selectedVariantOptions: variant.options,
+  };
+}
+
+function getConfirmationPayload(store: StoreData, productPrice: number) {
+  const confirmation = calculateConfirmationAdvance({
+    productPrice,
+    sellerConfirmationAdvanceType: store.sellerConfirmationAdvanceType,
+    sellerConfirmationAdvanceFixedAmount: store.sellerConfirmationAdvanceFixedAmount,
+    sellerConfirmationAdvancePercent: store.sellerConfirmationAdvancePercent,
+  });
+
+  return {
+    confirmationAdvanceType: confirmation.sellerConfirmationAdvanceType,
+    totalConfirmationAdvance: confirmation.totalConfirmationAdvance,
+    sellerConfirmationAmountPending: confirmation.sellerConfirmationAmountPending,
+    finalBalanceAfterConfirmation: confirmation.finalBalanceAfterConfirmation,
   };
 }
 
@@ -420,11 +453,17 @@ async function validateStoreAndProduct(input: BookingInput) {
         sellerWhatsAppE164: sellerPhone.e164,
       }
     : {};
+  const confirmationPayload = getConfirmationPayload(store, input.productPrice);
 
   return {
     db,
     product,
-    booking: withCanonicalVariant(input, selectedVariant, sellerPhonePayload),
+    booking: withCanonicalVariant(
+      input,
+      selectedVariant,
+      sellerPhonePayload,
+      confirmationPayload
+    ),
   };
 }
 
@@ -497,6 +536,11 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
         ? { sellerWhatsAppPhone: input.sellerWhatsAppPhone }
         : {}),
       ...(input.sellerWhatsAppE164 ? { sellerWhatsAppE164: input.sellerWhatsAppE164 } : {}),
+    }, {
+      confirmationAdvanceType: input.confirmationAdvanceType,
+      totalConfirmationAdvance: input.totalConfirmationAdvance,
+      sellerConfirmationAmountPending: input.sellerConfirmationAmountPending,
+      finalBalanceAfterConfirmation: input.finalBalanceAfterConfirmation,
     });
     responseInput = canonicalInput;
 
@@ -516,6 +560,10 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
       productPrice: canonicalInput.productPrice,
       bookingAdvanceAmount: BOOKING_AMOUNT_RUPEES,
       sellerCollectAmount: canonicalInput.sellerCollectAmount,
+      confirmationAdvanceType: canonicalInput.confirmationAdvanceType,
+      totalConfirmationAdvance: canonicalInput.totalConfirmationAdvance,
+      sellerConfirmationAmountPending: canonicalInput.sellerConfirmationAmountPending,
+      finalBalanceAfterConfirmation: canonicalInput.finalBalanceAfterConfirmation,
       buyerName: canonicalInput.buyerName,
       ...(canonicalInput.buyerEmail ? { buyerEmail: canonicalInput.buyerEmail } : {}),
       buyerPhone: canonicalInput.buyerPhone,
@@ -587,6 +635,10 @@ async function finalizeVerifiedBooking(rawInput: BookingInput, payment: {
     productPrice: responseInput.productPrice,
     bookingAdvanceAmount: BOOKING_AMOUNT_RUPEES,
     sellerCollectAmount: responseInput.sellerCollectAmount,
+    confirmationAdvanceType: responseInput.confirmationAdvanceType,
+    totalConfirmationAdvance: responseInput.totalConfirmationAdvance,
+    sellerConfirmationAmountPending: responseInput.sellerConfirmationAmountPending,
+    finalBalanceAfterConfirmation: responseInput.finalBalanceAfterConfirmation,
     buyerName: responseInput.buyerName,
     ...(responseInput.buyerEmail ? { buyerEmail: responseInput.buyerEmail } : {}),
     buyerPhone: responseInput.buyerPhone,

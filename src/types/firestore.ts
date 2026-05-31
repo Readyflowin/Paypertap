@@ -213,6 +213,10 @@ export type CheckoutSession = {
   productPrice: number;
   bookingAdvanceAmount: number;
   sellerCollectAmount: number;
+  confirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
+  totalConfirmationAdvance?: number;
+  sellerConfirmationAmountPending?: number;
+  finalBalanceAfterConfirmation?: number;
   buyerName: string;
   buyerEmail?: string;
   buyerPhone: string;

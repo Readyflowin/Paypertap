@@ -1,4 +1,10 @@
-import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  getDocFromServer,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
 import { normalizeIndianMobileInput } from "../lib/phone";
@@ -139,7 +145,7 @@ export async function updateStoreTheme(
 export async function updateStoreCustomization(
   storeId: string,
   input: StoreCustomizationInput
-): Promise<Partial<Store>> {
+): Promise<Store> {
   const instagram = normalizeInstagramProfile(input.instagramProfile);
   const payload: Partial<Store> & Record<string, unknown> = {
     updatedAt: serverTimestamp(),
@@ -233,7 +239,15 @@ export async function updateStoreCustomization(
     payload.instagramUrl = instagram.instagramUrl;
   }
 
-  await updateDoc(doc(db, "stores", storeId), payload);
+  const storeRef = doc(db, "stores", storeId);
 
-  return payload;
+  await updateDoc(storeRef, payload);
+
+  const savedStoreSnap = await getDocFromServer(storeRef);
+
+  if (!savedStoreSnap.exists()) {
+    throw new Error("Store settings were saved but the store could not be reloaded.");
+  }
+
+  return savedStoreSnap.data() as Store;
 }

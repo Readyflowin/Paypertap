@@ -111,6 +111,10 @@ export default function BookingSuccessPage() {
       productPrice: state.checkout.productPrice,
       bookingAdvanceAmount: state.checkout.bookingAdvanceAmount,
       sellerCollectAmount: state.checkout.sellerCollectAmount,
+      confirmationAdvanceType: state.checkout.confirmationAdvanceType,
+      totalConfirmationAdvance: state.checkout.totalConfirmationAdvance,
+      sellerConfirmationAmountPending: state.checkout.sellerConfirmationAmountPending,
+      finalBalanceAfterConfirmation: state.checkout.finalBalanceAfterConfirmation,
       buyerName: state.checkout.buyerName,
       buyerPhone: state.checkout.buyerPhone,
       buyerAddress: state.checkout.buyerAddress,
@@ -184,13 +188,29 @@ export default function BookingSuccessPage() {
   }
 
   const checkout = state.checkout;
-  const confirmationAdvance = calculateConfirmationAdvance({
+  const fallbackConfirmationAdvance = calculateConfirmationAdvance({
     productPrice: checkout.productPrice,
-    type: state.store?.sellerConfirmationAdvanceType,
-    fixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
-    percent: state.store?.sellerConfirmationAdvancePercent,
+    sellerConfirmationAdvanceType: state.store?.sellerConfirmationAdvanceType,
+    sellerConfirmationAdvanceFixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
+    sellerConfirmationAdvancePercent: state.store?.sellerConfirmationAdvancePercent,
     bookingPaid: checkout.bookingAdvanceAmount,
   });
+  const hasConfirmationSnapshot =
+    typeof checkout.sellerConfirmationAmountPending === "number" &&
+    typeof checkout.finalBalanceAfterConfirmation === "number" &&
+    typeof checkout.totalConfirmationAdvance === "number";
+  const confirmationAdvance = hasConfirmationSnapshot
+    ? {
+        ...fallbackConfirmationAdvance,
+        sellerConfirmationAdvanceType:
+          checkout.confirmationAdvanceType ||
+          fallbackConfirmationAdvance.sellerConfirmationAdvanceType,
+        paypertapBookingPaid: checkout.bookingAdvanceAmount,
+        totalConfirmationAdvance: checkout.totalConfirmationAdvance || checkout.bookingAdvanceAmount,
+        sellerConfirmationAmountPending: checkout.sellerConfirmationAmountPending || 0,
+        finalBalanceAfterConfirmation: checkout.finalBalanceAfterConfirmation || 0,
+      }
+    : fallbackConfirmationAdvance;
   const reservationApplied = checkout.reservationApplied !== false;
   const productImage = state.product?.images?.find(
     (image) => image.thumbUrl || image.url || image.mediumUrl
@@ -302,7 +322,7 @@ export default function BookingSuccessPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <PptBadge tone="neutral">Price {formatINR(checkout.productPrice)}</PptBadge>
                   <PptBadge tone="primary">
-                    Remaining {formatINR(checkout.sellerCollectAmount)}
+                    Final balance {formatINR(confirmationAdvance.finalBalanceAfterConfirmation)}
                   </PptBadge>
                 </div>
               </div>

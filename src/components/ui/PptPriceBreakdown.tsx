@@ -3,14 +3,21 @@ export type PptPriceBreakdownProps = {
   advanceAmount?: number;
   currency?: string;
   note?: string;
+  rows?: Array<{
+    label: string;
+    amount: number;
+    featured?: boolean;
+  }>;
 };
 
 function formatAmount(amount: number, currency: string) {
-  if (currency === "₹" || currency.toUpperCase() === "INR") {
-    return `₹${Math.max(Number(amount) || 0, 0).toLocaleString("en-IN")}`;
+  const safeAmount = Math.max(Number(amount) || 0, 0).toLocaleString("en-IN");
+
+  if (currency === "₹" || currency === "â‚¹" || currency === "INR" || currency === "Rs") {
+    return `₹${safeAmount}`;
   }
 
-  return `${currency}${Math.max(Number(amount) || 0, 0).toLocaleString("en-IN")}`;
+  return `${currency}${safeAmount}`;
 }
 
 export function PptPriceBreakdown({
@@ -18,25 +25,31 @@ export function PptPriceBreakdown({
   advanceAmount = 20,
   currency = "₹",
   note = "Pay the remaining amount directly to the seller.",
+  rows,
 }: PptPriceBreakdownProps) {
   const safePrice = Math.max(Number(productPrice) || 0, 0);
   const safeAdvance = Math.max(Number(advanceAmount) || 0, 0);
   const remainingAmount = Math.max(safePrice - safeAdvance, 0);
+  const displayRows =
+    rows && rows.length
+      ? rows
+      : [
+          { label: "Product price", amount: safePrice },
+          { label: "Pay now", amount: safeAdvance },
+          { label: "Final balance", amount: remainingAmount, featured: true },
+        ];
 
   return (
     <div className="pds-price-card">
-      <div className="pds-price-row">
-        <span>Product price</span>
-        <strong>{formatAmount(safePrice, currency)}</strong>
-      </div>
-      <div className="pds-price-row">
-        <span>Pay now</span>
-        <strong>{formatAmount(safeAdvance, currency)}</strong>
-      </div>
-      <div className="pds-price-row is-main">
-        <span>Pay seller later</span>
-        <strong>{formatAmount(remainingAmount, currency)}</strong>
-      </div>
+      {displayRows.map((row, index) => (
+        <div
+          key={`${row.label}-${index}`}
+          className={`pds-price-row ${row.featured ? "is-main" : ""}`}
+        >
+          <span>{row.label}</span>
+          <strong>{formatAmount(row.amount, currency)}</strong>
+        </div>
+      ))}
       <p>{note}</p>
     </div>
   );

@@ -7,6 +7,9 @@ export type SellerConfirmationAdvanceType =
 
 export type ConfirmationAdvanceInput = {
   productPrice: number;
+  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType | string;
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
   type?: SellerConfirmationAdvanceType | string;
   fixedAmount?: number | null;
   percent?: number | null;
@@ -18,6 +21,7 @@ export type ConfirmationAdvanceBreakdown = {
   paypertapBookingPaid: number;
   sellerConfirmationAmountPending: number;
   finalBalanceAfterConfirmation: number;
+  sellerConfirmationAdvanceType: SellerConfirmationAdvanceType;
   type: SellerConfirmationAdvanceType;
   displayText: string;
 };
@@ -43,39 +47,38 @@ function normalizeType(value: unknown): SellerConfirmationAdvanceType {
 
 export function calculateConfirmationAdvance({
   productPrice,
+  sellerConfirmationAdvanceType,
+  sellerConfirmationAdvanceFixedAmount,
+  sellerConfirmationAdvancePercent,
   type,
   fixedAmount,
   percent,
-  bookingPaid = BOOKING_ADVANCE_AMOUNT,
 }: ConfirmationAdvanceInput): ConfirmationAdvanceBreakdown {
   const safeProductPrice = safeRupeeAmount(productPrice);
-  const paypertapBookingPaid = safeRupeeAmount(bookingPaid) || BOOKING_ADVANCE_AMOUNT;
-  const normalizedType = normalizeType(type);
+  const paypertapBookingPaid = BOOKING_ADVANCE_AMOUNT;
+  const normalizedType = normalizeType(sellerConfirmationAdvanceType ?? type);
+  const configuredFixedAmount = sellerConfirmationAdvanceFixedAmount ?? fixedAmount;
+  const configuredPercent = sellerConfirmationAdvancePercent ?? percent;
 
   let requestedAdvance = paypertapBookingPaid;
 
   if (normalizedType === "fixed") {
-    requestedAdvance = safeRupeeAmount(fixedAmount);
+    requestedAdvance = safeRupeeAmount(configuredFixedAmount);
   }
 
   if (normalizedType === "percentage") {
-    const safePercent = Math.max(0, Number(percent) || 0);
+    const safePercent = Math.max(0, Number(configuredPercent) || 0);
     requestedAdvance = Math.round((safeProductPrice * safePercent) / 100);
   }
 
-  const minimumAdvance = Math.min(paypertapBookingPaid, safeProductPrice || paypertapBookingPaid);
   const totalConfirmationAdvance = Math.min(
-    safeProductPrice || paypertapBookingPaid,
-    Math.max(minimumAdvance, requestedAdvance)
+    safeProductPrice,
+    Math.max(paypertapBookingPaid, requestedAdvance)
   );
-  const sellerConfirmationAmountPending = Math.max(
-    totalConfirmationAdvance - paypertapBookingPaid,
-    0
-  );
-  const finalBalanceAfterConfirmation = Math.max(
-    safeProductPrice - totalConfirmationAdvance,
-    0
-  );
+  const sellerConfirmationAmountPending =
+    totalConfirmationAdvance - paypertapBookingPaid;
+  const finalBalanceAfterConfirmation =
+    safeProductPrice - totalConfirmationAdvance;
 
   const displayText =
     sellerConfirmationAmountPending > 0
@@ -83,13 +86,13 @@ export function calculateConfirmationAdvance({
           `This seller confirms orders after collecting ${formatINR(totalConfirmationAdvance)} total advance.`,
           `Pay ${formatINR(paypertapBookingPaid)} now to reserve this item.`,
           `After booking, pay ${formatINR(sellerConfirmationAmountPending)} directly to the seller on WhatsApp to confirm the order.`,
-          `Remaining on COD : ${formatINR(finalBalanceAfterConfirmation)}.`,
+          `Final balance: ${formatINR(finalBalanceAfterConfirmation)}.`,
         ].join("\n")
       : [
           `Pay ${formatINR(paypertapBookingPaid)} now to reserve this item.`,
           `The seller will collect the remaining ${formatINR(
-            Math.max(safeProductPrice - paypertapBookingPaid, 0)
-          )} directly on WhatsApp.`,
+            finalBalanceAfterConfirmation
+          )} directly.`,
         ].join("\n");
 
   return {
@@ -97,6 +100,7 @@ export function calculateConfirmationAdvance({
     paypertapBookingPaid,
     sellerConfirmationAmountPending,
     finalBalanceAfterConfirmation,
+    sellerConfirmationAdvanceType: normalizedType,
     type: normalizedType,
     displayText,
   };
