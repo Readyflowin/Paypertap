@@ -43,6 +43,9 @@ export type Store = {
   fontStyle: string;
   isPublished: boolean;
   bookingAdvanceAmount?: number;
+  sellerConfirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
   phone?: string;
   whatsappPhone?: string;
   whatsappNumber?: string;

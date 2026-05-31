@@ -479,6 +479,25 @@
           color: #fff;
         }
 
+        .pds-whatsapp-attention {
+          animation: pds-whatsapp-attention 4.6s ease-in-out 1s 3;
+          transform-origin: center;
+        }
+
+        @keyframes pds-whatsapp-attention {
+          0%, 24%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+          4% { transform: translateY(-1px) rotate(-1.2deg) scale(1.01); }
+          8% { transform: translateY(0) rotate(1.2deg) scale(1.01); }
+          12% { transform: translateY(-1px) rotate(-.8deg) scale(1.008); }
+          16% { transform: translateY(0) rotate(.8deg) scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .pds-whatsapp-attention {
+            animation: none;
+          }
+        }
+
         .pds-button-instagram {
           color: #fff !important;
           background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);

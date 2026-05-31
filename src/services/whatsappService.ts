@@ -1,5 +1,9 @@
 import { BOOKING_ADVANCE_AMOUNT } from "../lib/money";
 import {
+  calculateConfirmationAdvance,
+  type SellerConfirmationAdvanceType,
+} from "../lib/confirmationAdvance";
+import {
   buildWhatsAppUrl,
   normalizeIndianMobileInput,
 } from "../lib/phone";
@@ -8,6 +12,10 @@ import type { CheckoutSession, DerivedCustomerLead, Product, Store } from "../ty
 
 type BuyerBookingInput = {
   storeSlug: string;
+  storeName?: string;
+  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType | string;
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
   productId: string;
   productTitle: string;
   productPrice: number;
@@ -69,16 +77,42 @@ export function getStoreWhatsAppPhone(store?: Store | null): string | null {
 export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
   const productUrl = `${getOrigin()}/${input.storeSlug}/product/${input.productId}`;
   const variantDetails = getVariantDetailsText(input);
+  const storeName = input.storeName?.trim() || "this store";
+  const confirmationAdvance = calculateConfirmationAdvance({
+    productPrice: input.productPrice,
+    type: input.sellerConfirmationAdvanceType,
+    fixedAmount: input.sellerConfirmationAdvanceFixedAmount,
+    percent: input.sellerConfirmationAdvancePercent,
+    bookingPaid: input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
+  });
+  const paymentLines =
+    confirmationAdvance.sellerConfirmationAmountPending > 0
+      ? [
+          `Paid on PayPerTap: ₹${confirmationAdvance.paypertapBookingPaid}`,
+          `Seller confirmation amount pending: ₹${confirmationAdvance.sellerConfirmationAmountPending}`,
+          `Remaining on COD  after confirmation: ₹${confirmationAdvance.finalBalanceAfterConfirmation}`,
+        ]
+      : [
+          `Paid on PayPerTap: ₹${confirmationAdvance.paypertapBookingPaid}`,
+          `Remaining amount to seller: ₹${Math.max(
+            input.productPrice - confirmationAdvance.paypertapBookingPaid,
+            0
+          )}`,
+        ];
+  const closingLine =
+    confirmationAdvance.sellerConfirmationAmountPending > 0
+      ? "Please share your UPI/payment details so I can complete the confirmation amount and confirm delivery."
+      : "Please confirm delivery and the remaining payment details.";
 
   return [
-    "Hi, I booked this product on PayPerTap:",
+    `Hi, I booked this product on ${storeName}`,
     "",
     `Product: ${input.productTitle}`,
     ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     `Product link: ${productUrl}`,
     `Price: ₹${input.productPrice}`,
-    `Booking paid: ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT}`,
-    `Remaining: ₹${input.sellerCollectAmount}`,
+    "",
+    ...paymentLines,
     "",
     "My details:",
     `Name: ${input.buyerName}`,
@@ -87,7 +121,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
     `City: ${input.buyerCity}`,
     `Pincode: ${input.buyerPincode}`,
     "",
-    "Please confirm delivery and the remaining payment details.",
+    closingLine,
   ].join("\n");
 }
 

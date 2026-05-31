@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   ImageIcon,
-  MessageCircle,
   Package,
   ShieldCheck,
   Store as StoreIcon,
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
+import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import {
   getAvailableQuantity,
   getProductUnavailableLabel,
@@ -200,11 +200,13 @@ function getCssColor(value: string): string | null {
 
 function ProductVariantSelector({
   classes,
+  hasError,
   onChange,
   product,
   selectedOptions,
 }: {
   classes: ThemeClasses;
+  hasError: boolean;
   onChange: (options: Record<string, string>) => void;
   product: Product;
   selectedOptions: Record<string, string>;
@@ -220,7 +222,11 @@ function ProductVariantSelector({
   if (!productHasVariants(product)) return null;
 
   return (
-    <section className="mt-5 grid min-w-0 gap-4">
+    <section
+      className={`mt-5 grid min-w-0 gap-4 rounded-[22px] transition ${
+        hasError ? "ring-2 ring-amber-400/70 ring-offset-2" : ""
+      }`}
+    >
       {optionGroups.map((option) => {
         const isColor = option.name.toLocaleLowerCase() === "color";
 
@@ -277,6 +283,90 @@ function ProductVariantSelector({
           This option is not available
         </p>
       ) : null}
+    </section>
+  );
+}
+
+function ProductPaymentBreakdown({
+  classes,
+  productPrice,
+  sellerConfirmationAmountPending,
+  finalBalanceAfterConfirmation,
+  paypertapBookingPaid,
+}: {
+  classes: ThemeClasses;
+  productPrice: number;
+  sellerConfirmationAmountPending: number;
+  finalBalanceAfterConfirmation: number;
+  paypertapBookingPaid: number;
+}) {
+  const sellerLaterAmount = Math.max(productPrice - paypertapBookingPaid, 0);
+  const hasSellerConfirmation = sellerConfirmationAmountPending > 0;
+  const rows = hasSellerConfirmation
+    ? [
+        { label: "Pay now", value: formatINR(paypertapBookingPaid), featured: true },
+        {
+          label: "Confirm on WhatsApp",
+          value: formatINR(sellerConfirmationAmountPending),
+        },
+        { label: "Remaining on COD ", value: formatINR(finalBalanceAfterConfirmation) },
+      ]
+    : [
+        { label: "Pay now", value: formatINR(paypertapBookingPaid), featured: true },
+        { label: "Pay seller later", value: formatINR(sellerLaterAmount) },
+      ];
+
+  return (
+    <section className={`mt-5 min-w-0 rounded-[22px] border p-4 ${classes.bookingBox}`}>
+      <div className="flex items-start gap-3">
+        <div
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${classes.bookingStrong} bg-white/65`}
+        >
+          <ShieldCheck size={17} aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h2 className={`text-base font-semibold leading-6 ${classes.bookingStrong}`}>
+            Reserve this item
+          </h2>
+          <p className="mt-1 text-sm leading-6">
+            {hasSellerConfirmation
+              ? `Pay ${formatINR(
+                  paypertapBookingPaid
+                )} now to hold it. Then pay ${formatINR(
+                  sellerConfirmationAmountPending
+                )} on WhatsApp to confirm with the seller.`
+              : `Pay ${formatINR(
+                  paypertapBookingPaid
+                )} now to hold it. The seller will collect the remaining ${formatINR(
+                  sellerLaterAmount
+                )} on WhatsApp.`}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-2xl border border-current/10 bg-white/55 p-3">
+        <p className={`mb-2 text-[11px] font-semibold uppercase ${classes.eyebrow}`}>
+          Payment breakdown
+        </p>
+        <div className="grid gap-2">
+          {rows.map((row) => (
+            <div key={row.label} className="flex min-w-0 items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-xs">{row.label}</span>
+              <strong
+                className={`shrink-0 text-sm ${
+                  row.featured ? `text-base ${classes.bookingStrong}` : classes.bookingStrong
+                }`}
+              >
+                {row.value}
+              </strong>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs leading-5">
+        Details are sent to the seller after booking.
+      </p>
     </section>
   );
 }
@@ -368,6 +458,7 @@ export default function ProductDetailPage() {
   });
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [variantError, setVariantError] = useState("");
+  const variantSelectorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -469,7 +560,20 @@ export default function ProductDetailPage() {
       : isReserved
         ? "Currently reserved"
       : getProductUnavailableLabel(product);
-  const sellerCollectAmount = Math.max(0, product.price - BOOKING_ADVANCE_AMOUNT);
+  const confirmationAdvance = calculateConfirmationAdvance({
+    productPrice: product.price,
+    type: store.sellerConfirmationAdvanceType,
+    fixedAmount: store.sellerConfirmationAdvanceFixedAmount,
+    percent: store.sellerConfirmationAdvancePercent,
+  });
+  const stickyPaymentSubtext =
+    confirmationAdvance.sellerConfirmationAmountPending > 0
+      ? `${formatINR(confirmationAdvance.paypertapBookingPaid)} now · ${formatINR(
+          confirmationAdvance.sellerConfirmationAmountPending
+        )} on WhatsApp`
+      : `${formatINR(
+          confirmationAdvance.paypertapBookingPaid
+        )} now · remaining on WhatsApp`;
 
   function handleBook() {
     if (!isAvailable) return;
@@ -477,7 +581,16 @@ export default function ProductDetailPage() {
     const validation = validateSelectedVariant(product, selectedOptions);
 
     if (!validation.isValid) {
-      setVariantError(validation.message || "Please select an available option.");
+      const message = productHasVariants(product)
+        ? "Please select size and color first."
+        : validation.message || "Please select an available option.";
+      setVariantError(message);
+      window.requestAnimationFrame(() => {
+        variantSelectorRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
       return;
     }
 
@@ -569,28 +682,30 @@ export default function ProductDetailPage() {
                 {formatINR(product.price)}
               </p>
 
-              <div className={`mt-5 min-w-0 rounded-[22px] border p-4 text-sm leading-6 ${classes.bookingBox}`}>
-                <div className="mb-2 flex items-center gap-2">
-                  <ShieldCheck size={16} aria-hidden="true" className="shrink-0" />
-                  <strong className={`font-semibold ${classes.bookingStrong}`}>
-                    Book for {formatINR(BOOKING_ADVANCE_AMOUNT)}
-                  </strong>
-                </div>
-                <p>
-                  Your item is held after successful booking. Pay {formatINR(sellerCollectAmount)} directly to the seller.
-                </p>
-                
-              </div>
-
-              <ProductVariantSelector
+              <ProductPaymentBreakdown
                 classes={classes}
-                product={product}
-                selectedOptions={selectedOptions}
-                onChange={(nextOptions) => {
-                  setSelectedOptions(nextOptions);
-                  setVariantError("");
-                }}
+                productPrice={product.price}
+                paypertapBookingPaid={confirmationAdvance.paypertapBookingPaid}
+                sellerConfirmationAmountPending={
+                  confirmationAdvance.sellerConfirmationAmountPending
+                }
+                finalBalanceAfterConfirmation={
+                  confirmationAdvance.finalBalanceAfterConfirmation
+                }
               />
+
+              <div ref={variantSelectorRef}>
+                <ProductVariantSelector
+                  classes={classes}
+                  hasError={Boolean(variantError)}
+                  product={product}
+                  selectedOptions={selectedOptions}
+                  onChange={(nextOptions) => {
+                    setSelectedOptions(nextOptions);
+                    setVariantError("");
+                  }}
+                />
+              </div>
 
               {variantError ? (
                 <p className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${classes.bookingBox}`}>
@@ -634,10 +749,6 @@ export default function ProductDetailPage() {
                     {unavailableLabel}
                   </button>
                 )}
-                <p className={`flex items-center justify-center gap-2 text-center text-xs font-medium ${classes.muted}`}>
-                  <MessageCircle size={14} aria-hidden="true" />
-                  Continue on WhatsApp
-                </p>
               </div>
             </section>
 
@@ -646,7 +757,7 @@ export default function ProductDetailPage() {
         </div>
       </section>
 
-      <div className={`fixed inset-x-0 bottom-0 z-30 border-t p-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur sm:hidden ${classes.sticky}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-50 border-t p-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur sm:hidden ${classes.sticky}`}>
         <div className="mx-auto flex w-full max-w-6xl min-w-0 items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className={`truncate text-xs font-medium ${classes.muted}`}>Product price</p>
@@ -673,8 +784,7 @@ export default function ProductDetailPage() {
           )}
         </div>
         <p className={`mt-2 break-words text-center text-xs font-medium ${classes.muted}`}>
-          Pay {formatINR(sellerCollectAmount)} directly to the seller
-          <span className="block">Continue on WhatsApp</span>
+          {stickyPaymentSubtext}
         </p>
       </div>
     </main>

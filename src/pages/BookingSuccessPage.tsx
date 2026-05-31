@@ -12,6 +12,7 @@ import {
   PptTapLoader,
 } from "@/components/ui";
 import { formatINR } from "@/lib/money";
+import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import { buildWhatsAppUrl, normalizeIndianMobileInput } from "@/lib/phone";
 import { getVariantDetailsText } from "@/lib/productVariants";
 import { getProductById } from "@/services/productService";
@@ -101,6 +102,10 @@ export default function BookingSuccessPage() {
 
     return {
       storeSlug,
+      storeName: state.store?.storeName,
+      sellerConfirmationAdvanceType: state.store?.sellerConfirmationAdvanceType,
+      sellerConfirmationAdvanceFixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
+      sellerConfirmationAdvancePercent: state.store?.sellerConfirmationAdvancePercent,
       productId: state.checkout.productId,
       productTitle: state.checkout.productTitle,
       productPrice: state.checkout.productPrice,
@@ -115,7 +120,7 @@ export default function BookingSuccessPage() {
       selectedVariantLabel: state.checkout.selectedVariantLabel,
       selectedVariantOptions: state.checkout.selectedVariantOptions,
     };
-  }, [state.checkout, storeSlug]);
+  }, [state.checkout, state.store, storeSlug]);
 
   const whatsappMessage = whatsappInput ? buildBuyerBookingMessage(whatsappInput) : "";
   const sellerWhatsAppPhone = [
@@ -179,6 +184,13 @@ export default function BookingSuccessPage() {
   }
 
   const checkout = state.checkout;
+  const confirmationAdvance = calculateConfirmationAdvance({
+    productPrice: checkout.productPrice,
+    type: state.store?.sellerConfirmationAdvanceType,
+    fixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
+    percent: state.store?.sellerConfirmationAdvancePercent,
+    bookingPaid: checkout.bookingAdvanceAmount,
+  });
   const reservationApplied = checkout.reservationApplied !== false;
   const productImage = state.product?.images?.find(
     (image) => image.thumbUrl || image.url || image.mediumUrl
@@ -199,8 +211,30 @@ export default function BookingSuccessPage() {
           <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
             Booking received
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Your item is reserved. Continue to WhatsApp to confirm delivery and the remaining payment with the seller.
+          <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-base font-light leading-7 text-[var(--pds-muted)]">
+            {confirmationAdvance.sellerConfirmationAmountPending > 0
+              ? [
+                  "Your item is now on hold.",
+                  "",
+                  `You paid ${formatINR(
+                    confirmationAdvance.paypertapBookingPaid
+                  )} on PayPerTap.`,
+                  "",
+                  `To confirm the order, pay ${formatINR(
+                    confirmationAdvance.sellerConfirmationAmountPending
+                  )} directly to the seller on WhatsApp.`,
+                  "",
+                  "Tap below to send your product, size/color, payment, and delivery details.",
+                ].join("\n")
+              : [
+                  "Your item is now on hold.",
+                  "",
+                  `You paid ${formatINR(
+                    confirmationAdvance.paypertapBookingPaid
+                  )} on PayPerTap.`,
+                  "",
+                  "Tap below to send your product, size/color, payment, and delivery details.",
+                ].join("\n")}
           </p>
 
           <div className="mt-6 flex flex-col items-center gap-3">
@@ -211,6 +245,7 @@ export default function BookingSuccessPage() {
                 size="lg"
                 rounded="pill"
                 icon={<PptBrandIcon type="whatsapp" size={18} />}
+                className="pds-whatsapp-attention"
                 onClick={openWhatsApp}
               >
                 Continue to WhatsApp

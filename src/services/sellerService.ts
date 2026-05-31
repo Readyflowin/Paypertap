@@ -9,6 +9,10 @@ import {
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
 import { normalizeIndianMobileInput } from "../lib/phone";
+import {
+  DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
+  type SellerConfirmationAdvanceType,
+} from "../lib/confirmationAdvance";
 import type { Seller, Store, StoreSlugReservation } from "../types/firestore";
 import {
   sendSellerWelcomeEmail,
@@ -31,6 +35,9 @@ type StoreOnboardingInput = {
   storeName: string;
   instagramProfile?: string;
   logoUrl?: string;
+  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType;
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
 };
 
 type StoreOnboardingDebugInfo = {
@@ -362,6 +369,20 @@ export async function completeStoreOnboarding(
     );
   }
 
+  if (
+    input.sellerConfirmationAdvanceType === "fixed" &&
+    Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0) < 20
+  ) {
+    throw new Error("Fixed confirmation amount must be at least ₹20.");
+  }
+
+  if (
+    input.sellerConfirmationAdvanceType === "percentage" &&
+    Math.round(Number(input.sellerConfirmationAdvancePercent) || 0) <= 0
+  ) {
+    throw new Error("Confirmation percentage must be greater than 0.");
+  }
+
   const uid = user.uid;
   const sellerRef = doc(db, "sellers", uid);
   const seller = await ensureMinimalSeller(user);
@@ -403,6 +424,16 @@ export async function completeStoreOnboarding(
     secondaryColor: DEFAULT_COLORS.secondaryColor,
     accentColor: DEFAULT_COLORS.accentColor,
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
+    sellerConfirmationAdvanceType:
+      input.sellerConfirmationAdvanceType || DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
+    sellerConfirmationAdvanceFixedAmount:
+      input.sellerConfirmationAdvanceType === "fixed"
+        ? Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0)
+        : null,
+    sellerConfirmationAdvancePercent:
+      input.sellerConfirmationAdvanceType === "percentage"
+        ? Math.round(Number(input.sellerConfirmationAdvancePercent) || 0)
+        : null,
     phone,
     whatsappPhone: phone,
     instagramProfile,

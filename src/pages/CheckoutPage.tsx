@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { formatINR } from "@/lib/money";
+import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import { normalizeIndianMobileInput } from "@/lib/phone";
 import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailability";
 import { getProductById, getPublicProductById } from "@/services/productService";
@@ -397,6 +398,12 @@ export default function CheckoutPage() {
   if (!store || !product) return null;
 
   const productImageUrl = getProductImage(product);
+  const confirmationAdvance = calculateConfirmationAdvance({
+    productPrice: product.price,
+    type: store.sellerConfirmationAdvanceType,
+    fixedAmount: store.sellerConfirmationAdvanceFixedAmount,
+    percent: store.sellerConfirmationAdvancePercent,
+  });
 
   return (
     <main className="pds-page">
@@ -417,7 +424,7 @@ export default function CheckoutPage() {
             Book this item
           </h1>
           <p className="mt-3 max-w-2xl text-base font-light leading-7 text-[var(--pds-muted)]">
-            Pay ₹20 to reserve this item, then continue to WhatsApp to confirm delivery and the remaining payment with the seller.
+            Pay ₹20 to reserve this item, then continue to WhatsApp to confirm delivery and payment details with the seller.
           </p>
         </header>
 
@@ -505,6 +512,11 @@ export default function CheckoutPage() {
                 className="mt-5"
               >
                 Message the seller to confirm delivery and the remaining payment.
+                {confirmationAdvance.sellerConfirmationAmountPending > 0
+                  ? ` The seller asks for ${formatINR(
+                      confirmationAdvance.sellerConfirmationAmountPending
+                    )} more on WhatsApp to confirm this order.`
+                  : ""}
               </PptNotice>
             </div>
           </section>
@@ -517,12 +529,19 @@ export default function CheckoutPage() {
               availableQuantity={availableQuantity}
               selectedVariantLabel={selectedVariant?.label}
               selectedVariantOptions={selectedVariant?.options}
+              confirmationText={confirmationAdvance.displayText}
             />
             <PptPriceBreakdown
               productPrice={product.price}
               advanceAmount={product.bookingAdvanceAmount || 20}
               currency="₹"
-              note="After booking, you can message the seller on WhatsApp to confirm delivery and the remaining payment."
+              note={
+                confirmationAdvance.sellerConfirmationAmountPending > 0
+                  ? `Pay ${formatINR(
+                      confirmationAdvance.sellerConfirmationAmountPending
+                    )} directly to the seller on WhatsApp to confirm the order.`
+                  : "After booking, you can message the seller on WhatsApp to confirm delivery and the remaining payment."
+              }
             />
           </aside>
         </div>
@@ -538,6 +557,7 @@ function ProductSummaryCard({
   availableQuantity,
   selectedVariantLabel,
   selectedVariantOptions,
+  confirmationText,
 }: {
   product: Product;
   storeName: string;
@@ -545,6 +565,7 @@ function ProductSummaryCard({
   availableQuantity: number;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
+  confirmationText: string;
 }) {
   const badge = getProductBadge(product, availableQuantity);
   const variantDetails = getVariantDetailsText({
@@ -598,6 +619,9 @@ function ProductSummaryCard({
           </p>
         </div>
       </div>
+      <p className="mt-4 whitespace-pre-line rounded-[20px] bg-[var(--pds-surface-soft)] p-3 text-xs leading-5 text-[var(--pds-muted)]">
+        {confirmationText}
+      </p>
     </div>
   );
 }

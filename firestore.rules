@@ -47,6 +47,55 @@ service cloud.firestore {
       return value is int && value == phaseOneBookingAdvance();
     }
 
+    function isValidSellerConfirmationAdvanceType(value) {
+      return value in ["paypertap_only", "fixed", "percentage"];
+    }
+
+    function hasValidSellerConfirmationAdvanceFields(data) {
+      return (
+          !("sellerConfirmationAdvanceType" in data)
+          || isValidSellerConfirmationAdvanceType(data.sellerConfirmationAdvanceType)
+        )
+        && (
+          !("sellerConfirmationAdvanceFixedAmount" in data)
+          || data.sellerConfirmationAdvanceFixedAmount == null
+          || (
+            data.sellerConfirmationAdvanceFixedAmount is number
+            && data.sellerConfirmationAdvanceFixedAmount >= phaseOneBookingAdvance()
+            && data.sellerConfirmationAdvanceFixedAmount <= 1000000
+          )
+        )
+        && (
+          !("sellerConfirmationAdvancePercent" in data)
+          || data.sellerConfirmationAdvancePercent == null
+          || (
+            data.sellerConfirmationAdvancePercent is number
+            && data.sellerConfirmationAdvancePercent > 0
+            && data.sellerConfirmationAdvancePercent <= 100
+          )
+        )
+        && (
+          !("sellerConfirmationAdvanceType" in data)
+          || data.sellerConfirmationAdvanceType != "fixed"
+          || (
+            "sellerConfirmationAdvanceFixedAmount" in data
+            && data.sellerConfirmationAdvanceFixedAmount is number
+            && data.sellerConfirmationAdvanceFixedAmount >= phaseOneBookingAdvance()
+            && data.sellerConfirmationAdvanceFixedAmount <= 1000000
+          )
+        )
+        && (
+          !("sellerConfirmationAdvanceType" in data)
+          || data.sellerConfirmationAdvanceType != "percentage"
+          || (
+            "sellerConfirmationAdvancePercent" in data
+            && data.sellerConfirmationAdvancePercent is number
+            && data.sellerConfirmationAdvancePercent > 0
+            && data.sellerConfirmationAdvancePercent <= 100
+          )
+        );
+    }
+
     function isValidSellerStatus(value) {
       return value in ["active", "paused", "suspended"];
     }
@@ -647,7 +696,8 @@ service cloud.firestore {
         && (
           !("bookingAdvanceAmount" in request.resource.data)
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        );
+        )
+        && hasValidSellerConfirmationAdvanceFields(request.resource.data);
 
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
@@ -658,7 +708,8 @@ service cloud.firestore {
         && (
           !("bookingAdvanceAmount" in request.resource.data)
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        );
+        )
+        && hasValidSellerConfirmationAdvanceFields(request.resource.data);
 
       allow delete: if isAdmin();
     }

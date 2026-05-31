@@ -2,6 +2,11 @@ import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
 import { normalizeIndianMobileInput } from "../lib/phone";
+import {
+  DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
+  isSellerConfirmationAdvanceType,
+  type SellerConfirmationAdvanceType,
+} from "../lib/confirmationAdvance";
 import type { StorefrontThemeId } from "../storefront/themes/types";
 import type { Store, StoreSlugReservation } from "../types/firestore";
 
@@ -23,6 +28,9 @@ export type StoreCustomizationInput = {
   themeStyle?: string;
   primaryColor?: string;
   accentColor?: string;
+  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType;
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
 };
 
 export function normalizeInstagramProfile(value?: string): {
@@ -187,6 +195,39 @@ export async function updateStoreCustomization(
   if (input.heroSubtitle !== undefined) payload.heroSubtitle = input.heroSubtitle.trim();
   if (input.primaryColor !== undefined) payload.primaryColor = input.primaryColor;
   if (input.accentColor !== undefined) payload.accentColor = input.accentColor;
+  if (input.sellerConfirmationAdvanceType !== undefined) {
+    if (!isSellerConfirmationAdvanceType(input.sellerConfirmationAdvanceType)) {
+      throw new Error("Please choose a valid confirmation advance option.");
+    }
+
+    payload.sellerConfirmationAdvanceType = input.sellerConfirmationAdvanceType;
+    payload.sellerConfirmationAdvanceFixedAmount =
+      input.sellerConfirmationAdvanceType === "fixed"
+        ? Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0)
+        : null;
+    payload.sellerConfirmationAdvancePercent =
+      input.sellerConfirmationAdvanceType === "percentage"
+        ? Math.round(Number(input.sellerConfirmationAdvancePercent) || 0)
+        : null;
+
+    if (
+      input.sellerConfirmationAdvanceType === "fixed" &&
+      Number(payload.sellerConfirmationAdvanceFixedAmount) < 20
+    ) {
+      throw new Error("Fixed confirmation amount must be at least ₹20.");
+    }
+
+    if (
+      input.sellerConfirmationAdvanceType === "percentage" &&
+      Number(payload.sellerConfirmationAdvancePercent) <= 0
+    ) {
+      throw new Error("Confirmation percentage must be greater than 0.");
+    }
+  } else if (input.sellerConfirmationAdvanceFixedAmount !== undefined) {
+    payload.sellerConfirmationAdvanceType = DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE;
+    payload.sellerConfirmationAdvanceFixedAmount = null;
+    payload.sellerConfirmationAdvancePercent = null;
+  }
   if (input.instagramProfile !== undefined) {
     payload.instagramProfile = input.instagramProfile.trim();
     payload.instagramUrl = instagram.instagramUrl;

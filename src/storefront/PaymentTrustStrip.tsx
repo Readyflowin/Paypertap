@@ -90,7 +90,7 @@ export function PaymentTrustStrip({
         <div className="min-w-0">
           <p className={`text-xs font-semibold ${classes.label}`}>Book your item</p>
           <p className="mt-1 text-xs leading-5">
-            Pay ₹20 to reserve this item, then continue to WhatsApp.
+            Pay ₹20 to reserve this item. Seller details are shared after booking.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export function PaymentTrustStrip({
             <PptBrandIcon type="whatsapp" size={15} />
           </span>
           <span className="min-w-0 whitespace-normal break-words">
-            Continue on WhatsApp
+            Seller chat after booking
           </span>
         </div>
         <div
