@@ -1,4 +1,4 @@
-import { BOOKING_ADVANCE_AMOUNT, formatINR } from "./money";
+import { BOOKING_ADVANCE_AMOUNT, formatINR } from "./money.js";
 
 export type SellerConfirmationAdvanceType =
   | "paypertap_only"
