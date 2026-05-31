@@ -36,7 +36,7 @@ export function PptPriceBreakdown({
       : [
           { label: "Product price", amount: safePrice },
           { label: "Pay now", amount: safeAdvance },
-          { label: "Final balance", amount: remainingAmount, featured: true },
+          { label: "Remaining at COD", amount: remainingAmount, featured: true },
         ];
 
   return (

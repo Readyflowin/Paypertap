@@ -86,7 +86,7 @@ export function calculateConfirmationAdvance({
           `This seller confirms orders after collecting ${formatINR(totalConfirmationAdvance)} total advance.`,
           `Pay ${formatINR(paypertapBookingPaid)} now to reserve this item.`,
           `After booking, pay ${formatINR(sellerConfirmationAmountPending)} directly to the seller on WhatsApp to confirm the order.`,
-          `Final balance: ${formatINR(finalBalanceAfterConfirmation)}.`,
+          `Remaining at COD: ${formatINR(finalBalanceAfterConfirmation)}.`,
         ].join("\n")
       : [
           `Pay ${formatINR(paypertapBookingPaid)} now to reserve this item.`,

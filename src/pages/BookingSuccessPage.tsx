@@ -322,7 +322,7 @@ export default function BookingSuccessPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <PptBadge tone="neutral">Price {formatINR(checkout.productPrice)}</PptBadge>
                   <PptBadge tone="primary">
-                    Final balance {formatINR(confirmationAdvance.finalBalanceAfterConfirmation)}
+                    Remaining at COD {formatINR(confirmationAdvance.finalBalanceAfterConfirmation)}
                   </PptBadge>
                 </div>
               </div>

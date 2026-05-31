@@ -560,7 +560,7 @@ export default function CheckoutPage() {
                         amount: confirmationAdvance.sellerConfirmationAmountPending,
                       },
                       {
-                        label: "Final balance",
+                        label: "Remaining at COD",
                         amount: confirmationAdvance.finalBalanceAfterConfirmation,
                         featured: true,
                       },
@@ -572,7 +572,7 @@ export default function CheckoutPage() {
                         amount: confirmationAdvance.paypertapBookingPaid,
                       },
                       {
-                        label: "Final balance",
+                        label: "Remaining at COD",
                         amount: confirmationAdvance.finalBalanceAfterConfirmation,
                         featured: true,
                       },

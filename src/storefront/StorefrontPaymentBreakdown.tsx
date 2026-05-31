@@ -72,7 +72,7 @@ export function getStorefrontConfirmationPolicyText(
       ? `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then pay ${formatINR(
           sellerPending
         )} on WhatsApp to confirm with the seller.`
-      : `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the final balance directly.`;
+      : `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the Remaining at COD directly.`;
   }
 
   if (type === "percentage") {
@@ -84,7 +84,7 @@ export function getStorefrontConfirmationPolicyText(
     return `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. Product pages show the exact ${percent}% confirmation amount before booking.`;
   }
 
-  return `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the final balance directly.`;
+  return `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the Remaining at COD directly.`;
 }
 
 export function StorefrontPaymentBreakdown({
@@ -101,11 +101,11 @@ export function StorefrontPaymentBreakdown({
           label: "Confirm on WhatsApp",
           value: formatINR(breakdown.sellerConfirmationAmountPending),
         },
-        { label: "Final balance", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
+        { label: "Remaining at COD", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
       ]
     : [
         { label: "Pay now", value: formatINR(breakdown.paypertapBookingPaid), featured: true },
-        { label: "Final balance", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
+        { label: "Remaining at COD", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
       ];
 
   return (

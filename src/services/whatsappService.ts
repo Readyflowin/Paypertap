@@ -110,7 +110,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
       ? [
           `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
           `Seller confirmation amount pending: ₹${paymentBreakdown.sellerConfirmationAmountPending}`,
-          `Final balance after confirmation: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
+          `Remaining at COD after confirmation: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
         ]
       : [
           `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
