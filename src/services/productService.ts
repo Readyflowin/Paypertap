@@ -26,6 +26,7 @@ import {
   type ProductVariant,
   type ProductVariantOption,
 } from "../lib/productVariants";
+import { getNextProductStatus } from "../lib/productAvailability";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
 import { uploadProductImages } from "./uploadService";
 
@@ -482,6 +483,15 @@ export async function updateSellerProduct(
     throw new Error("Total stock cannot be less than reserved + sold quantity.");
   }
 
+  const nextStatus =
+    input.status === "draft" || input.status === "unpublished"
+      ? input.status
+      : getNextProductStatus({
+          inventoryQuantity,
+          reservedQuantity,
+          soldQuantity,
+        });
+
   let images: ProductImage[] = getPersistedProductImages(product);
   const collectionId = input.collectionId?.trim() || "";
   const collectionName = input.collectionName?.trim() || input.category?.trim() || "";
@@ -514,7 +524,7 @@ export async function updateSellerProduct(
     bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
     sellerCollectAmount: getSellerCollectAmount(price),
     inventoryQuantity,
-    status: input.status,
+    status: nextStatus,
     images: ruleSafeImages,
     ...primaryImageFields,
     ...variantPayload,
@@ -534,6 +544,7 @@ export async function updateSellerProduct(
     ...product,
     ...updatePayload,
     collectionId,
+    status: nextStatus,
     updatedAt: undefined,
   };
 }

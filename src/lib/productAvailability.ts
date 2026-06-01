@@ -1,4 +1,8 @@
 import type { Product, ProductStatus } from "../types/firestore";
+import {
+  deriveProductStatus,
+  getAvailableQuantity as getInventoryAvailableQuantity,
+} from "./inventory";
 
 export type ProductAvailabilityFields = {
   status?: ProductStatus | string;
@@ -8,12 +12,7 @@ export type ProductAvailabilityFields = {
 };
 
 export function getAvailableQuantity(product: ProductAvailabilityFields): number {
-  return Math.max(
-    0,
-    Number(product.inventoryQuantity || 0) -
-      Number(product.reservedQuantity || 0) -
-      Number(product.soldQuantity || 0)
-  );
+  return getInventoryAvailableQuantity(product);
 }
 
 export function isProductBookable(product: ProductAvailabilityFields): boolean {
@@ -23,15 +22,7 @@ export function isProductBookable(product: ProductAvailabilityFields): boolean {
 export function getNextProductStatus(
   product: ProductAvailabilityFields
 ): ProductStatus {
-  const inventoryQuantity = Number(product.inventoryQuantity || 0);
-  const reservedQuantity = Number(product.reservedQuantity || 0);
-  const soldQuantity = Number(product.soldQuantity || 0);
-  const availableQuantity = getAvailableQuantity(product);
-
-  if (inventoryQuantity > 0 && soldQuantity >= inventoryQuantity) return "sold";
-  if (availableQuantity > 0) return "open";
-  if (reservedQuantity > 0) return "hold";
-  return "open";
+  return deriveProductStatus(product);
 }
 
 export function getProductUnavailableLabel(

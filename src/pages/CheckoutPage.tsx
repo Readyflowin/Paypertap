@@ -20,12 +20,7 @@ import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailabili
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
 import { startMockBookingPayment } from "@/services/mockPaymentService";
-import { startRazorpayBookingPayment } from "@/services/razorpayPaymentService";
-import { getSellerByUid } from "@/services/sellerService";
-import {
-  sendBookingCreatedEmail,
-  sendBuyerBookingConfirmationEmail,
-} from "@/services/emailEventService";
+import { sendBuyerBookingConfirmationEmail } from "@/services/emailEventService";
 import { markCheckoutEmailEventSent } from "@/services/checkoutService";
 import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import {
@@ -305,11 +300,14 @@ export default function CheckoutPage() {
       };
       const result =
         PAYMENT_MODE === "razorpay"
-          ? await startRazorpayBookingPayment(paymentInput, (status) => {
-              if (status === "creating") setPaymentStatus("Creating secure payment...");
-              if (status === "checkout") setPaymentStatus("Complete payment to continue...");
-              if (status === "verifying") setPaymentStatus("Verifying payment...");
-            })
+          ? await import("@/services/razorpayPaymentService").then(
+              ({ startRazorpayBookingPayment }) =>
+                startRazorpayBookingPayment(paymentInput, (status) => {
+                  if (status === "creating") setPaymentStatus("Creating secure payment...");
+                  if (status === "checkout") setPaymentStatus("Complete payment to continue...");
+                  if (status === "verifying") setPaymentStatus("Verifying payment...");
+                })
+            )
           : await startMockBookingPayment(paymentInput);
 
       if (
@@ -343,23 +341,6 @@ export default function CheckoutPage() {
       (PAYMENT_MODE === "razorpay" && !checkoutSession.razorpayPaymentId)
     ) {
       return;
-    }
-
-    try {
-      const seller = await getSellerByUid(checkoutSession.sellerId);
-
-      if (seller?.email && !checkoutSession.emailEvents?.sellerBookingSentAt) {
-        const sent = await sendBookingCreatedEmail({
-          sellerEmail: seller.email,
-          checkoutSession,
-        });
-
-        if (sent) {
-          await markCheckoutEmailEventSent(checkoutSession.checkoutId, "sellerBookingSentAt");
-        }
-      }
-    } catch (error) {
-      console.warn("Could not send seller booking email:", error);
     }
 
     // TODO: buyer confirmation email requires buyer email field.

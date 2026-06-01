@@ -1,19 +1,20 @@
-import { type ReactNode, useEffect } from "react";
+import { Suspense, lazy, type ReactNode, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import AuthPage from "./pages/AuthPage";
-import BookingSuccessPage from "./pages/BookingSuccessPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import DashboardPage from "./pages/DashboardPage";
-import DesignSystemPage from "./pages/DesignSystemPage";
-import IntegrationTestPage from "./pages/IntegrationTestPage";
-import ProductOnboardingPage from "./pages/ProductOnboardingPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import PublicStorePage from "./pages/PublicStorePage";
-import StoreOnboardingPage from "./pages/StoreOnboardingPage";
-import StorePolicyPage from "./pages/StorePolicyPage";
 import { NoIndex, RouteMeta } from "./seo/Seo";
 import { staticRoutes } from "./seo/staticRoutes";
+
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const BookingSuccessPage = lazy(() => import("./pages/BookingSuccessPage"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const DesignSystemPage = lazy(() => import("./pages/DesignSystemPage"));
+const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
+const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const ProductOnboardingPage = lazy(() => import("./pages/ProductOnboardingPage"));
+const PublicStorePage = lazy(() => import("./pages/PublicStorePage"));
+const StoreOnboardingPage = lazy(() => import("./pages/StoreOnboardingPage"));
+const StorePolicyPage = lazy(() => import("./pages/StorePolicyPage"));
 
 const enableIntegrationTests =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTEGRATION_TESTS === "true";
@@ -59,108 +60,118 @@ function ScrollToTop() {
   return null;
 }
 
+function RouteFallback() {
+  return (
+    <div className="min-h-screen bg-white px-6 py-10 text-sm font-medium text-gray-500">
+      Loading PayPerTap...
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        {staticRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-        <Route
-          path="/auth"
-          element={
-            <PrivateRoute>
-              <AuthPage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/login" element={<Navigate to="/auth" replace />} />
-        <Route
-          path="/onboarding/store"
-          element={
-            <PrivateRoute>
-              <StoreOnboardingPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/onboarding/product"
-          element={
-            <PrivateRoute>
-              <ProductOnboardingPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/design-system"
-          element={
-            <PrivateRoute>
-              <DesignSystemPage />
-            </PrivateRoute>
-          }
-        />
-        {enableIntegrationTests ? (
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          {staticRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
           <Route
-            path="/integration-test"
+            path="/auth"
             element={
               <PrivateRoute>
-                <IntegrationTestPage />
+                <AuthPage />
               </PrivateRoute>
             }
           />
-        ) : null}
-        <Route
-          path="/:storeSlug/product/:productId"
-          element={
-            <PublicAppRoute>
-              <ProductDetailPage />
-            </PublicAppRoute>
-          }
-        />
-        <Route
-          path="/:storeSlug/checkout/:productId"
-          element={
-            <NoIndexAppRoute>
-              <CheckoutPage />
-            </NoIndexAppRoute>
-          }
-        />
-        <Route
-          path="/:storeSlug/policies/:policyType"
-          element={
-            <PublicAppRoute>
-              <StorePolicyPage />
-            </PublicAppRoute>
-          }
-        />
-        <Route
-          path="/:storeSlug/booking-success/:checkoutId"
-          element={
-            <NoIndexAppRoute>
-              <BookingSuccessPage />
-            </NoIndexAppRoute>
-          }
-        />
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          <Route
+            path="/onboarding/store"
+            element={
+              <PrivateRoute>
+                <StoreOnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/onboarding/product"
+            element={
+              <PrivateRoute>
+                <ProductOnboardingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/design-system"
+            element={
+              <PrivateRoute>
+                <DesignSystemPage />
+              </PrivateRoute>
+            }
+          />
+          {enableIntegrationTests ? (
+            <Route
+              path="/integration-test"
+              element={
+                <PrivateRoute>
+                  <IntegrationTestPage />
+                </PrivateRoute>
+              }
+            />
+          ) : null}
+          <Route
+            path="/:storeSlug/product/:productId"
+            element={
+              <PublicAppRoute>
+                <ProductDetailPage />
+              </PublicAppRoute>
+            }
+          />
+          <Route
+            path="/:storeSlug/checkout/:productId"
+            element={
+              <NoIndexAppRoute>
+                <CheckoutPage />
+              </NoIndexAppRoute>
+            }
+          />
+          <Route
+            path="/:storeSlug/policies/:policyType"
+            element={
+              <PublicAppRoute>
+                <StorePolicyPage />
+              </PublicAppRoute>
+            }
+          />
+          <Route
+            path="/:storeSlug/booking-success/:checkoutId"
+            element={
+              <NoIndexAppRoute>
+                <BookingSuccessPage />
+              </NoIndexAppRoute>
+            }
+          />
 
-        {/* Linktree-style public store URL */}
-        <Route
-          path="/:storeSlug"
-          element={
-            <PublicAppRoute>
-              <PublicStorePage />
-            </PublicAppRoute>
-          }
-        />
-      </Routes>
+          {/* Linktree-style public store URL */}
+          <Route
+            path="/:storeSlug"
+            element={
+              <PublicAppRoute>
+                <PublicStorePage />
+              </PublicAppRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

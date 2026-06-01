@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -10,11 +11,13 @@ import {
 import type { User } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   BarChart3,
   CalendarCheck,
   CheckCircle2,
   Copy,
   CreditCard,
+  Download,
   ExternalLink,
   FolderOpen,
   Link2,
@@ -58,6 +61,7 @@ import {
   productHasTemporaryImageUrls,
 } from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
+import { buildBookingLabelData } from "../lib/labelData";
 import {
   generateVariantCombinations,
   getVariantDetailsText,
@@ -876,6 +880,7 @@ export default function DashboardPage() {
               <BookingsTab
                 bookings={bookings}
                 onBookingChanged={refreshProductsAndBookings}
+                products={products}
                 store={store}
               />
             ) : null}
@@ -2991,7 +2996,7 @@ function EditProductForm({
         <Metric label="Available now" value={String(currentAvailableQuantity)} />
         <Metric label="Reserved" value={String(reservedQuantity)} />
         <Metric label="Sold" value={String(soldQuantity)} />
-        <Metric label="Total capacity" value={String(product.inventoryQuantity)} />
+        <Metric label="Total stock" value={String(product.inventoryQuantity)} />
       </div>
 
       <PptNotice tone={openingWithoutStock ? "warning" : "info"} title="Stock follows reservations and sales.">
@@ -3186,15 +3191,11 @@ function ProductRow({
         ) : (
           <p className="mt-2 text-xs text-gray-400">No description</p>
         )}
-        <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-3 lg:max-w-xl">
+        <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-4 lg:max-w-2xl">
           <Metric label="Available" value={String(availableQuantity)} />
-          <Metric label="Total capacity" value={String(product.inventoryQuantity)} />
-          {product.reservedQuantity > 0 ? (
-            <Metric label="Reserved" value={String(product.reservedQuantity)} />
-          ) : null}
-          {product.soldQuantity > 0 ? (
-            <Metric label="Sold" value={String(product.soldQuantity)} />
-          ) : null}
+          <Metric label="Total stock" value={String(product.inventoryQuantity)} />
+          <Metric label="Reserved" value={String(product.reservedQuantity)} />
+          <Metric label="Sold" value={String(product.soldQuantity)} />
         </div>
       </div>
       <div className="grid gap-2 text-sm lg:min-w-56">
@@ -3209,10 +3210,12 @@ function ProductRow({
 function BookingsTab({
   bookings,
   onBookingChanged,
+  products,
   store,
 }: {
   bookings: CheckoutSession[];
   onBookingChanged: () => Promise<void>;
+  products: Product[];
   store: Store | null;
 }) {
   return (
@@ -3233,14 +3236,23 @@ function BookingsTab({
             />
           </section>
         ) : (
-          bookings.map((booking) => (
-            <BookingCard
-              key={booking.checkoutId}
-              booking={booking}
-              onBookingChanged={onBookingChanged}
-              store={store}
-            />
-          ))
+          bookings.map((booking) => {
+            const matchedProduct =
+              products.find(
+                (product) =>
+                  (product.productId || product.id) === booking.productId
+              ) || null;
+
+            return (
+              <BookingCard
+                key={booking.checkoutId}
+                booking={booking}
+                onBookingChanged={onBookingChanged}
+                product={matchedProduct}
+                store={store}
+              />
+            );
+          })
         )}
       </div>
     </section>
@@ -3250,15 +3262,22 @@ function BookingsTab({
 function BookingCard({
   booking,
   onBookingChanged,
+  product,
   store,
 }: {
   booking: CheckoutSession;
   onBookingChanged: () => Promise<void>;
+  product: Product | null;
   store: Store | null;
 }) {
   const [copied, setCopied] = useState(false);
+  const [generatingLabel, setGeneratingLabel] = useState(false);
   const [savingAction, setSavingAction] = useState("");
+  const [pendingConfirmation, setPendingConfirmation] = useState<
+    "cancelled" | "sold" | null
+  >(null);
   const [actionError, setActionError] = useState("");
+  const [labelError, setLabelError] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<CheckoutSession["status"] | "">(
     booking.status || ""
   );
@@ -3280,10 +3299,39 @@ function BookingCard({
     setCopied(true);
   }
 
+  async function handleDownloadLabel() {
+    if (!store) {
+      setLabelError("Store details are required to generate a label.");
+      return;
+    }
+
+    try {
+      setGeneratingLabel(true);
+      setLabelError("");
+      const origin =
+        typeof window !== "undefined" && window.location.origin
+          ? window.location.origin
+          : "https://paypertap.in";
+      const labelData = buildBookingLabelData({
+        booking,
+        store,
+        product,
+        origin,
+      });
+      const { downloadBookingLabelPdf } = await import("../lib/labelPdf");
+
+      await downloadBookingLabelPdf(labelData);
+    } catch (err) {
+      setLabelError(err instanceof Error ? err.message : "Could not generate label.");
+    } finally {
+      setGeneratingLabel(false);
+    }
+  }
+
   async function runBookingAction(
     nextStatus: CheckoutSession["status"],
     action: () => Promise<void>
-  ) {
+  ): Promise<boolean> {
     const previousStatus = selectedStatus;
 
     try {
@@ -3292,14 +3340,60 @@ function BookingCard({
       setActionError("");
       await action();
       await onBookingChanged();
+      return true;
     } catch (err) {
       console.error("Booking action failed:", err);
       setSelectedStatus(previousStatus);
       setActionError(err instanceof Error ? err.message : "Could not update booking.");
+      return false;
     } finally {
       setSavingAction("");
     }
   }
+
+  async function handleConfirmBookingAction() {
+    if (savingAction) return;
+
+    if (pendingConfirmation === "cancelled") {
+      const succeeded = await runBookingAction("cancelled", () =>
+        markBookingCancelled(booking.checkoutId)
+      );
+      if (succeeded) setPendingConfirmation(null);
+      return;
+    }
+
+    if (pendingConfirmation === "sold") {
+      const succeeded = await runBookingAction("sold", () =>
+        markBookingSold(booking.checkoutId)
+      );
+      if (succeeded) setPendingConfirmation(null);
+    }
+  }
+
+  const confirmationContent =
+    pendingConfirmation === "cancelled"
+      ? {
+          title: "Cancel booking?",
+          description:
+            "This will release the reserved stock and make the product available again.",
+          detail:
+            "Use this only when the buyer did not complete confirmation or the order should not continue.",
+          confirmLabel: "Cancel booking",
+          cancelLabel: "Keep booking",
+          loadingLabel: "Cancelling...",
+          variant: "danger" as const,
+        }
+      : pendingConfirmation === "sold"
+        ? {
+            title: "Mark item sold?",
+            description: "This will move 1 reserved unit to sold inventory.",
+            detail: "Use this only after the order is confirmed/completed with the buyer.",
+            confirmLabel: "Mark sold",
+            cancelLabel: "Go back",
+            loadingLabel: "Marking sold...",
+            variant: "default" as const,
+          }
+        : null;
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
@@ -3331,14 +3425,24 @@ function BookingCard({
             <PptBrandIcon type="whatsapp" size={17} />
             <span>Open WhatsApp</span>
           </a>
+          <button
+            type="button"
+            onClick={handleDownloadLabel}
+            disabled={generatingLabel || Boolean(savingAction)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-950 disabled:opacity-50"
+          >
+            <Download size={15} aria-hidden="true" />
+            <span>{generatingLabel ? "Generating label..." : "Download Label"}</span>
+          </button>
           <div className="grid gap-2">
             <span className="text-xs font-medium text-gray-500">Update status</span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  void runBookingAction("cancelled", () => markBookingCancelled(booking.checkoutId))
-                }
+                onClick={() => {
+                  setActionError("");
+                  setPendingConfirmation("cancelled");
+                }}
                 disabled={Boolean(savingAction)}
                 className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-950 disabled:opacity-50"
               >
@@ -3346,9 +3450,10 @@ function BookingCard({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  void runBookingAction("sold", () => markBookingSold(booking.checkoutId))
-                }
+                onClick={() => {
+                  setActionError("");
+                  setPendingConfirmation("sold");
+                }}
                 disabled={Boolean(savingAction)}
                 className="rounded-xl bg-gray-950 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
               >
@@ -3408,8 +3513,144 @@ function BookingCard({
           Add your UPI ID in Store settings later to auto-fill payment messages.
         </p>
       ) : null}
+      {labelError ? <ErrorBox message={labelError} /> : null}
       {actionError ? <ErrorBox message={actionError} /> : null}
+      {confirmationContent ? (
+        <ConfirmActionModal
+          open={Boolean(pendingConfirmation)}
+          title={confirmationContent.title}
+          description={confirmationContent.description}
+          detail={confirmationContent.detail}
+          confirmLabel={confirmationContent.confirmLabel}
+          cancelLabel={confirmationContent.cancelLabel}
+          loadingLabel={confirmationContent.loadingLabel}
+          variant={confirmationContent.variant}
+          loading={Boolean(savingAction)}
+          errorMessage={actionError}
+          onCancel={() => setPendingConfirmation(null)}
+          onConfirm={() => void handleConfirmBookingAction()}
+        />
+      ) : null}
     </article>
+  );
+}
+
+type ConfirmActionModalProps = {
+  cancelLabel: string;
+  confirmLabel: string;
+  description: string;
+  detail: string;
+  errorMessage?: string;
+  loading: boolean;
+  loadingLabel: string;
+  open: boolean;
+  title: string;
+  variant?: "danger" | "default";
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+function ConfirmActionModal({
+  cancelLabel,
+  confirmLabel,
+  description,
+  detail,
+  errorMessage,
+  loading,
+  loadingLabel,
+  open,
+  title,
+  variant = "default",
+  onCancel,
+  onConfirm,
+}: ConfirmActionModalProps) {
+  const titleId = useId();
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const isDanger = variant === "danger";
+
+  useEffect(() => {
+    if (!open) return;
+
+    confirmButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !loading) {
+        onCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [loading, onCancel, open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex min-h-dvh items-center justify-center bg-gray-950/45 px-4 py-6 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (!loading && event.target === event.currentTarget) {
+          onCancel();
+        }
+      }}
+    >
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        role="dialog"
+        className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6"
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
+              isDanger
+                ? "border-red-100 bg-red-50 text-red-700"
+                : "border-gray-200 bg-gray-50 text-gray-950"
+            }`}
+          >
+            {isDanger ? (
+              <AlertTriangle size={21} aria-hidden="true" />
+            ) : (
+              <CheckCircle2 size={21} aria-hidden="true" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 id={titleId} className="text-lg font-semibold tracking-tight text-gray-950">
+              {title}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-gray-700">{description}</p>
+            <p className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
+              {detail}
+            </p>
+          </div>
+        </div>
+
+        {errorMessage ? <ErrorBox message={errorMessage} /> : null}
+
+        <div className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto] sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-gray-950 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-32"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            ref={confirmButtonRef}
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-32 ${
+              isDanger ? "bg-red-600 hover:bg-red-700" : "bg-gray-950 hover:bg-gray-800"
+            }`}
+          >
+            {loading ? loadingLabel : confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 

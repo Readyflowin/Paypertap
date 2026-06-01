@@ -10,6 +10,12 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import {
+  applyReservationRelease,
+  applySoldTransition,
+  canMarkBookingSold,
+  canReleaseReservation,
+} from "../lib/inventory";
 import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { normalizeIndianMobileInput } from "../lib/phone";
 import type { SellerConfirmationAdvanceType } from "../lib/confirmationAdvance";
@@ -229,6 +235,10 @@ function getTimeValue(value: unknown): number {
   return 0;
 }
 
+function getProductRefForCheckout(checkoutSession: CheckoutSession) {
+  return doc(db, "products", checkoutSession.reservedProductId || checkoutSession.productId);
+}
+
 export async function getCheckoutSessionsBySellerId(
   sellerId: string,
   storeId?: string
@@ -286,9 +296,144 @@ export async function markBookingConfirmed(checkoutId: string): Promise<void> {
 }
 
 export async function markBookingSold(checkoutId: string): Promise<void> {
-  await updateBookingStatus(checkoutId, "sold");
+  const checkoutRef = doc(db, "checkoutSessions", checkoutId);
+
+  await runTransaction(db, async (transaction) => {
+    const checkoutSnap = await transaction.get(checkoutRef);
+
+    if (!checkoutSnap.exists()) {
+      throw new Error("Booking not found.");
+    }
+
+    const checkoutSession = {
+      ...(checkoutSnap.data() as CheckoutSession),
+      checkoutId: String(checkoutSnap.data().checkoutId || checkoutSnap.id),
+    };
+
+    if (checkoutSession.status === "sold") {
+      return;
+    }
+
+    if (!canMarkBookingSold(checkoutSession)) {
+      throw new Error("Only active reserved bookings can be marked sold.");
+    }
+
+    const productRef = getProductRefForCheckout(checkoutSession);
+    const productSnap = await transaction.get(productRef);
+
+    if (!productSnap.exists()) {
+      throw new Error("Reserved product not found.");
+    }
+
+    const product = productSnap.data() as Product;
+
+    if (
+      product.sellerId !== checkoutSession.sellerId ||
+      product.storeId !== checkoutSession.storeId ||
+      (product.productId || productSnap.id) !== checkoutSession.productId
+    ) {
+      throw new Error("Booking and product no longer match.");
+    }
+
+    const soldTransition = applySoldTransition(product, checkoutSession.reservedQuantity);
+
+    if (soldTransition.soldTransitionQuantity <= 0) {
+      throw new Error("This booking has no reserved stock to mark sold.");
+    }
+    const now = serverTimestamp();
+
+    transaction.update(productRef, {
+      reservedQuantity: soldTransition.reservedQuantity,
+      soldQuantity: soldTransition.soldQuantity,
+      status: soldTransition.status,
+      updatedAt: now,
+    });
+    transaction.update(checkoutRef, {
+      status: "sold",
+      reservationApplied: false,
+      reservationSold: true,
+      soldAt: now,
+      updatedAt: now,
+    });
+  });
 }
 
 export async function markBookingCancelled(checkoutId: string): Promise<void> {
-  await updateBookingStatus(checkoutId, "cancelled");
+  const checkoutRef = doc(db, "checkoutSessions", checkoutId);
+
+  await runTransaction(db, async (transaction) => {
+    const checkoutSnap = await transaction.get(checkoutRef);
+
+    if (!checkoutSnap.exists()) {
+      throw new Error("Booking not found.");
+    }
+
+    const checkoutSession = {
+      ...(checkoutSnap.data() as CheckoutSession),
+      checkoutId: String(checkoutSnap.data().checkoutId || checkoutSnap.id),
+    };
+
+    if (checkoutSession.status === "cancelled" || checkoutSession.status === "released") {
+      return;
+    }
+
+    if (checkoutSession.status === "sold") {
+      throw new Error("Sold bookings cannot be cancelled.");
+    }
+
+    const hasActiveReservation = canReleaseReservation(checkoutSession);
+    const now = serverTimestamp();
+
+    if (!hasActiveReservation) {
+      transaction.update(checkoutRef, {
+        status: "cancelled",
+        cancelledAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    const productRef = getProductRefForCheckout(checkoutSession);
+    const productSnap = await transaction.get(productRef);
+
+    if (!productSnap.exists()) {
+      throw new Error("Reserved product not found.");
+    }
+
+    const product = productSnap.data() as Product;
+
+    if (
+      product.sellerId !== checkoutSession.sellerId ||
+      product.storeId !== checkoutSession.storeId ||
+      (product.productId || productSnap.id) !== checkoutSession.productId
+    ) {
+      throw new Error("Booking and product no longer match.");
+    }
+
+    const releaseTransition = applyReservationRelease(product, checkoutSession.reservedQuantity);
+
+    if (releaseTransition.releasedQuantity <= 0) {
+      transaction.update(checkoutRef, {
+        status: "cancelled",
+        reservationApplied: false,
+        reservationReleased: true,
+        cancelledAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    transaction.update(productRef, {
+      reservedQuantity: releaseTransition.reservedQuantity,
+      status: releaseTransition.status,
+      updatedAt: now,
+    });
+    transaction.update(checkoutRef, {
+      status: "cancelled",
+      reservationApplied: false,
+      reservationReleased: true,
+      cancelledAt: now,
+      updatedAt: now,
+    });
+  });
 }

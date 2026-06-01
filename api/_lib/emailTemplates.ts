@@ -9,7 +9,8 @@ export type EmailEventType =
   | "store_created"
   | "product_added"
   | "booking_created"
-  | "buyer_booking_confirmation";
+  | "buyer_booking_confirmation"
+  | "admin_seller_onboarded";
 
 export type SellerWelcomePayload = {
   sellerEmail: string;
@@ -37,14 +38,22 @@ export type ProductAddedPayload = {
 
 export type BookingCreatedPayload = {
   sellerEmail: string;
+  storeName?: string;
   productTitle: string;
+  productUrl?: string;
+  variantDetails?: string;
   productPrice: number;
   bookingAdvanceAmount: number;
   sellerCollectAmount: number;
+  sellerConfirmationAmountPending?: number;
+  finalBalanceAfterConfirmation?: number;
   buyerName: string;
   buyerPhone: string;
+  buyerAddress?: string;
   buyerCity?: string;
   buyerPincode?: string;
+  checkoutId?: string;
+  bookingDateText?: string;
   dashboardUrl: string;
 };
 
@@ -59,12 +68,28 @@ export type BuyerBookingConfirmationPayload = {
   whatsappUrl?: string;
 };
 
+export type AdminSellerOnboardedPayload = {
+  sellerName?: string;
+  sellerEmail?: string;
+  sellerPhone?: string;
+  storeName: string;
+  storeSlug: string;
+  storeUrl: string;
+  sellerConfirmationAdvanceType?: string;
+  sellerConfirmationAdvanceFixedAmount?: number | null;
+  sellerConfirmationAdvancePercent?: number | null;
+  createdAtText?: string;
+  sellerId: string;
+  storeId: string;
+};
+
 export type EmailEventPayload =
   | SellerWelcomePayload
   | StoreCreatedPayload
   | ProductAddedPayload
   | BookingCreatedPayload
-  | BuyerBookingConfirmationPayload;
+  | BuyerBookingConfirmationPayload
+  | AdminSellerOnboardedPayload;
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -270,6 +295,73 @@ export function getBookingCreatedTemplate(payload: BookingCreatedPayload): Email
   };
 }
 
+export function getSellerBookingCreatedTemplate(payload: BookingCreatedPayload): EmailTemplate {
+  const location = [payload.buyerCity, payload.buyerPincode].filter(Boolean).join(" ");
+  const sellerConfirmationAmountPending = Number(payload.sellerConfirmationAmountPending || 0);
+  const finalBalanceAfterConfirmation =
+    payload.finalBalanceAfterConfirmation ?? payload.sellerCollectAmount;
+  const variantDetails = payload.variantDetails?.trim() || "Not selected";
+  const body = [
+    paragraph(`You have a new verified booking for ${payload.productTitle}.`),
+    paragraph(`The buyer has paid ${formatINR(payload.bookingAdvanceAmount)} on PayPerTap as a verified booking. Use WhatsApp to collect the remaining confirmation amount and coordinate delivery.`),
+    details([
+      ["Store", payload.storeName || "PayPerTap store"],
+      ["Buyer", payload.buyerName],
+      ["Phone", payload.buyerPhone],
+      ["Address", payload.buyerAddress || "Not provided"],
+      ["City/Pincode", location || "Not provided"],
+      ["Product", payload.productTitle],
+      ["Product link", payload.productUrl || "Not available"],
+      ["Variant", variantDetails],
+      ["Product price", formatINR(payload.productPrice)],
+      ["Paid on PayPerTap", formatINR(payload.bookingAdvanceAmount)],
+      ...(sellerConfirmationAmountPending > 0
+        ? [[
+            "Seller confirmation amount pending",
+            formatINR(sellerConfirmationAmountPending),
+          ] as [string, string]]
+        : []),
+      ["Final balance after confirmation", formatINR(finalBalanceAfterConfirmation)],
+      ["Booking/session ID", payload.checkoutId || "Not available"],
+      ["Date/time", payload.bookingDateText || "Just now"],
+    ]),
+    paragraph("WhatsApp handoff: message the buyer, confirm product details, collect any pending confirmation amount, and continue the order from your dashboard once complete."),
+  ].join("");
+
+  return {
+    subject: `New PayPerTap booking: ${payload.productTitle}`,
+    html: renderLayout({
+      body,
+      ctaLabel: "Open dashboard",
+      ctaUrl: payload.dashboardUrl,
+      preview: `New PayPerTap booking for ${payload.productTitle}.`,
+      title: "New verified booking",
+    }),
+    text: [
+      `New PayPerTap booking: ${payload.productTitle}`,
+      `The buyer has paid ${formatINR(payload.bookingAdvanceAmount)} on PayPerTap as a verified booking.`,
+      `Store: ${payload.storeName || "PayPerTap store"}`,
+      `Buyer: ${payload.buyerName}`,
+      `Phone: ${payload.buyerPhone}`,
+      `Address: ${payload.buyerAddress || "Not provided"}`,
+      `City/Pincode: ${location || "Not provided"}`,
+      `Product: ${payload.productTitle}`,
+      `Product link: ${payload.productUrl || "Not available"}`,
+      `Variant: ${variantDetails}`,
+      `Product price: ${formatINR(payload.productPrice)}`,
+      `Paid on PayPerTap: ${formatINR(payload.bookingAdvanceAmount)}`,
+      sellerConfirmationAmountPending > 0
+        ? `Seller confirmation amount pending: ${formatINR(sellerConfirmationAmountPending)}`
+        : "",
+      `Final balance after confirmation: ${formatINR(finalBalanceAfterConfirmation)}`,
+      `Booking/session ID: ${payload.checkoutId || "Not available"}`,
+      `Date/time: ${payload.bookingDateText || "Just now"}`,
+      "WhatsApp handoff: message the buyer, confirm product details, collect any pending confirmation amount, and continue the order from your dashboard once complete.",
+      `Open dashboard: ${payload.dashboardUrl}`,
+    ].filter(Boolean).join("\n"),
+  };
+}
+
 export function getBuyerBookingConfirmationTemplate(
   payload: BuyerBookingConfirmationPayload
 ): EmailTemplate {
@@ -304,6 +396,64 @@ export function getBuyerBookingConfirmationTemplate(
   };
 }
 
+export function getAdminSellerOnboardedTemplate(
+  payload: AdminSellerOnboardedPayload
+): EmailTemplate {
+  const fixedAdvance =
+    payload.sellerConfirmationAdvanceFixedAmount === null ||
+    payload.sellerConfirmationAdvanceFixedAmount === undefined
+      ? "Not set"
+      : formatINR(payload.sellerConfirmationAdvanceFixedAmount);
+  const percentAdvance =
+    payload.sellerConfirmationAdvancePercent === null ||
+    payload.sellerConfirmationAdvancePercent === undefined
+      ? "Not set"
+      : `${payload.sellerConfirmationAdvancePercent}%`;
+  const body = [
+    paragraph(`A new seller completed store onboarding on PayPerTap: ${payload.storeName}.`),
+    details([
+      ["Seller name", payload.sellerName || "Not provided"],
+      ["Seller email", payload.sellerEmail || "Not provided"],
+      ["Seller phone / WhatsApp", payload.sellerPhone || "Not provided"],
+      ["Store name", payload.storeName],
+      ["Store slug", payload.storeSlug],
+      ["Store URL", payload.storeUrl],
+      ["Advance type", payload.sellerConfirmationAdvanceType || "paypertap_only"],
+      ["Fixed advance", fixedAdvance],
+      ["Percent advance", percentAdvance],
+      ["Created/onboarded time", payload.createdAtText || "Just now"],
+      ["Seller ID", payload.sellerId],
+      ["Store ID", payload.storeId],
+    ]),
+  ].join("");
+
+  return {
+    subject: `New seller onboarded on PayPerTap: ${payload.storeName}`,
+    html: renderLayout({
+      body,
+      ctaLabel: "Open store",
+      ctaUrl: payload.storeUrl,
+      preview: `${payload.storeName} completed PayPerTap onboarding.`,
+      title: "New seller onboarded",
+    }),
+    text: [
+      `New seller onboarded on PayPerTap: ${payload.storeName}`,
+      `Seller name: ${payload.sellerName || "Not provided"}`,
+      `Seller email: ${payload.sellerEmail || "Not provided"}`,
+      `Seller phone / WhatsApp: ${payload.sellerPhone || "Not provided"}`,
+      `Store name: ${payload.storeName}`,
+      `Store slug: ${payload.storeSlug}`,
+      `Store URL: ${payload.storeUrl}`,
+      `Advance type: ${payload.sellerConfirmationAdvanceType || "paypertap_only"}`,
+      `Fixed advance: ${fixedAdvance}`,
+      `Percent advance: ${percentAdvance}`,
+      `Created/onboarded time: ${payload.createdAtText || "Just now"}`,
+      `Seller ID: ${payload.sellerId}`,
+      `Store ID: ${payload.storeId}`,
+    ].join("\n"),
+  };
+}
+
 export function getEmailTemplate(
   eventType: EmailEventType,
   payload: EmailEventPayload
@@ -321,7 +471,11 @@ export function getEmailTemplate(
   }
 
   if (eventType === "booking_created") {
-    return getBookingCreatedTemplate(payload as BookingCreatedPayload);
+    return getSellerBookingCreatedTemplate(payload as BookingCreatedPayload);
+  }
+
+  if (eventType === "admin_seller_onboarded") {
+    return getAdminSellerOnboardedTemplate(payload as AdminSellerOnboardedPayload);
   }
 
   return getBuyerBookingConfirmationTemplate(payload as BuyerBookingConfirmationPayload);

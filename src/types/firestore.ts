@@ -65,6 +65,7 @@ export type Store = {
   emailEvents?: {
     storeCreatedSentAt?: unknown;
   };
+  adminOnboardingEmailSentAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
@@ -194,13 +195,16 @@ export type CheckoutSessionStatus =
   | "started"
   | "details_submitted"
   | "payment_pending"
+  | "payment_created"
   | "booking_paid"
+  | "payment_failed"
   | "whatsapp_opened"
   | "contacted"
   | "remaining_paid"
   | "confirmed"
   | "sold"
   | "abandoned"
+  | "expired"
   | "cancelled"
   | "released";
 
@@ -229,6 +233,8 @@ export type CheckoutSession = {
   status: CheckoutSessionStatus;
   whatsappOpened: boolean;
   reservationApplied?: boolean;
+  reservationReleased?: boolean;
+  reservationSold?: boolean;
   reservedProductId?: string;
   reservedQuantity?: number;
   selectedVariantId?: string;
@@ -240,6 +246,9 @@ export type CheckoutSession = {
     sellerBookingSentAt?: unknown;
     buyerBookingSentAt?: unknown;
   };
+  cancelledAt?: unknown;
+  releasedAt?: unknown;
+  soldAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 };

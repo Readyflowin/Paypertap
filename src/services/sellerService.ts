@@ -15,6 +15,7 @@ import {
 } from "../lib/confirmationAdvance";
 import type { Seller, Store, StoreSlugReservation } from "../types/firestore";
 import {
+  sendAdminSellerOnboardingEmail,
   sendSellerWelcomeEmail,
   sendStoreCreatedEmail,
 } from "./emailEventService";
@@ -510,6 +511,7 @@ export async function completeStoreOnboarding(
         console.warn("Could not touch store after created email was sent:", error);
       }
     });
+    void sendAdminSellerOnboardingEmail({ storeId });
   }
 
   return {

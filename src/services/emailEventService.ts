@@ -1,4 +1,5 @@
 import type { CheckoutSession, Product, Seller, Store } from "../types/firestore";
+import { auth } from "../lib/firebase";
 
 type EmailEventType =
   | "seller_welcome"
@@ -157,4 +158,33 @@ export async function sendBuyerBookingConfirmationEmail(payload: {
     sellerCollectAmount: payload.checkoutSession.sellerCollectAmount,
     whatsappUrl: payload.whatsappUrl,
   });
+}
+
+export async function sendAdminSellerOnboardingEmail(payload: {
+  storeId: string;
+}) {
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+
+    if (!idToken) return false;
+
+    const response = await fetch("/api/send-admin-onboarding-email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ storeId: payload.storeId }),
+    });
+    const data = (await response.json().catch(() => ({}))) as EmailEventResponse;
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Admin onboarding email could not be sent.");
+    }
+
+    return true;
+  } catch (error) {
+    console.warn("PayPerTap admin onboarding email failed:", error);
+    return false;
+  }
 }

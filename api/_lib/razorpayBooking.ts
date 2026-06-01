@@ -7,6 +7,7 @@ import {
   getAdminDbIfConfigured,
   getFirebaseAdminEnvDebugState,
 } from "./firebaseAdmin.js";
+import { sendSellerBookingEmailSafely } from "./emailNotifications.js";
 import { normalizeIndianMobileInput } from "../../src/lib/phone.js";
 import { calculateConfirmationAdvance } from "../../src/lib/confirmationAdvance.js";
 
@@ -803,6 +804,14 @@ export async function verifyRazorpayPaymentHandler(req: any, res: JsonResponse) 
       razorpayPaymentId,
       razorpaySignature,
     });
+    const emailDb = getAdminDbIfConfigured();
+
+    if (emailDb) {
+      await sendSellerBookingEmailSafely({
+        checkoutId: finalized.checkoutId,
+        db: emailDb,
+      });
+    }
 
     sendJson(res, 200, {
       success: true,
