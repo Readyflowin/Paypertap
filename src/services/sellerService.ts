@@ -79,8 +79,8 @@ const BOOKING_ADVANCE_AMOUNT = 20;
 
 const DEFAULT_COLORS = {
   primaryColor: "#111111",
-  secondaryColor: "#f7f3ea",
-  accentColor: "#7c3aed",
+  secondaryColor: "#F6F1E8",
+  accentColor: "#7A2E2E",
 };
 
 const DEFAULT_THEME_ID = "theme1";

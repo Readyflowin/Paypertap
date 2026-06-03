@@ -5,6 +5,7 @@ import { loadLocalEnv } from "./_env.js";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function sendJson(res: any, statusCode: number, body: unknown) {
+  res.setHeader("Cache-Control", "no-store");
   res.status(statusCode).json(body);
 }
 

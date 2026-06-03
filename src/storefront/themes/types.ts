@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ComponentType, LazyExoticComponent, ReactElement } from "react";
 import type { Product, Store, StoreCollection } from "@/types/firestore";
 
 export type StorefrontThemeId = "theme1" | "theme2" | "theme3";
@@ -14,7 +14,9 @@ export type StorefrontThemeProps = {
   isOwnerPreview?: boolean;
 };
 
-export type StorefrontThemeComponent = (props: StorefrontThemeProps) => ReactElement;
+export type StorefrontThemeComponent =
+  | ComponentType<StorefrontThemeProps>
+  | LazyExoticComponent<ComponentType<StorefrontThemeProps>>;
 
 export type StorefrontThemeDefinition = {
   id: StorefrontThemeId;

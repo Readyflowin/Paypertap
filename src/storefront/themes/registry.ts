@@ -1,6 +1,4 @@
-import Theme1 from "./theme1/Theme1";
-import Theme2 from "./theme2/Theme2";
-import Theme3 from "./theme3/Theme3";
+import { lazy } from "react";
 import type {
   StorefrontThemeDefinition,
   StorefrontThemeId,
@@ -8,15 +6,19 @@ import type {
 
 export const DEFAULT_STOREFRONT_THEME_ID: StorefrontThemeId = "theme1";
 
+const Theme1 = lazy(() => import("./theme1/Theme1"));
+const Theme2 = lazy(() => import("./theme2/Theme2"));
+const Theme3 = lazy(() => import("./theme3/Theme3"));
+
 export const storefrontThemeRegistry: Record<
   StorefrontThemeId,
   StorefrontThemeDefinition
 > = {
   theme1: {
     id: "theme1",
-    name: "Simple Shop",
-    description: "Fast, focused storefront for clear product browsing and high-intent bookings.",
-    previewLabel: "Simple Shop",
+    name: "Editorial Thrift",
+    description: "Premium streetwear storefront for limited drops, one-off pieces, and WhatsApp-confirmed bookings.",
+    previewLabel: "Editorial Thrift",
     component: Theme1,
   },
   theme2: {

@@ -140,8 +140,7 @@ export function normalizeProductImages(
 
     const thumbnailUrl =
       getDurableImageUrl(record.thumbnailUrl) ||
-      getDurableImageUrl(record.thumbUrl) ||
-      url;
+      getDurableImageUrl(record.thumbUrl);
     const key = typeof record.key === "string" ? record.key.trim() : "";
     const thumbKey =
       typeof record.thumbKey === "string" ? record.thumbKey.trim() : "";
@@ -149,8 +148,7 @@ export function normalizeProductImages(
     return [
       removeUndefinedImageFields({
         url,
-        thumbnailUrl,
-        thumbUrl: thumbnailUrl,
+        ...(thumbnailUrl ? { thumbnailUrl, thumbUrl: thumbnailUrl } : {}),
         ...(key ? { key } : {}),
         ...(thumbKey ? { thumbKey } : {}),
         alt: getSafeImageAlt(record.alt, productTitle),

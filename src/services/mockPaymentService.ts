@@ -73,6 +73,10 @@ export async function startMockBookingPayment(
   checkoutSession: CheckoutSession;
   reservationApplied: boolean;
 }> {
+  if (import.meta.env.PROD) {
+    throw new Error("Mock checkout is only available in local development.");
+  }
+
   // TODO: Replace this with backend Razorpay order + payment verification later.
   const checkoutId = await createCheckoutSessionWithReservation(input);
   const checkoutSession =

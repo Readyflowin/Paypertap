@@ -25,6 +25,8 @@ import {
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreData } from "@/services/publicStoreService";
 import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
+import { Theme1EditorialFooter } from "@/storefront/themes/theme1/Theme1Footer";
+import { Theme1Header } from "@/storefront/themes/theme1/Theme1Header";
 import {
   getStoreConfirmationAdvanceBreakdown,
   getStorefrontPaymentSubtext,
@@ -75,24 +77,24 @@ type ThemeClasses = {
 
 const themeClasses: Record<PageThemeId, ThemeClasses> = {
   theme1: {
-    main: "bg-[#f7f7f8] text-neutral-950",
-    back: "text-neutral-500 hover:text-neutral-950",
-    mediaPanel: "border-neutral-200 bg-white shadow-[0_18px_50px_rgba(17,18,23,0.07)]",
-    imageSurface: "bg-neutral-100",
-    emptyImage: "text-neutral-400",
-    thumb: "border-neutral-200 bg-neutral-100",
-    infoPanel: "border-neutral-200 bg-white shadow-[0_18px_50px_rgba(17,18,23,0.07)]",
-    eyebrow: "text-neutral-400",
-    title: "text-neutral-950",
-    price: "text-neutral-950",
-    muted: "text-neutral-600",
-    bookingBox: "border-neutral-200 bg-neutral-50 text-neutral-600",
-    bookingStrong: "text-neutral-950",
-    primaryCta: "bg-neutral-950 !text-white hover:bg-neutral-800",
-    disabledCta: "border-neutral-200 bg-neutral-100 text-neutral-400",
-    sticky: "border-neutral-200 bg-white/96 text-neutral-950",
-    storePanel: "border-neutral-200 bg-white text-neutral-600",
-    storeLogo: "border-neutral-200 bg-neutral-950 text-white",
+    main: "bg-[#F6F1E8] text-[#111111]",
+    back: "text-[#6F6A60] hover:text-[#7A2E2E]",
+    mediaPanel: "border-[#DDD4C7] bg-[#F9F5ED] shadow-[0_18px_50px_rgba(25,20,15,0.08)]",
+    imageSurface: "bg-[#EFE3C8]",
+    emptyImage: "text-[#6F6A60]",
+    thumb: "border-[#DDD4C7] bg-[#EFE3C8]",
+    infoPanel: "border-[#DDD4C7] bg-[#F9F5ED] shadow-[0_18px_50px_rgba(25,20,15,0.08)]",
+    eyebrow: "text-[#7A2E2E]",
+    title: "text-[#111111]",
+    price: "text-[#111111]",
+    muted: "text-[#6F6A60]",
+    bookingBox: "border-[#DDD4C7] bg-[#F4EFE6] text-[#6F6A60]",
+    bookingStrong: "text-[#111111]",
+    primaryCta: "bg-[#111111] !text-[#F6F1E8] hover:bg-[#2d1b16]",
+    disabledCta: "border-[#DDD4C7] bg-[#F4EFE6] text-[#8f8679]",
+    sticky: "border-[#DDD4C7] bg-[#F6F1E8]/96 text-[#111111]",
+    storePanel: "border-[#DDD4C7] bg-[#F9F5ED] text-[#6F6A60]",
+    storeLogo: "border-[#DDD4C7] bg-[#111111] text-[#F6F1E8]",
   },
   theme2: {
     main: "bg-[#f5eee6] text-[#171411]",
@@ -236,7 +238,9 @@ function ProductVariantSelector({
         return (
           <div key={option.name} className="min-w-0">
             <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
-              <p className={`text-sm font-semibold ${classes.title}`}>{option.name}</p>
+              <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${classes.eyebrow}`}>
+                {option.name}
+              </p>
               {selectedOptions[option.name] ? (
                 <span className={`truncate text-xs ${classes.muted}`}>
                   {selectedOptions[option.name]}
@@ -260,11 +264,11 @@ function ProductVariantSelector({
                         [option.name]: value,
                       })
                     }
-                    className={`inline-flex min-h-10 min-w-0 max-w-full items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition ${
+                    className={`inline-flex min-h-11 min-w-11 max-w-full items-center justify-center gap-2 border px-3 text-sm font-semibold transition ${
                       isSelected
                         ? classes.primaryCta
                         : `${classes.bookingBox} hover:opacity-90`
-                    } ${!isAvailable ? "cursor-not-allowed opacity-45" : ""}`}
+                    } ${!isAvailable ? "cursor-not-allowed opacity-45 line-through" : ""}`}
                   >
                     {isColor ? (
                       <span
@@ -484,6 +488,14 @@ export default function ProductDetailPage() {
     store,
   });
   const stickyPaymentSubtext = getStorefrontPaymentSubtext(confirmationAdvance);
+  const showTheme1Chrome = themeId === "theme1";
+
+  function handleTheme1ChromeProductSelect(nextProduct: Product) {
+    const nextProductId = nextProduct.productId || nextProduct.id;
+    if (nextProductId) {
+      navigate(`/${storeSlug}/product/${nextProductId}`);
+    }
+  }
 
   function handleBook() {
     if (!isAvailable) return;
@@ -513,6 +525,14 @@ export default function ProductDetailPage() {
   }
 
   return (
+    <>
+    {showTheme1Chrome ? (
+      <Theme1Header
+        onProductSelect={handleTheme1ChromeProductSelect}
+        products={[product]}
+        store={store}
+      />
+    ) : null}
     <main className={`min-h-screen overflow-x-hidden px-3 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-6 ${classes.main}`}>
       <section className="mx-auto w-full max-w-6xl">
         <Link
@@ -703,5 +723,9 @@ export default function ProductDetailPage() {
         </p>
       </div>
     </main>
+    {showTheme1Chrome ? (
+      <Theme1EditorialFooter store={store} storeSlug={storeSlug} />
+    ) : null}
+    </>
   );
 }

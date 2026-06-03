@@ -1,27 +1,79 @@
-import { type ReactElement } from "react";
-
-import HomePage from "../homepage/HomePage";
-import { AboutPage } from "../pages/about/AboutPage";
-import { ContactPage } from "../pages/contact/ContactPage";
-import { FAQPage } from "../pages/faq/FAQPage";
-import { FounderPage } from "../pages/founder/FounderPage";
-import { HowItWorksPage } from "../pages/how-it-works/HowItWorksPage";
-import { PricingPage } from "../pages/pricing/PricingPage";
-import { PrivacyPage } from "../pages/privacy/PrivacyPage";
-import { RefundCancellationPage } from "../pages/refund-cancellation/RefundCancellationPage";
-import { TermsPage } from "../pages/terms/TermsPage";
-import { CompareHubPage } from "../seo-pages/CompareHubPage";
-import { ComparisonPage } from "../seo-pages/ComparisonPage";
-import { FeaturePage } from "../seo-pages/FeaturePage";
+import { lazy, type ReactElement } from "react";
 import {
   type ComparisonSlug,
   type FeatureSlug,
   type UseCaseSlug,
 } from "../seo-pages/seoPageTypes";
-import { UseCasePage } from "../seo-pages/UseCasePage";
 import { routeMetadata, type RouteMetadata } from "./metadata";
 import { getRouteJsonLd } from "./routeSchemas";
 import { type JsonLdObject } from "./schema";
+
+const HomePage = lazy(() => import("../homepage/HomePage"));
+const AboutPage = lazy(() =>
+  import("../pages/about/AboutPage").then((module) => ({
+    default: module.AboutPage,
+  }))
+);
+const ContactPage = lazy(() =>
+  import("../pages/contact/ContactPage").then((module) => ({
+    default: module.ContactPage,
+  }))
+);
+const FAQPage = lazy(() =>
+  import("../pages/faq/FAQPage").then((module) => ({
+    default: module.FAQPage,
+  }))
+);
+const FounderPage = lazy(() =>
+  import("../pages/founder/FounderPage").then((module) => ({
+    default: module.FounderPage,
+  }))
+);
+const HowItWorksPage = lazy(() =>
+  import("../pages/how-it-works/HowItWorksPage").then((module) => ({
+    default: module.HowItWorksPage,
+  }))
+);
+const PricingPage = lazy(() =>
+  import("../pages/pricing/PricingPage").then((module) => ({
+    default: module.PricingPage,
+  }))
+);
+const PrivacyPage = lazy(() =>
+  import("../pages/privacy/PrivacyPage").then((module) => ({
+    default: module.PrivacyPage,
+  }))
+);
+const RefundCancellationPage = lazy(() =>
+  import("../pages/refund-cancellation/RefundCancellationPage").then((module) => ({
+    default: module.RefundCancellationPage,
+  }))
+);
+const TermsPage = lazy(() =>
+  import("../pages/terms/TermsPage").then((module) => ({
+    default: module.TermsPage,
+  }))
+);
+const CompareHubPage = lazy(() =>
+  import("../seo-pages/CompareHubPage").then((module) => ({
+    default: module.CompareHubPage,
+  }))
+);
+const ComparisonPage = lazy(() =>
+  import("../seo-pages/ComparisonPage").then((module) => ({
+    default: module.ComparisonPage,
+  }))
+);
+const FeaturePage = lazy(() =>
+  import("../seo-pages/FeaturePage").then((module) => ({
+    default: module.FeaturePage,
+  }))
+);
+const UseCasePage = lazy(() =>
+  import("../seo-pages/UseCasePage").then((module) => ({
+    default: module.UseCasePage,
+  }))
+);
 
 export type StaticRoute = RouteMetadata & {
   element: ReactElement;

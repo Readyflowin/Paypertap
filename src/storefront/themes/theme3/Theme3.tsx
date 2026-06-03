@@ -38,6 +38,7 @@ import {
   getStorePolicyLinks,
 } from "../../storePolicies";
 import { useStorefrontWishlist } from "../../useStorefrontWishlist";
+import { useVisibleProductBatch } from "../../useVisibleProductBatch";
 import {
   ALL_COLLECTIONS,
   filterProductsByCollectionAndSearch,
@@ -440,6 +441,13 @@ function Theme3ProductGrid({
   const searchResults = hasSearch ? products.slice(0, 6) : [];
   const showSearchPanel = hasSearch && !suggestionsDismissed;
   const hasMoreSearchResults = hasSearch && products.length > searchResults.length;
+  const {
+    canLoadMore,
+    loadMore,
+    totalCount,
+    visibleCount,
+    visibleProducts: renderedProducts,
+  } = useVisibleProductBatch(products);
 
   useEffect(() => {
     setSuggestionsDismissed(false);
@@ -651,23 +659,46 @@ function Theme3ProductGrid({
           </p>
         </section>
         )
+      ) : hasSearch && showSearchPanel ? (
+        <p className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-white/45">
+          Showing search matches above. Clear search to browse the grid.
+        </p>
       ) : (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {products.map((product) => {
-          const fallbackIndex = getProductFallbackIndex(product);
+      <>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {renderedProducts.map((product) => {
+            const fallbackIndex = getProductFallbackIndex(product);
 
-          return (
-            <Theme3ProductCard
-              key={getProductId(product) || getProductTitle(product)}
-              fallbackIndex={fallbackIndex}
-              isSaved={isProductSaved(product, fallbackIndex)}
-              product={product}
-              onSelect={onSelect}
-              onToggleSaved={onToggleProductSaved}
-            />
-          );
-        })}
-      </div>
+            return (
+              <Theme3ProductCard
+                key={getProductId(product) || getProductTitle(product)}
+                fallbackIndex={fallbackIndex}
+                isSaved={isProductSaved(product, fallbackIndex)}
+                product={product}
+                onSelect={onSelect}
+                onToggleSaved={onToggleProductSaved}
+              />
+            );
+          })}
+        </div>
+        {totalCount > 4 ? (
+          <div className="mt-5 flex flex-col items-center gap-3 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-white/45">
+              Showing {visibleCount} of {totalCount} one-off pieces
+            </p>
+            {canLoadMore ? (
+              <button
+                type="button"
+                onClick={loadMore}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white px-5 text-sm font-bold text-neutral-950 shadow-[0_16px_34px_rgba(0,0,0,0.22)] transition hover:bg-white/88 sm:w-auto"
+              >
+                <span>Load more pieces</span>
+                <span aria-hidden="true">-&gt;</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </>
       )}
     </section>
   );

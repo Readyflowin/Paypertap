@@ -13,8 +13,10 @@ export const config = {
 };
 
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxFileSize = 5 * 1024 * 1024;
+const maxFileSize = 12 * 1024 * 1024;
 const publicImageCacheControl = "public, max-age=31536000, immutable";
+const optimizedImageTooLargeMessage =
+  "Could not process this image. Please try another photo or screenshot.";
 
 type UploadedFile = {
   filepath: string;
@@ -23,7 +25,7 @@ type UploadedFile = {
   size: number;
 };
 
-type UploadFolder = "stores" | "products" | "test";
+type UploadFolder = "stores" | "products" | "heroes" | "test";
 
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.setHeader("Cache-Control", "no-store");
@@ -92,7 +94,7 @@ function firstField(value: unknown): string | null {
 
 function getUploadFolder(value: unknown): UploadFolder {
   const folder = firstField(value);
-  return folder === "stores" || folder === "products" || folder === "test" ? folder : "test";
+  return folder === "stores" || folder === "products" || folder === "heroes" || folder === "test" ? folder : "test";
 }
 
 function getExtensionForMimeType(mimetype: string) {
@@ -212,7 +214,7 @@ export default async function handler(req: any, res: any) {
     if (file.size > maxFileSize) {
       return sendJson(res, 400, {
         success: false,
-        error: "Image must be 5MB or smaller.",
+        error: optimizedImageTooLargeMessage,
       });
     }
 
@@ -261,7 +263,7 @@ export default async function handler(req: any, res: any) {
       error instanceof Error && "httpCode" in error && error.httpCode === 413 ? 400 : 500;
     const message =
       statusCode === 400
-        ? "Image must be 5MB or smaller."
+        ? optimizedImageTooLargeMessage
         : error instanceof Error
           ? error.message
           : "Image upload failed.";

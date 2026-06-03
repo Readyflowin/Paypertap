@@ -16,6 +16,7 @@ const BOOKING_AMOUNT_PAISE = 2000;
 const CURRENCY = "INR";
 
 type JsonResponse = {
+  setHeader?: (name: string, value: string) => void;
   status: (statusCode: number) => { json: (body: unknown) => void };
 };
 
@@ -92,6 +93,7 @@ type StoreData = {
 };
 
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
+  res.setHeader?.("Cache-Control", "no-store");
   res.status(statusCode).json(body);
 }
 

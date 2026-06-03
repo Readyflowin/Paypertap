@@ -131,6 +131,29 @@ service cloud.firestore {
         );
     }
 
+    function hasValidStoreAppearanceFields(data) {
+      return (
+          !("heroTitle" in data)
+          || isValidOptionalShortString(data.heroTitle)
+        )
+        && (
+          !("heroSubtitle" in data)
+          || isValidOptionalString(data.heroSubtitle)
+        )
+        && (
+          !("heroImageUrl" in data)
+          || isValidOptionalString(data.heroImageUrl)
+        )
+        && (
+          !("heroImageKey" in data)
+          || isValidOptionalString(data.heroImageKey)
+        )
+        && (
+          !("announcementText" in data)
+          || isValidOptionalShortString(data.announcementText)
+        );
+    }
+
     function isValidSellerStatus(value) {
       return value in ["active", "paused", "suspended"];
     }
@@ -655,6 +678,8 @@ service cloud.firestore {
         "heroTitle",
         "heroSubtitle",
         "heroImageUrl",
+        "heroImageKey",
+        "announcementText",
         "instagramProfile",
         "instagramUrl",
         "themeId",
@@ -771,7 +796,8 @@ service cloud.firestore {
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
         )
         && hasValidSellerConfirmationAdvanceFields(request.resource.data)
-        && hasValidStoreContactAndPolicyFields(request.resource.data);
+        && hasValidStoreContactAndPolicyFields(request.resource.data)
+        && hasValidStoreAppearanceFields(request.resource.data);
 
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
@@ -785,7 +811,8 @@ service cloud.firestore {
           || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
         )
         && hasValidSellerConfirmationAdvanceFields(request.resource.data)
-        && hasValidStoreContactAndPolicyFields(request.resource.data);
+        && hasValidStoreContactAndPolicyFields(request.resource.data)
+        && hasValidStoreAppearanceFields(request.resource.data);
 
       allow delete: if isAdmin();
     }

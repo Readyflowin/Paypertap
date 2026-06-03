@@ -4,8 +4,8 @@ import {
   assertValidImageFile,
   assertValidImageFiles,
   compressImage,
+  compressHeroImage,
   compressLogoImage,
-  compressProductImageSet,
   compressStorefrontImage,
   IMAGE_COMPRESSION_PRESETS,
   MAX_PRODUCT_IMAGE_COUNT,
@@ -13,14 +13,16 @@ import {
 } from "../lib/imageCompression";
 import { isDurableImageUrl } from "../lib/imageUrls";
 
-const maxImageSize = 5 * 1024 * 1024;
+const maxOptimizedImageSize = 12 * 1024 * 1024;
+const imageProcessingErrorMessage =
+  "Could not process this image. Please try another photo or screenshot.";
 export const PUBLIC_IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export function getPublicImageCacheControl() {
   return PUBLIC_IMAGE_CACHE_CONTROL;
 }
 
-type UploadFolder = "stores" | "products" | "test";
+type UploadFolder = "stores" | "products" | "heroes" | "test";
 
 type UploadImageResponse = {
   success?: boolean;
@@ -32,8 +34,8 @@ type UploadImageResponse = {
 
 function validateUploadFile(file: File) {
   assertValidImageFile(file);
-  if (file.size > maxImageSize) {
-    throw new Error("Image must be 5MB or smaller.");
+  if (file.size > maxOptimizedImageSize) {
+    throw new Error(imageProcessingErrorMessage);
   }
 }
 
@@ -86,6 +88,7 @@ async function uploadImageBlobToR2(
 function getDefaultPresetForFolder(folder: UploadFolder): ImageCompressionPreset {
   if (folder === "stores") return IMAGE_COMPRESSION_PRESETS.storeLogo;
   if (folder === "products") return IMAGE_COMPRESSION_PRESETS.productMain;
+  if (folder === "heroes") return IMAGE_COMPRESSION_PRESETS.storefrontHero;
   return IMAGE_COMPRESSION_PRESETS.storefrontBanner;
 }
 
@@ -115,25 +118,35 @@ export async function uploadImageToR2(
   return uploadImageBlobToR2(compressedImage, folder);
 }
 
+export async function uploadHeroImage(
+  file: File
+): Promise<{ url: string; key: string }> {
+  const heroFile = await compressHeroImage(file);
+  return uploadImageBlobToR2(heroFile, "heroes");
+}
+
+export async function uploadOptimizedHeroImage(
+  file: File
+): Promise<{ url: string; key: string }> {
+  validateUploadFile(file);
+  return uploadImageBlobToR2(file, "heroes");
+}
+
 export async function uploadProductImage(
   file: File | null | undefined,
   alt = "Product image"
 ): Promise<ProductImage | null> {
   if (!file) return null;
 
-  const { mainFile, thumbnailFile } = await compressProductImageSet(file);
-  const [uploadedImage, uploadedThumbnail] = await Promise.all([
-    uploadImageBlobToR2(mainFile, "products"),
-    uploadImageBlobToR2(thumbnailFile, "products"),
-  ]);
+  const mainFile = await compressImage(file, IMAGE_COMPRESSION_PRESETS.productMain);
+  // Product uploads intentionally create one optimized object per selected image.
+  // Old thumbnail fields remain readable, but new uploads do not create thumb objects.
+  const uploadedImage = await uploadImageBlobToR2(mainFile, "products");
 
   return {
     url: uploadedImage.url,
-    thumbnailUrl: uploadedThumbnail.url,
-    thumbUrl: uploadedThumbnail.url,
     alt: alt.trim() || file.name || "Product image",
     key: uploadedImage.key,
-    thumbKey: uploadedThumbnail.key,
     sortOrder: 0,
   };
 }

@@ -43,6 +43,7 @@ import { useAuthUser } from "../hooks/useAuthUser";
 import {
   assertValidImageFile,
   assertValidImageFiles,
+  compressHeroImage,
   MAX_PRODUCT_IMAGE_COUNT,
 } from "../lib/imageCompression";
 import {
@@ -101,7 +102,6 @@ import {
   updateStorePublishStatus,
 } from "../services/storeService";
 import { ThemeRenderer } from "../storefront/ThemeRenderer";
-import { getStorefrontConfirmationPolicyText } from "../storefront/StorefrontPaymentBreakdown";
 import { getProductGridImageUrl } from "../storefront/imageMedia";
 import {
   DEFAULT_STOREFRONT_THEME_ID,
@@ -109,7 +109,7 @@ import {
   storefrontThemeRegistry,
 } from "../storefront/themes/registry";
 import type { StorefrontThemeId } from "../storefront/themes/types";
-import { uploadImageToR2 } from "../services/uploadService";
+import { uploadImageToR2, uploadOptimizedHeroImage } from "../services/uploadService";
 import {
   buildBookingWhatsAppUrl,
   buildDeliveryDetailsMessage,
@@ -1595,7 +1595,7 @@ function RecentProductsCard({
         />
       ) : (
         <div className="ppt-dashboard-list">
-          {products.map((product) => {
+          {products.slice(0, 5).map((product) => {
             const imageUrl = getProductImage(product);
             const available = getAvailableQuantity(product);
             const badge = getProductStatusBadge(product, available);
@@ -1959,6 +1959,9 @@ function ProductsTab({
   const addProductFormRef = useRef<HTMLFormElement>(null);
   const addProductTitleRef = useRef<HTMLInputElement>(null);
   const safeProducts = Array.isArray(products) ? products : [];
+  const [visibleProductRows, setVisibleProductRows] = useState(20);
+  const visibleProducts = safeProducts.slice(0, visibleProductRows);
+  const canLoadMoreProductRows = visibleProductRows < safeProducts.length;
 
   function getProductBookingCount(product: Product): number {
     const productId = product.productId || product.id;
@@ -2022,6 +2025,10 @@ function ProductsTab({
     setEditingProduct(null);
     setShowForm(true);
   }, [openAddProductSignal]);
+
+  useEffect(() => {
+    setVisibleProductRows(20);
+  }, [safeProducts.length]);
 
   useEffect(() => {
     if (!showForm) return;
@@ -2342,7 +2349,11 @@ function ProductsTab({
           </EmptyState>
         ) : (
           <div className="divide-y divide-gray-100">
-            {safeProducts.map((product) => (
+            {visibleProducts.map((product) => {
+              const productId = product.productId || product.id;
+              const editingProductId = editingProduct?.productId || editingProduct?.id;
+
+              return (
               <ProductRow
                 key={product.id || product.productId}
                 collections={collections}
@@ -2355,8 +2366,31 @@ function ProductsTab({
                   void handleProductDeleted(product);
                 }}
                 product={product}
+                suppressImage={Boolean(productId && productId === editingProductId)}
               />
-            ))}
+              );
+            })}
+            {safeProducts.length > 20 ? (
+              <div className="p-4 text-center">
+                {canLoadMoreProductRows ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleProductRows((current) =>
+                        Math.min(current + 20, safeProducts.length)
+                      )
+                    }
+                    className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+                  >
+                    Load more products
+                  </button>
+                ) : (
+                  <p className="text-xs font-medium text-gray-500">
+                    All products loaded.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
       </div>
@@ -3111,11 +3145,13 @@ function ProductRow({
   onDelete,
   onEdit,
   product,
+  suppressImage = false,
 }: {
   collections: StoreCollection[];
   onDelete: () => void;
   onEdit: () => void;
   product: Product;
+  suppressImage?: boolean;
 }) {
   const imageUrl = getProductImage(product);
   const productImageCount = getProductImageUrls(product).length;
@@ -3129,7 +3165,7 @@ function ProductRow({
   return (
     <div className="grid min-w-0 gap-4 p-4 lg:grid-cols-[72px_minmax(0,1fr)_auto] lg:items-center">
       <div className="h-18 w-18 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
-        {imageUrl ? (
+        {imageUrl && !suppressImage ? (
           <img
             src={imageUrl}
             alt={product.title}
@@ -3139,7 +3175,7 @@ function ProductRow({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-gray-400">
-            Product image
+            {suppressImage ? "Editing" : "Product image"}
           </div>
         )}
       </div>
@@ -3911,6 +3947,11 @@ function StoreTab({
   );
   const [heroHeading, setHeroHeading] = useState(store?.heroTitle || store?.heroHeading || "");
   const [heroSubtitle, setHeroSubtitle] = useState(store?.heroSubtitle || "");
+  const [announcementText, setAnnouncementText] = useState(store?.announcementText || "");
+  const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [heroFileName, setHeroFileName] = useState("");
+  const [heroPreviewUrl, setHeroPreviewUrl] = useState("");
+  const [saveProgress, setSaveProgress] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoFileName, setLogoFileName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -3948,10 +3989,24 @@ function StoreTab({
         sellerConfirmationAdvancePercent: draftPercent,
         heroTitle: heroHeading,
         heroSubtitle,
+        announcementText,
+        heroImageUrl: store.heroImageUrl,
       }
     : null;
   const safeLogoUrl = getStoreLogoUrl(draftStore || store);
-  const confirmationPolicyText = getStorefrontConfirmationPolicyText(draftStore || store);
+  const firstProductHeroImage = useMemo(
+    () => products.map(getProductGridImageUrl).find(Boolean) || "",
+    [products]
+  );
+  const savedHeroImageUrl = getDisplayImageUrl(store?.heroImageUrl);
+  const heroImagePreviewUrl = heroPreviewUrl || savedHeroImageUrl || firstProductHeroImage;
+  const announcementPreviewText =
+    announcementText.trim() || "LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE";
+  const heroTitlePreview =
+    heroHeading.trim() || "Curated drops, one piece at a time.";
+  const heroSubtitlePreview =
+    heroSubtitle.trim() ||
+    "Browse available pieces and reserve before the chat moves to WhatsApp.";
 
   useEffect(() => {
     setStoreName(store?.storeName || "");
@@ -3976,8 +4031,50 @@ function StoreTab({
     );
     setHeroHeading(store?.heroTitle || store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
+    setAnnouncementText(store?.announcementText || "");
+    setHeroFile(null);
+    setHeroFileName("");
+    setSaveProgress("");
     setWhatsappPhoneError("");
   }, [store]);
+
+  useEffect(() => {
+    return () => {
+      if (heroPreviewUrl) {
+        URL.revokeObjectURL(heroPreviewUrl);
+      }
+    };
+  }, [heroPreviewUrl]);
+
+  async function handleHeroImageChange(file: File | null, resetInput: () => void) {
+    if (!file) {
+      setHeroFile(null);
+      setHeroFileName("");
+      return;
+    }
+
+    try {
+      assertValidImageFile(file);
+      const croppedFile = await compressHeroImage(file);
+      setHeroFile(file);
+      setHeroFileName(file.name);
+      setError("");
+      setSaveProgress("");
+      setHeroPreviewUrl((currentUrl) => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        return URL.createObjectURL(croppedFile);
+      });
+    } catch (err) {
+      resetInput();
+      setHeroFile(null);
+      setHeroFileName("");
+      setHeroPreviewUrl((currentUrl) => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        return "";
+      });
+      setError(err instanceof Error ? err.message : "Could not process this image. Please try another photo.");
+    }
+  }
 
   async function handleSaveStore(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3988,6 +4085,7 @@ function StoreTab({
       setSaving(true);
       setSaved(false);
       setError("");
+      setSaveProgress("");
       setWhatsappPhoneError("");
 
       const normalizedWhatsappPhone = normalizeIndianMobileInput(whatsappPhone);
@@ -4017,6 +4115,15 @@ function StoreTab({
         uploadedLogo = await uploadImageToR2(logoFile, "stores");
       }
 
+      let uploadedHero: { url: string; key: string } | null = null;
+      if (heroFile) {
+        setSaveProgress("Optimizing hero image...");
+        const optimizedHeroFile = await compressHeroImage(heroFile);
+        setSaveProgress("Uploading hero image...");
+        uploadedHero = await uploadOptimizedHeroImage(optimizedHeroFile);
+      }
+
+      setSaveProgress("Saving storefront...");
       const updatedFields = await updateStoreCustomization(store.storeId, {
         storeName,
         bio,
@@ -4033,6 +4140,9 @@ function StoreTab({
         sellerConfirmationAdvancePercent: percent,
         heroHeading,
         heroSubtitle,
+        announcementText,
+        heroImageUrl: uploadedHero?.url,
+        heroImageKey: uploadedHero?.key,
         logoUrl: uploadedLogo?.url,
       });
 
@@ -4049,12 +4159,20 @@ function StoreTab({
       onStoreUpdated(updatedFields);
       setLogoFile(null);
       setLogoFileName("");
+      setHeroFile(null);
+      setHeroFileName("");
+      setHeroPreviewUrl((currentUrl) => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        return "";
+      });
       setSaved(true);
+      setSaveProgress("Storefront updated.");
     } catch (err) {
       console.error("Store customization update failed:", err);
       setError(err instanceof Error ? err.message : "Could not save store settings.");
     } finally {
       setSaving(false);
+      setSaveProgress((current) => (current === "Storefront updated." ? current : ""));
     }
   }
 
@@ -4100,10 +4218,81 @@ function StoreTab({
               {publishing ? "Saving..." : store?.isPublished ? "Unpublish store" : "Publish store"}
             </PptButton>
             <PptButton type="submit" loading={saving} success={saved} disabled={!store?.storeId || saving}>
-              {saved ? "Saved" : "Save changes"}
+              {saved ? "Storefront updated" : "Save storefront appearance"}
             </PptButton>
           </div>
         </div>
+
+        <section className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-base font-semibold tracking-tight text-gray-950">
+              Storefront appearance
+            </h3>
+            <p className="text-sm leading-6 text-gray-500">
+              Tune the first screen buyers see on your Theme 1 storefront.
+            </p>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                <div className="flex flex-col gap-1">
+                  <h4 className="text-sm font-semibold text-gray-950">Hero section</h4>
+                  <p className="text-xs leading-5 text-gray-500">
+                    Best with a vertical 2:3 image. We'll automatically crop and optimize it for your storefront.
+                  </p>
+                </div>
+                <label className="mt-4 block text-sm font-medium text-gray-800">
+                  Hero image
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={(event) => {
+                      const input = event.currentTarget;
+                      void handleHeroImageChange(input.files?.[0] || null, () => {
+                        input.value = "";
+                      });
+                    }}
+                    className="mt-2 w-full rounded-xl border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-gray-950 file:px-2 file:py-1 file:text-xs file:font-medium file:text-white"
+                  />
+                </label>
+                <p className="mt-2 text-xs text-gray-500">
+                  {heroFileName || "PNG, JPG, JPEG, or WebP. Saved as one optimized 2:3 hero image."}
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Hero title"
+                  value={heroHeading}
+                  onChange={setHeroHeading}
+                  placeholder="Curated drops, one piece at a time."
+                />
+                <Field
+                  label="Announcement bar text"
+                  value={announcementText}
+                  onChange={setAnnouncementText}
+                  placeholder="LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE"
+                />
+              </div>
+              <Field
+                label="Hero subtitle"
+                value={heroSubtitle}
+                onChange={setHeroSubtitle}
+                placeholder="Browse available pieces and reserve before the chat moves to WhatsApp."
+              />
+            </div>
+
+            <Theme1HeroPreviewCard
+              announcement={announcementPreviewText}
+              heroImageUrl={heroImagePreviewUrl}
+              logoUrl={safeLogoUrl}
+              storeName={storeName || store?.storeName || "Store name"}
+              subtitle={heroSubtitlePreview}
+              title={heroTitlePreview}
+            />
+          </div>
+        </section>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr]">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
@@ -4168,11 +4357,11 @@ function StoreTab({
                   <p className="line-clamp-1 text-xs text-gray-500">{bio || "Store tagline"}</p>
                 </div>
               </div>
-              <h3 className="mt-4 text-lg font-semibold tracking-tight text-gray-950">
-                {heroHeading || "Fresh drops are live"}
-              </h3>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
-                {heroSubtitle || confirmationPolicyText}
+              <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                Store identity
+              </p>
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                Logo, contact, and policy details appear across your storefront.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <PptBadge tone={store?.isPublished ? "success" : "warning"}>
@@ -4289,10 +4478,6 @@ function StoreTab({
                 />
               </label>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Hero heading" value={heroHeading} onChange={setHeroHeading} placeholder="Fresh drops are live" />
-              <Field label="Hero subtitle" value={heroSubtitle} onChange={setHeroSubtitle} placeholder="Reserve with ₹20. Confirm the rest on WhatsApp." />
-            </div>
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <InfoRow label="Store link name" value={storeSlug || "Not set"} />
               <InfoRow label="Public link" value={storeLink || "Not set"} />
@@ -4318,6 +4503,11 @@ function StoreTab({
         <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
           Buyers pay ₹20 booking via PayPerTap. If you set an extra confirmation advance, the buyer pays that extra amount directly to you on WhatsApp/UPI/COD.
         </div>
+        {saveProgress ? (
+          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
+            {saveProgress}
+          </div>
+        ) : null}
         {error ? <ErrorBox message={error} /> : null}
       </form>
 
@@ -4349,6 +4539,103 @@ function StoreTab({
 
       <QuickReplies />
     </section>
+  );
+}
+
+function Theme1HeroPreviewCard({
+  announcement,
+  heroImageUrl,
+  logoUrl,
+  storeName,
+  subtitle,
+  title,
+}: {
+  announcement: string;
+  heroImageUrl: string;
+  logoUrl: string;
+  storeName: string;
+  subtitle: string;
+  title: string;
+}) {
+  const initials = storeName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  return (
+    <article className="overflow-hidden rounded-[28px] border border-gray-200 bg-[#F6F1E8] shadow-sm">
+      <div className="bg-[#111111] px-3 py-2 text-center text-[9px] font-semibold uppercase tracking-[0.18em] text-[#F6F1E8]">
+        {announcement}
+      </div>
+      <div className="flex items-center justify-between border-b border-[#DDD4C7] px-3 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-xs font-semibold text-[#F6F1E8]">
+            {logoUrl ? (
+              <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              initials || "PT"
+            )}
+          </span>
+          <span className="min-w-0 truncate text-sm font-semibold text-[#111111]">
+            {storeName}
+          </span>
+        </div>
+        <span className="text-xs font-semibold text-[#7A2E2E]">Theme 1</span>
+      </div>
+      <div className="p-3">
+        {heroImageUrl ? (
+          <div className="relative min-h-[360px] overflow-hidden rounded-lg bg-[#111111]">
+            <img
+              src={heroImageUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover opacity-[0.82]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/30 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-4 text-[#F6F1E8]">
+              <p className="w-fit border border-[#F6F1E8]/40 bg-[#111111]/40 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]">
+                Premium thrift / archive drop
+              </p>
+              <h3
+                className="mt-4 line-clamp-3 break-words text-4xl font-semibold leading-[0.98]"
+                style={{ fontFamily: "Georgia, ui-serif, serif" }}
+              >
+                {title}
+              </h3>
+              <p className="mt-3 line-clamp-3 text-xs leading-5 text-[#F6F1E8]/80">
+                {subtitle}
+              </p>
+              <div className="mt-4 grid gap-2">
+                <span className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#F6F1E8] px-4 text-xs font-bold text-[#111111]">
+                  Shop new drop -&gt;
+                </span>
+                <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-4 text-xs font-bold text-[#F6F1E8]">
+                  How booking works
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#111111] p-5 text-[#F6F1E8]">
+            <p className="w-fit border border-[#F6F1E8]/35 bg-[#2d1b16] px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#EFE3C8]">
+              New drop
+            </p>
+            <h3
+              className="mt-5 break-words text-4xl font-semibold leading-[0.96]"
+              style={{ fontFamily: "Georgia, ui-serif, serif" }}
+            >
+              Fresh drops are live
+            </h3>
+            <p className="mt-4 text-xs leading-5 text-[#F6F1E8]/72">
+              Fresh pieces, limited stock, ready to reserve.
+            </p>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 

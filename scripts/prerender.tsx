@@ -7,7 +7,7 @@ import { renderToString } from "react-dom/server";
 import { Route, Routes, StaticRouter } from "react-router";
 
 import { renderHeadTags } from "../src/seo/renderHead";
-import { staticRoutes } from "../src/seo/staticRoutes";
+import { staticRoutes } from "../src/seo/staticRoutes.prerender";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = path.join(projectRoot, "dist");

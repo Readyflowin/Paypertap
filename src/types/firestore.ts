@@ -31,6 +31,8 @@ export type Store = {
   storeLogoUrl?: string;
   logoKey?: string;
   heroImageUrl?: string;
+  heroImageKey?: string;
+  announcementText?: string;
   themeId: string;
   primaryColor: string;
   secondaryColor: string;

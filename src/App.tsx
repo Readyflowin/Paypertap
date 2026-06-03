@@ -15,6 +15,7 @@ const ProductOnboardingPage = lazy(() => import("./pages/ProductOnboardingPage")
 const PublicStorePage = lazy(() => import("./pages/PublicStorePage"));
 const StoreOnboardingPage = lazy(() => import("./pages/StoreOnboardingPage"));
 const StorePolicyPage = lazy(() => import("./pages/StorePolicyPage"));
+const ThemePreviewPage = lazy(() => import("./pages/ThemePreviewPage"));
 
 const enableIntegrationTests =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTEGRATION_TESTS === "true";
@@ -115,6 +116,14 @@ export default function App() {
             element={
               <PrivateRoute>
                 <DesignSystemPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/design-system/themes"
+            element={
+              <PrivateRoute>
+                <ThemePreviewPage />
               </PrivateRoute>
             }
           />

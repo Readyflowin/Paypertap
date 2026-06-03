@@ -30,7 +30,10 @@ export type StoreCustomizationInput = {
   logoUrl?: string;
   logoKey?: string;
   heroHeading?: string;
+  heroImageUrl?: string;
+  heroImageKey?: string;
   heroSubtitle?: string;
+  announcementText?: string;
   themeStyle?: string;
   primaryColor?: string;
   accentColor?: string;
@@ -199,6 +202,17 @@ export async function updateStoreCustomization(
   }
   if (input.heroHeading !== undefined) payload.heroTitle = input.heroHeading.trim();
   if (input.heroSubtitle !== undefined) payload.heroSubtitle = input.heroSubtitle.trim();
+  if (input.heroImageUrl !== undefined) {
+    const heroImageUrl = input.heroImageUrl.trim();
+    if (heroImageUrl && !getDurableImageUrl(heroImageUrl)) {
+      throw new Error("Please re-upload the hero image before saving.");
+    }
+    payload.heroImageUrl = heroImageUrl;
+  }
+  if (input.heroImageKey !== undefined) payload.heroImageKey = input.heroImageKey.trim();
+  if (input.announcementText !== undefined) {
+    payload.announcementText = input.announcementText.trim();
+  }
   if (input.primaryColor !== undefined) payload.primaryColor = input.primaryColor;
   if (input.accentColor !== undefined) payload.accentColor = input.accentColor;
   if (input.sellerConfirmationAdvanceType !== undefined) {

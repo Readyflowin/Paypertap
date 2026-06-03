@@ -29,13 +29,15 @@ export function normalizePublicImageUrl(value: unknown): string {
 }
 
 export function getStorefrontImageLoading(index: number): "eager" | "lazy" {
-  return index < 2 ? "eager" : "lazy";
+  void index;
+  return "lazy";
 }
 
 export function getStorefrontImageFetchPriority(
   index: number
 ): "high" | "auto" {
-  return index < 2 ? "high" : "auto";
+  void index;
+  return "auto";
 }
 
 export function getProductImageUrls(
