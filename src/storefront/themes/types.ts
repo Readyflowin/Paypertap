@@ -1,7 +1,7 @@
 import type { ComponentType, LazyExoticComponent, ReactElement } from "react";
 import type { Product, Store, StoreCollection } from "@/types/firestore";
 
-export type StorefrontThemeId = "theme1" | "theme2" | "theme3";
+export type StorefrontThemeId = "theme1";
 
 export type StorefrontStore = Store;
 export type StorefrontProduct = Product;

@@ -23,7 +23,7 @@ import {
   isProductBookable,
 } from "@/lib/productAvailability";
 import { getProductById, getPublicProductById } from "@/services/productService";
-import { getPublicStoreData } from "@/services/publicStoreService";
+import { getPublicStoreShellData } from "@/services/publicStoreService";
 import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
 import { Theme1EditorialFooter } from "@/storefront/themes/theme1/Theme1Footer";
 import { Theme1Header } from "@/storefront/themes/theme1/Theme1Header";
@@ -44,7 +44,7 @@ import {
 } from "@/lib/productVariants";
 import type { Product, Store } from "@/types/firestore";
 
-type PageThemeId = "theme1" | "theme2" | "theme3";
+type PageThemeId = "theme1";
 
 type PageState = {
   store: Store | null;
@@ -96,53 +96,11 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
     storePanel: "border-[#DDD4C7] bg-[#F9F5ED] text-[#6F6A60]",
     storeLogo: "border-[#DDD4C7] bg-[#111111] text-[#F6F1E8]",
   },
-  theme2: {
-    main: "bg-[#f5eee6] text-[#171411]",
-    back: "text-[#75695f] hover:text-[#171411]",
-    mediaPanel: "border-[#e7ded4] bg-[#fffaf4] shadow-[0_20px_60px_rgba(78,61,43,0.08)]",
-    imageSurface: "bg-[#eee5da]",
-    emptyImage: "text-[#9a8c7f]",
-    thumb: "border-[#e7ded4] bg-[#eee5da]",
-    infoPanel: "border-[#e7ded4] bg-[#fffaf4] shadow-[0_20px_60px_rgba(78,61,43,0.08)]",
-    eyebrow: "text-[#8f7f6f]",
-    title: "text-[#171411]",
-    price: "text-[#171411]",
-    muted: "text-[#6f6257]",
-    bookingBox: "border-[#e7ded4] bg-white/70 text-[#6f6257]",
-    bookingStrong: "text-[#171411]",
-    primaryCta: "bg-[#171411] !text-[#fffaf4] hover:bg-[#2a241f]",
-    disabledCta: "border-[#dfd3c6] bg-[#f4eadf] text-[#9a8b7c]",
-    sticky: "border-[#eadfd3] bg-[#fffaf4]/96 text-[#171411]",
-    storePanel: "border-[#e7ded4] bg-[#fffaf4] text-[#6f6257]",
-    storeLogo: "border-[#e4d9cd] bg-[#171411] text-[#fffaf4]",
-  },
-  theme3: {
-    main: "bg-[#070709] text-white",
-    back: "text-white/55 hover:text-white",
-    mediaPanel: "border-white/10 bg-neutral-950 shadow-[0_24px_70px_rgba(0,0,0,0.36)]",
-    imageSurface: "bg-white/8",
-    emptyImage: "text-white/34",
-    thumb: "border-white/10 bg-white/8",
-    infoPanel: "border-white/10 bg-neutral-900 shadow-[0_24px_70px_rgba(0,0,0,0.36)]",
-    eyebrow: "text-white/42",
-    title: "text-white",
-    price: "text-white",
-    muted: "text-white/64",
-    bookingBox: "border-white/10 bg-white/7 text-white/64",
-    bookingStrong: "text-white",
-    primaryCta: "bg-emerald-300 !text-neutral-950 hover:bg-emerald-200",
-    disabledCta: "border-white/10 bg-white/10 text-white/40",
-    sticky: "border-white/10 bg-neutral-950/96 text-white",
-    storePanel: "border-white/10 bg-neutral-900 text-white/58",
-    storeLogo: "border-white/14 bg-white text-neutral-950",
-  },
 };
 
 function getSelectedThemeId(store: Store): PageThemeId {
-  const selectedThemeId = store.themeId || store.selectedThemeId;
-  return selectedThemeId === "theme2" || selectedThemeId === "theme3"
-    ? selectedThemeId
-    : "theme1";
+  void store;
+  return "theme1";
 }
 
 function getStoreInstagramUrl(store: Store): string {
@@ -371,7 +329,7 @@ function StoreMiniBlock({
 export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { storeSlug = "", productId = "" } = useParams();
-  const { user, loading: authLoading } = useAuthUser();
+  const { user } = useAuthUser();
   const [state, setState] = useState<PageState>({
     store: null,
     product: null,
@@ -384,23 +342,25 @@ export default function ProductDetailPage() {
   const variantSelectorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-
     let cancelled = false;
 
     async function loadProduct() {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
 
-        const storeData = await getPublicStoreData(storeSlug, user?.uid);
+        const [storeData, publicProduct] = await Promise.all([
+          getPublicStoreShellData(storeSlug, user?.uid),
+          getPublicProductById(productId),
+        ]);
 
         if (!storeData) {
           throw new Error("Product not found");
         }
 
-        const product = storeData.isOwnerPreview
-          ? await getProductById(productId)
-          : await getPublicProductById(productId);
+        const product =
+          storeData.isOwnerPreview && !publicProduct
+            ? await getProductById(productId)
+            : publicProduct;
 
         if (!product || product.storeId !== storeData.store.storeId) {
           throw new Error("Product not found");
@@ -437,9 +397,9 @@ export default function ProductDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, productId, storeSlug, user?.uid]);
+  }, [productId, storeSlug, user?.uid]);
 
-  if (state.loading || authLoading) {
+  if (state.loading) {
     return <ProductDetailLoading />;
   }
 
@@ -488,7 +448,6 @@ export default function ProductDetailPage() {
     store,
   });
   const stickyPaymentSubtext = getStorefrontPaymentSubtext(confirmationAdvance);
-  const showTheme1Chrome = themeId === "theme1";
 
   function handleTheme1ChromeProductSelect(nextProduct: Product) {
     const nextProductId = nextProduct.productId || nextProduct.id;
@@ -526,13 +485,11 @@ export default function ProductDetailPage() {
 
   return (
     <>
-    {showTheme1Chrome ? (
       <Theme1Header
         onProductSelect={handleTheme1ChromeProductSelect}
         products={[product]}
         store={store}
       />
-    ) : null}
     <main className={`min-h-screen overflow-x-hidden px-3 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-6 ${classes.main}`}>
       <section className="mx-auto w-full max-w-6xl">
         <Link
@@ -723,9 +680,7 @@ export default function ProductDetailPage() {
         </p>
       </div>
     </main>
-    {showTheme1Chrome ? (
       <Theme1EditorialFooter store={store} storeSlug={storeSlug} />
-    ) : null}
     </>
   );
 }

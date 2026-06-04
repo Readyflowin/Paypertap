@@ -129,6 +129,18 @@ export function getTheme1StoreHeroSubtitle(store: StorefrontThemeProps["store"])
   return store.heroSubtitle || "";
 }
 
+export function getTheme1StoreHeroEyebrowText(store: StorefrontThemeProps["store"]) {
+  return store.heroEyebrowText || "";
+}
+
+export function getTheme1StoreHeroPrimaryCtaText(store: StorefrontThemeProps["store"]) {
+  return store.heroPrimaryCtaText || "";
+}
+
+export function getTheme1StoreHeroSecondaryCtaText(store: StorefrontThemeProps["store"]) {
+  return store.heroSecondaryCtaText || "";
+}
+
 export function getTheme1Collections(
   products: StorefrontProduct[],
   managedCollections: StorefrontThemeProps["collections"] = []
@@ -195,6 +207,9 @@ export function adaptTheme1Store({
     heroImageUrl: getDisplayImageUrl(store.heroImageUrl),
     heroTitle: getTheme1StoreHeroTitle(store),
     heroSubtitle: getTheme1StoreHeroSubtitle(store),
+    heroEyebrowText: getTheme1StoreHeroEyebrowText(store),
+    heroPrimaryCtaText: getTheme1StoreHeroPrimaryCtaText(store),
+    heroSecondaryCtaText: getTheme1StoreHeroSecondaryCtaText(store),
     story: getTheme1StoreDescription(store),
     socialProof: getTheme1SocialProof(store, products),
     trustBadges: getTheme1TrustBadges(store),

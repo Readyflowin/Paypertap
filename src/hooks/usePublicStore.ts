@@ -12,14 +12,12 @@ type UsePublicStoreState = {
 };
 
 export function usePublicStore(storeId: string): UsePublicStoreState {
-  const { user, loading: authLoading } = useAuthUser();
+  const { user } = useAuthUser();
   const [data, setData] = useState<PublicStoreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-
     let cancelled = false;
 
     async function loadStore() {
@@ -56,7 +54,7 @@ export function usePublicStore(storeId: string): UsePublicStoreState {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, storeId, user?.uid]);
+  }, [storeId, user?.uid]);
 
   return {
     data,

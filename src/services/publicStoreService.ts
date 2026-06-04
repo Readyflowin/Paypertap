@@ -1,24 +1,27 @@
-import type { Product, Store, StoreCollection, Theme } from "../types/firestore";
+import type { Product, Store, StoreCollection } from "../types/firestore";
 import { listStoreCollections } from "./collectionService";
 import {
   getPublicProductsByStoreId,
   getSellerProductsForStore,
 } from "./productService";
 import { getStoreBySlugOrId } from "./storeService";
-import { getThemeById } from "./themeService";
 
 export type PublicStoreData = {
   store: Store;
-  theme: Theme | null;
   products: Product[];
   collections: StoreCollection[];
   isOwnerPreview: boolean;
 };
 
-export async function getPublicStoreData(
+export type PublicStoreShellData = {
+  store: Store;
+  isOwnerPreview: boolean;
+};
+
+export async function getPublicStoreShellData(
   storeId: string,
   viewerUid?: string | null
-): Promise<PublicStoreData | null> {
+): Promise<PublicStoreShellData | null> {
   const store = await getStoreBySlugOrId(storeId);
 
   if (!store) {
@@ -32,11 +35,25 @@ export async function getPublicStoreData(
     return null;
   }
 
-  const [theme, products] = await Promise.all([
-    getThemeById(store.themeId).catch((error) => {
-      console.warn("Failed to load store theme:", error);
-      return null;
-    }),
+  return {
+    store,
+    isOwnerPreview,
+  };
+}
+
+export async function getPublicStoreData(
+  storeId: string,
+  viewerUid?: string | null
+): Promise<PublicStoreData | null> {
+  const storeShell = await getPublicStoreShellData(storeId, viewerUid);
+
+  if (!storeShell) {
+    return null;
+  }
+
+  const { store, isOwnerPreview } = storeShell;
+
+  const products = await (
     isOwnerPreview && viewerUid
       ? getSellerProductsForStore(viewerUid, store.storeId)
           .then((ownerProducts) =>
@@ -51,8 +68,8 @@ export async function getPublicStoreData(
       : getPublicProductsByStoreId(store.storeId).catch((error) => {
           console.warn("Failed to load store products:", error);
           return [];
-        }),
-  ]);
+        })
+  );
   const collections = await listStoreCollections(store.storeId, products).catch(
     (error) => {
       console.warn("Failed to load store collections:", error);
@@ -62,7 +79,6 @@ export async function getPublicStoreData(
 
   return {
     store,
-    theme,
     products,
     collections,
     isOwnerPreview,

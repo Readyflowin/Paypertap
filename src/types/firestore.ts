@@ -62,6 +62,9 @@ export type Store = {
   heroTitle?: string;
   heroHeading?: string;
   heroSubtitle?: string;
+  heroEyebrowText?: string;
+  heroPrimaryCtaText?: string;
+  heroSecondaryCtaText?: string;
   themeStyle?: "soft-boutique" | "dark-drop" | "clean-minimal" | string;
   selectedThemeId?: string;
   emailEvents?: {

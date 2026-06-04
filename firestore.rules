@@ -141,6 +141,18 @@ service cloud.firestore {
           || isValidOptionalString(data.heroSubtitle)
         )
         && (
+          !("heroEyebrowText" in data)
+          || isValidOptionalShortString(data.heroEyebrowText)
+        )
+        && (
+          !("heroPrimaryCtaText" in data)
+          || isValidOptionalShortString(data.heroPrimaryCtaText)
+        )
+        && (
+          !("heroSecondaryCtaText" in data)
+          || isValidOptionalShortString(data.heroSecondaryCtaText)
+        )
+        && (
           !("heroImageUrl" in data)
           || isValidOptionalString(data.heroImageUrl)
         )
@@ -677,6 +689,9 @@ service cloud.firestore {
         "storeLogoUrl",
         "heroTitle",
         "heroSubtitle",
+        "heroEyebrowText",
+        "heroPrimaryCtaText",
+        "heroSecondaryCtaText",
         "heroImageUrl",
         "heroImageKey",
         "announcementText",

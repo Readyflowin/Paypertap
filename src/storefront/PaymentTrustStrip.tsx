@@ -6,7 +6,7 @@ import upiLogo from "@/assets/payment/upi-logo.svg";
 import { PptBrandIcon } from "@/components/ui";
 import { BOOKING_ADVANCE_AMOUNT } from "@/lib/money";
 
-type PaymentTrustVariant = "theme1" | "theme2" | "theme3";
+type PaymentTrustVariant = "theme1";
 
 type PaymentTrustStripProps = {
   compact?: boolean;
@@ -31,22 +31,6 @@ const variantClasses: Record<
     badge: "border-neutral-200 bg-neutral-50 text-neutral-700",
     logoBadge: "border-neutral-200 bg-white",
     iconBadge: "bg-neutral-950 text-white",
-  },
-  theme2: {
-    shell:
-      "border-[#e7ded4] bg-[#fffaf4] text-[#6f6257] shadow-[0_14px_38px_rgba(78,61,43,0.05)]",
-    label: "text-[#171411]",
-    badge: "border-[#dfd3c6] bg-white/72 text-[#53473d]",
-    logoBadge: "border-[#dfd3c6] bg-white/82",
-    iconBadge: "bg-[#171411] text-[#fffaf4]",
-  },
-  theme3: {
-    shell:
-      "border-neutral-800 bg-neutral-950 text-white/68 shadow-[0_18px_44px_rgba(10,10,12,0.16)]",
-    label: "text-white",
-    badge: "border-white/12 bg-white/8 text-white/72",
-    logoBadge: "border-white/12 bg-white/95",
-    iconBadge: "bg-white text-neutral-950",
   },
 };
 

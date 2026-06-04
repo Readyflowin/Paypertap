@@ -98,14 +98,11 @@ import {
 import {
   getStoreById,
   updateStoreCustomization,
-  updateStoreTheme,
   updateStorePublishStatus,
 } from "../services/storeService";
-import { ThemeRenderer } from "../storefront/ThemeRenderer";
 import { getProductGridImageUrl } from "../storefront/imageMedia";
 import {
   DEFAULT_STOREFRONT_THEME_ID,
-  isStorefrontThemeId,
   storefrontThemeRegistry,
 } from "../storefront/themes/registry";
 import type { StorefrontThemeId } from "../storefront/themes/types";
@@ -149,6 +146,14 @@ const sidebarItems = [
 ] as const;
 
 type DashboardTab = (typeof sidebarItems)[number];
+const DEFAULT_HERO_TITLE = "Curated drops, one piece at a time.";
+const DEFAULT_HERO_SUBTITLE =
+  "Browse available pieces and reserve before the chat moves to WhatsApp.";
+const DEFAULT_HERO_EYEBROW_TEXT = "Premium thrift / archive drop";
+const DEFAULT_HERO_PRIMARY_CTA_TEXT = "Shop new drop";
+const DEFAULT_HERO_SECONDARY_CTA_TEXT = "How booking works";
+const DEFAULT_ANNOUNCEMENT_TEXT = "LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE";
+
 const mobileNavItems = [
   "Overview",
   "Products",
@@ -362,14 +367,7 @@ function getStoreInstagramProfile(store?: Store | null): string {
 }
 
 function getSelectedStorefrontThemeId(store?: Store | null): StorefrontThemeId {
-  if (isStorefrontThemeId(store?.themeId)) {
-    return store.themeId;
-  }
-
-  if (isStorefrontThemeId(store?.selectedThemeId)) {
-    return store.selectedThemeId;
-  }
-
+  void store;
   return DEFAULT_STOREFRONT_THEME_ID;
 }
 
@@ -896,10 +894,8 @@ export default function DashboardPage() {
 
             {activeTab === "Store" ? (
               <StoreTab
-                collections={collections}
                 onTogglePublish={handleTogglePublish}
                 onStoreUpdated={(updatedStore) => setStore(updatedStore)}
-                products={products}
                 publishing={publishing}
                 store={store}
                 storeLink={storeLink}
@@ -3900,8 +3896,6 @@ function CustomerRow({
 }
 
 function StoreTab({
-  collections,
-  products,
   store,
   storeSlug,
   storeLink,
@@ -3909,8 +3903,6 @@ function StoreTab({
   onTogglePublish,
   onStoreUpdated,
 }: {
-  collections: StoreCollection[];
-  products: Product[];
   store: Store | null;
   storeSlug: string;
   storeLink: string;
@@ -3947,6 +3939,13 @@ function StoreTab({
   );
   const [heroHeading, setHeroHeading] = useState(store?.heroTitle || store?.heroHeading || "");
   const [heroSubtitle, setHeroSubtitle] = useState(store?.heroSubtitle || "");
+  const [heroEyebrowText, setHeroEyebrowText] = useState(store?.heroEyebrowText || "");
+  const [heroPrimaryCtaText, setHeroPrimaryCtaText] = useState(
+    store?.heroPrimaryCtaText || ""
+  );
+  const [heroSecondaryCtaText, setHeroSecondaryCtaText] = useState(
+    store?.heroSecondaryCtaText || ""
+  );
   const [announcementText, setAnnouncementText] = useState(store?.announcementText || "");
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroFileName, setHeroFileName] = useState("");
@@ -3957,11 +3956,11 @@ function StoreTab({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
+  const [appearanceSaved, setAppearanceSaved] = useState(false);
+  const [appearanceError, setAppearanceError] = useState("");
+  const [appearanceProgress, setAppearanceProgress] = useState("");
   const [whatsappPhoneError, setWhatsappPhoneError] = useState("");
-  const [previewThemeId, setPreviewThemeId] = useState<StorefrontThemeId | null>(null);
-  const [themeSavingId, setThemeSavingId] = useState<StorefrontThemeId | null>(null);
-  const [themeSavedMessage, setThemeSavedMessage] = useState("");
-  const [themeError, setThemeError] = useState("");
   const selectedThemeId = getSelectedStorefrontThemeId(store);
   const draftFixedAmount =
     confirmationAdvanceType === "fixed"
@@ -3989,24 +3988,25 @@ function StoreTab({
         sellerConfirmationAdvancePercent: draftPercent,
         heroTitle: heroHeading,
         heroSubtitle,
+        heroEyebrowText,
+        heroPrimaryCtaText,
+        heroSecondaryCtaText,
         announcementText,
         heroImageUrl: store.heroImageUrl,
       }
     : null;
   const safeLogoUrl = getStoreLogoUrl(draftStore || store);
-  const firstProductHeroImage = useMemo(
-    () => products.map(getProductGridImageUrl).find(Boolean) || "",
-    [products]
-  );
   const savedHeroImageUrl = getDisplayImageUrl(store?.heroImageUrl);
-  const heroImagePreviewUrl = heroPreviewUrl || savedHeroImageUrl || firstProductHeroImage;
+  const heroImagePreviewUrl = heroPreviewUrl || savedHeroImageUrl;
   const announcementPreviewText =
-    announcementText.trim() || "LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE";
-  const heroTitlePreview =
-    heroHeading.trim() || "Curated drops, one piece at a time.";
-  const heroSubtitlePreview =
-    heroSubtitle.trim() ||
-    "Browse available pieces and reserve before the chat moves to WhatsApp.";
+    announcementText.trim() || DEFAULT_ANNOUNCEMENT_TEXT;
+  const heroTitlePreview = heroHeading.trim() || DEFAULT_HERO_TITLE;
+  const heroSubtitlePreview = heroSubtitle.trim() || DEFAULT_HERO_SUBTITLE;
+  const heroEyebrowPreview = heroEyebrowText.trim() || DEFAULT_HERO_EYEBROW_TEXT;
+  const heroPrimaryCtaPreview =
+    heroPrimaryCtaText.trim() || DEFAULT_HERO_PRIMARY_CTA_TEXT;
+  const heroSecondaryCtaPreview =
+    heroSecondaryCtaText.trim() || DEFAULT_HERO_SECONDARY_CTA_TEXT;
 
   useEffect(() => {
     setStoreName(store?.storeName || "");
@@ -4031,10 +4031,14 @@ function StoreTab({
     );
     setHeroHeading(store?.heroTitle || store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
+    setHeroEyebrowText(store?.heroEyebrowText || "");
+    setHeroPrimaryCtaText(store?.heroPrimaryCtaText || "");
+    setHeroSecondaryCtaText(store?.heroSecondaryCtaText || "");
     setAnnouncementText(store?.announcementText || "");
     setHeroFile(null);
     setHeroFileName("");
     setSaveProgress("");
+    setAppearanceProgress("");
     setWhatsappPhoneError("");
   }, [store]);
 
@@ -4058,8 +4062,9 @@ function StoreTab({
       const croppedFile = await compressHeroImage(file);
       setHeroFile(file);
       setHeroFileName(file.name);
-      setError("");
-      setSaveProgress("");
+      setAppearanceError("");
+      setAppearanceSaved(false);
+      setAppearanceProgress("");
       setHeroPreviewUrl((currentUrl) => {
         if (currentUrl) URL.revokeObjectURL(currentUrl);
         return URL.createObjectURL(croppedFile);
@@ -4072,7 +4077,60 @@ function StoreTab({
         if (currentUrl) URL.revokeObjectURL(currentUrl);
         return "";
       });
-      setError(err instanceof Error ? err.message : "Could not process this image. Please try another photo.");
+      setAppearanceError(
+        err instanceof Error ? err.message : "Could not process this image. Please try another photo."
+      );
+    }
+  }
+
+  async function handleSaveAppearance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!store?.storeId) return;
+
+    try {
+      setAppearanceSaving(true);
+      setAppearanceSaved(false);
+      setAppearanceError("");
+      setAppearanceProgress("");
+
+      let uploadedHero: { url: string; key: string } | null = null;
+      if (heroFile) {
+        setAppearanceProgress("Optimizing hero image…");
+        const optimizedHeroFile = await compressHeroImage(heroFile);
+        setAppearanceProgress("Uploading hero image…");
+        uploadedHero = await uploadOptimizedHeroImage(optimizedHeroFile);
+      }
+
+      setAppearanceProgress("Saving storefront…");
+      const updatedFields = await updateStoreCustomization(store.storeId, {
+        heroTitle: heroHeading,
+        heroSubtitle,
+        heroEyebrowText,
+        heroPrimaryCtaText,
+        heroSecondaryCtaText,
+        announcementText,
+        heroImageUrl: uploadedHero?.url,
+        heroImageKey: uploadedHero?.key,
+      });
+
+      onStoreUpdated(updatedFields);
+      setHeroFile(null);
+      setHeroFileName("");
+      setHeroPreviewUrl((currentUrl) => {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        return "";
+      });
+      setAppearanceSaved(true);
+      setAppearanceProgress("Storefront updated.");
+    } catch (err) {
+      console.error("Storefront appearance update failed:", err);
+      setAppearanceError(
+        err instanceof Error ? err.message : "Could not save storefront appearance."
+      );
+    } finally {
+      setAppearanceSaving(false);
+      setAppearanceProgress((current) => (current === "Storefront updated." ? current : ""));
     }
   }
 
@@ -4115,14 +4173,6 @@ function StoreTab({
         uploadedLogo = await uploadImageToR2(logoFile, "stores");
       }
 
-      let uploadedHero: { url: string; key: string } | null = null;
-      if (heroFile) {
-        setSaveProgress("Optimizing hero image...");
-        const optimizedHeroFile = await compressHeroImage(heroFile);
-        setSaveProgress("Uploading hero image...");
-        uploadedHero = await uploadOptimizedHeroImage(optimizedHeroFile);
-      }
-
       setSaveProgress("Saving storefront...");
       const updatedFields = await updateStoreCustomization(store.storeId, {
         storeName,
@@ -4138,11 +4188,6 @@ function StoreTab({
         sellerConfirmationAdvanceType: confirmationAdvanceType,
         sellerConfirmationAdvanceFixedAmount: fixedAmount,
         sellerConfirmationAdvancePercent: percent,
-        heroHeading,
-        heroSubtitle,
-        announcementText,
-        heroImageUrl: uploadedHero?.url,
-        heroImageKey: uploadedHero?.key,
         logoUrl: uploadedLogo?.url,
       });
 
@@ -4159,66 +4204,49 @@ function StoreTab({
       onStoreUpdated(updatedFields);
       setLogoFile(null);
       setLogoFileName("");
-      setHeroFile(null);
-      setHeroFileName("");
-      setHeroPreviewUrl((currentUrl) => {
-        if (currentUrl) URL.revokeObjectURL(currentUrl);
-        return "";
-      });
       setSaved(true);
-      setSaveProgress("Storefront updated.");
+      setSaveProgress("Store settings updated.");
     } catch (err) {
       console.error("Store customization update failed:", err);
       setError(err instanceof Error ? err.message : "Could not save store settings.");
     } finally {
       setSaving(false);
-      setSaveProgress((current) => (current === "Storefront updated." ? current : ""));
-    }
-  }
-
-  async function handleApplyTheme(themeId: StorefrontThemeId) {
-    if (!store?.storeId || !isStorefrontThemeId(themeId)) return;
-
-    try {
-      setThemeSavingId(themeId);
-      setThemeSavedMessage("");
-      setThemeError("");
-
-      const updatedFields = await updateStoreTheme(store.storeId, themeId);
-
-      onStoreUpdated({
-        ...store,
-        ...updatedFields,
-      });
-      setPreviewThemeId(null);
-      setThemeSavedMessage("Theme applied. Your public storefront will use it now.");
-    } catch (err) {
-      console.error("Theme update failed:", err);
-      setThemeError(err instanceof Error ? err.message : "Could not apply this theme.");
-    } finally {
-      setThemeSavingId(null);
+      setSaveProgress((current) => (current === "Store settings updated." ? current : ""));
     }
   }
 
   return (
     <section className="space-y-4">
-      <form onSubmit={handleSaveStore} className="rounded-2xl border border-gray-200 bg-white p-5">
+      <form
+        onSubmit={handleSaveAppearance}
+        className="rounded-2xl border border-gray-200 bg-white p-5"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Store</h2>
-            <p className="mt-1 text-sm text-gray-500">Customize your public storefront and trust signals.</p>
+            <h2 className="text-lg font-semibold tracking-tight">Storefront appearance</h2>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Customize the first section buyers see when they open your store.
+            </p>
           </div>
           <div className="grid gap-2 sm:flex sm:items-center">
             <PptButton
               type="button"
-              variant={store?.isPublished ? "secondary" : "primary"}
-              onClick={onTogglePublish}
-              disabled={publishing || !store?.storeId}
+              variant="secondary"
+              icon={<ExternalLink size={16} />}
+              disabled={!storeLink}
+              onClick={() => {
+                if (storeLink) window.open(storeLink, "_blank", "noopener,noreferrer");
+              }}
             >
-              {publishing ? "Saving..." : store?.isPublished ? "Unpublish store" : "Publish store"}
+              View store
             </PptButton>
-            <PptButton type="submit" loading={saving} success={saved} disabled={!store?.storeId || saving}>
-              {saved ? "Storefront updated" : "Save storefront appearance"}
+            <PptButton
+              type="submit"
+              loading={appearanceSaving}
+              success={appearanceSaved}
+              disabled={!store?.storeId || appearanceSaving}
+            >
+              {appearanceSaved ? "Storefront updated" : "Save storefront appearance"}
             </PptButton>
           </div>
         </div>
@@ -4226,10 +4254,10 @@ function StoreTab({
         <section className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <div className="flex flex-col gap-1">
             <h3 className="text-base font-semibold tracking-tight text-gray-950">
-              Storefront appearance
+              Hero and announcement
             </h3>
             <p className="text-sm leading-6 text-gray-500">
-              Tune the first screen buyers see on your Theme 1 storefront.
+              Set the image and message buyers see before they browse products.
             </p>
           </div>
 
@@ -4265,34 +4293,106 @@ function StoreTab({
                 <Field
                   label="Hero title"
                   value={heroHeading}
-                  onChange={setHeroHeading}
-                  placeholder="Curated drops, one piece at a time."
+                  onChange={(value) => {
+                    setHeroHeading(value);
+                    setAppearanceSaved(false);
+                  }}
+                  placeholder={DEFAULT_HERO_TITLE}
                 />
                 <Field
-                  label="Announcement bar text"
+                  label="Announcement text"
                   value={announcementText}
-                  onChange={setAnnouncementText}
-                  placeholder="LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE"
+                  onChange={(value) => {
+                    setAnnouncementText(value);
+                    setAppearanceSaved(false);
+                  }}
+                  placeholder={DEFAULT_ANNOUNCEMENT_TEXT}
                 />
               </div>
               <Field
                 label="Hero subtitle"
                 value={heroSubtitle}
-                onChange={setHeroSubtitle}
-                placeholder="Browse available pieces and reserve before the chat moves to WhatsApp."
+                onChange={(value) => {
+                  setHeroSubtitle(value);
+                  setAppearanceSaved(false);
+                }}
+                placeholder={DEFAULT_HERO_SUBTITLE}
               />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field
+                  label="Hero eyebrow"
+                  value={heroEyebrowText}
+                  onChange={(value) => {
+                    setHeroEyebrowText(value);
+                    setAppearanceSaved(false);
+                  }}
+                  placeholder={DEFAULT_HERO_EYEBROW_TEXT}
+                />
+                <Field
+                  label="Primary button"
+                  value={heroPrimaryCtaText}
+                  onChange={(value) => {
+                    setHeroPrimaryCtaText(value);
+                    setAppearanceSaved(false);
+                  }}
+                  placeholder={DEFAULT_HERO_PRIMARY_CTA_TEXT}
+                />
+                <Field
+                  label="Secondary button"
+                  value={heroSecondaryCtaText}
+                  onChange={(value) => {
+                    setHeroSecondaryCtaText(value);
+                    setAppearanceSaved(false);
+                  }}
+                  placeholder={DEFAULT_HERO_SECONDARY_CTA_TEXT}
+                />
+              </div>
             </div>
 
             <Theme1HeroPreviewCard
               announcement={announcementPreviewText}
+              eyebrow={heroEyebrowPreview}
               heroImageUrl={heroImagePreviewUrl}
               logoUrl={safeLogoUrl}
+              primaryCtaText={heroPrimaryCtaPreview}
+              secondaryCtaText={heroSecondaryCtaPreview}
               storeName={storeName || store?.storeName || "Store name"}
               subtitle={heroSubtitlePreview}
               title={heroTitlePreview}
             />
           </div>
         </section>
+
+        {appearanceProgress ? (
+          <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
+            {appearanceProgress}
+          </div>
+        ) : null}
+        {appearanceError ? <ErrorBox message={appearanceError} /> : null}
+      </form>
+
+      <form onSubmit={handleSaveStore} className="rounded-2xl border border-gray-200 bg-white p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Store settings</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Manage your store identity, contact details, and trust signals.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:flex sm:items-center">
+            <PptButton
+              type="button"
+              variant={store?.isPublished ? "secondary" : "primary"}
+              onClick={onTogglePublish}
+              disabled={publishing || !store?.storeId}
+            >
+              {publishing ? "Saving..." : store?.isPublished ? "Unpublish store" : "Publish store"}
+            </PptButton>
+            <PptButton type="submit" loading={saving} success={saved} disabled={!store?.storeId || saving}>
+              {saved ? "Store settings updated" : "Save store settings"}
+            </PptButton>
+          </div>
+        </div>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[260px_1fr]">
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
@@ -4511,31 +4611,7 @@ function StoreTab({
         {error ? <ErrorBox message={error} /> : null}
       </form>
 
-      <ThemeSelector
-        collections={collections}
-        currentThemeId={selectedThemeId}
-        error={themeError}
-        onApplyTheme={handleApplyTheme}
-        onPreviewTheme={setPreviewThemeId}
-        products={products}
-        savingThemeId={themeSavingId}
-        store={draftStore}
-        storeSlug={storeSlug}
-        successMessage={themeSavedMessage}
-      />
-
-      {previewThemeId && draftStore ? (
-        <ThemePreviewModal
-          onApply={() => handleApplyTheme(previewThemeId)}
-          onClose={() => setPreviewThemeId(null)}
-          products={products}
-          collections={collections}
-          saving={themeSavingId === previewThemeId}
-          store={draftStore}
-          storeSlug={storeSlug}
-          themeId={previewThemeId}
-        />
-      ) : null}
+      <StorefrontStyleSummary currentThemeId={selectedThemeId} />
 
       <QuickReplies />
     </section>
@@ -4544,15 +4620,21 @@ function StoreTab({
 
 function Theme1HeroPreviewCard({
   announcement,
+  eyebrow,
   heroImageUrl,
   logoUrl,
+  primaryCtaText,
+  secondaryCtaText,
   storeName,
   subtitle,
   title,
 }: {
   announcement: string;
+  eyebrow: string;
   heroImageUrl: string;
   logoUrl: string;
+  primaryCtaText: string;
+  secondaryCtaText: string;
   storeName: string;
   subtitle: string;
   title: string;
@@ -4597,7 +4679,7 @@ function Theme1HeroPreviewCard({
             <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/30 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 text-[#F6F1E8]">
               <p className="w-fit border border-[#F6F1E8]/40 bg-[#111111]/40 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em]">
-                Premium thrift / archive drop
+                {eyebrow}
               </p>
               <h3
                 className="mt-4 line-clamp-3 break-words text-4xl font-semibold leading-[0.98]"
@@ -4610,10 +4692,10 @@ function Theme1HeroPreviewCard({
               </p>
               <div className="mt-4 grid gap-2">
                 <span className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#F6F1E8] px-4 text-xs font-bold text-[#111111]">
-                  Shop new drop -&gt;
+                  {primaryCtaText} -&gt;
                 </span>
                 <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-4 text-xs font-bold text-[#F6F1E8]">
-                  How booking works
+                  {secondaryCtaText}
                 </span>
               </div>
             </div>
@@ -4627,11 +4709,17 @@ function Theme1HeroPreviewCard({
               className="mt-5 break-words text-4xl font-semibold leading-[0.96]"
               style={{ fontFamily: "Georgia, ui-serif, serif" }}
             >
-              Fresh drops are live
+              {title}
             </h3>
             <p className="mt-4 text-xs leading-5 text-[#F6F1E8]/72">
-              Fresh pieces, limited stock, ready to reserve.
+              {subtitle}
             </p>
+            <span className="mt-4 inline-flex min-h-10 items-center justify-center rounded-full bg-[#F6F1E8] px-4 text-xs font-bold text-[#111111]">
+              {primaryCtaText} -&gt;
+            </span>
+            <span className="mt-2 inline-flex min-h-10 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-4 text-xs font-bold text-[#F6F1E8]">
+              {secondaryCtaText}
+            </span>
           </div>
         )}
       </div>
@@ -4748,266 +4836,30 @@ function DashboardAdvanceOption({
   );
 }
 
-function ThemeSelector({
-  collections,
+function StorefrontStyleSummary({
   currentThemeId,
-  error,
-  onApplyTheme,
-  onPreviewTheme,
-  products,
-  savingThemeId,
-  store,
-  storeSlug,
-  successMessage,
 }: {
-  collections: StoreCollection[];
   currentThemeId: StorefrontThemeId;
-  error: string;
-  onApplyTheme: (themeId: StorefrontThemeId) => void;
-  onPreviewTheme: (themeId: StorefrontThemeId) => void;
-  products: Product[];
-  savingThemeId: StorefrontThemeId | null;
-  store: Store | null;
-  storeSlug: string;
-  successMessage: string;
 }) {
-  const themes = Object.values(storefrontThemeRegistry);
+  const theme = storefrontThemeRegistry[currentThemeId];
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold tracking-tight">Store theme</h2>
+          <h2 className="text-base font-semibold tracking-tight">Storefront style</h2>
           <p className="mt-1 text-sm leading-6 text-gray-500">
-            Preview your storefront themes and apply the one that fits your brand.
+            Your store uses PayPerTap&apos;s flagship mobile-first storefront.
+            Customize your hero image, text, logo, and contact details above.
           </p>
         </div>
-        <PptBadge tone="primary">
-          Current: {storefrontThemeRegistry[currentThemeId].previewLabel}
-        </PptBadge>
+        <PptBadge tone="primary">{theme.previewLabel}</PptBadge>
       </div>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
-        {themes.map((theme) => {
-          const isSelected = theme.id === currentThemeId;
-          const isSaving = savingThemeId === theme.id;
-
-          return (
-            <article
-              key={theme.id}
-              className={`flex min-w-0 flex-col rounded-2xl border p-4 ${
-                isSelected
-                  ? "border-gray-950 bg-gray-50"
-                  : "border-gray-200 bg-white"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-                    {theme.previewLabel}
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold tracking-tight text-gray-950">
-                    {theme.name}
-                  </h3>
-                </div>
-                {isSelected ? <PptBadge tone="success">Selected</PptBadge> : null}
-              </div>
-
-              <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-gray-950">
-                <div
-                  className={
-                    theme.id === "theme1"
-                      ? "h-24 bg-white p-3"
-                      : theme.id === "theme2"
-                        ? "h-24 bg-[#f5eee6] p-3"
-                        : "h-24 bg-neutral-950 p-3"
-                  }
-                >
-                  <div
-                    className={
-                      theme.id === "theme3"
-                        ? "h-full rounded-xl border border-white/18 bg-white/8"
-                        : "h-full rounded-xl border border-gray-200 bg-white"
-                    }
-                  >
-                    <div
-                      className={
-                        theme.id === "theme3"
-                          ? "mx-3 mt-3 h-3 w-20 rounded-full bg-white"
-                          : "mx-3 mt-3 h-3 w-20 rounded-full bg-gray-950"
-                      }
-                    />
-                    <div
-                      className={
-                        theme.id === "theme2"
-                          ? "mx-3 mt-3 h-8 rounded-xl bg-[#e8ded2]"
-                          : theme.id === "theme3"
-                            ? "mx-3 mt-3 grid grid-cols-2 gap-2"
-                            : "mx-3 mt-3 grid grid-cols-2 gap-2"
-                      }
-                    >
-                      <span
-                        className={
-                          theme.id === "theme3"
-                            ? "h-8 rounded-lg bg-white/20"
-                            : "h-8 rounded-lg bg-gray-100"
-                        }
-                      />
-                      <span
-                        className={
-                          theme.id === "theme3"
-                            ? "h-8 rounded-lg bg-white/20"
-                            : "h-8 rounded-lg bg-gray-100"
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="mt-4 min-h-12 text-sm leading-6 text-gray-500">
-                {theme.description}
-              </p>
-
-              <div className="mt-auto grid gap-2 pt-4">
-                <PptButton
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onPreviewTheme(theme.id)}
-                  disabled={!store?.storeId}
-                >
-                  Preview
-                </PptButton>
-                <PptButton
-                  type="button"
-                  variant={isSelected ? "secondary" : "primary"}
-                  loading={isSaving}
-                  disabled={!store?.storeId || isSaving || isSelected}
-                  onClick={() => onApplyTheme(theme.id)}
-                >
-                  {isSelected ? "Current theme" : "Use this theme"}
-                </PptButton>
-              </div>
-            </article>
-          );
-        })}
+      <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+        <p className="text-sm font-semibold text-gray-950">{theme.name}</p>
+        <p className="mt-2 text-sm leading-6 text-gray-600">{theme.description}</p>
       </div>
-
-      {!store?.storeId ? (
-        <PptNotice tone="warning" title="Store not ready" className="mt-4">
-          Finish store setup before applying a storefront theme.
-        </PptNotice>
-      ) : null}
-      <p className="mt-4 text-xs leading-5 text-gray-500">
-        Preview uses your current store data and {products.length} product
-        {products.length === 1 ? "" : "s"} across {collections.length} collection
-        {collections.length === 1 ? "" : "s"}. It does not save until you apply a theme.
-      </p>
-      {successMessage ? (
-        <PptNotice tone="success" title="Theme saved" className="mt-4">
-          {successMessage}
-        </PptNotice>
-      ) : null}
-      {error ? <ErrorBox message={error} /> : null}
     </section>
-  );
-}
-
-function ThemePreviewModal({
-  collections,
-  onApply,
-  onClose,
-  products,
-  saving,
-  store,
-  storeSlug,
-  themeId,
-}: {
-  collections: StoreCollection[];
-  onApply: () => void;
-  onClose: () => void;
-  products: Product[];
-  saving: boolean;
-  store: Store;
-  storeSlug: string;
-  themeId: StorefrontThemeId;
-}) {
-  const theme = storefrontThemeRegistry[themeId];
-  const previewStore: Store = {
-    ...store,
-    selectedThemeId: themeId,
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/58 px-3 py-4 backdrop-blur-sm">
-      <section
-        aria-label={`${theme.name} preview`}
-        aria-modal="true"
-        role="dialog"
-        className="mx-auto grid w-full max-w-5xl gap-5 rounded-[28px] bg-white p-4 shadow-2xl lg:grid-cols-[minmax(0,1fr)_320px]"
-      >
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <PptBadge tone="primary">Preview only</PptBadge>
-              <h2 className="mt-2 text-xl font-semibold tracking-tight text-gray-950">
-                {theme.name}
-              </h2>
-            </div>
-            <PptButton type="button" variant="secondary" onClick={onClose}>
-              Close
-            </PptButton>
-          </div>
-
-          <div className="mx-auto aspect-[9/16] w-full max-w-[360px] overflow-hidden rounded-[34px] border-[10px] border-gray-950 bg-gray-950 shadow-[0_24px_70px_rgba(17,24,39,0.28)]">
-            <div
-              className="h-full w-full overflow-y-auto overscroll-contain rounded-[22px] bg-white"
-              onClickCapture={(event) => {
-                const target = event.target as HTMLElement;
-                const interactiveElement = target.closest("a, button");
-
-                if (interactiveElement) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }
-              }}
-            >
-              <ThemeRenderer
-                collections={collections}
-                isOwnerPreview
-                products={products}
-                selectedThemeId={themeId}
-                store={previewStore}
-                storeSlug={storeSlug || store.storeSlug || store.storeId}
-              />
-            </div>
-          </div>
-        </div>
-
-        <aside className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-            Theme preview
-          </p>
-          <h3 className="mt-2 text-lg font-semibold tracking-tight text-gray-950">
-            {theme.previewLabel}
-          </h3>
-          <p className="mt-3 text-sm leading-6 text-gray-600">
-            {theme.description}
-          </p>
-          <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-600">
-            This is a preview. Your public storefront will not change until you apply this theme.
-          </div>
-          <div className="mt-5 grid gap-2">
-            <PptButton type="button" loading={saving} disabled={saving} onClick={onApply}>
-              Apply this theme
-            </PptButton>
-            <PptButton type="button" variant="secondary" onClick={onClose}>
-              Keep current theme
-            </PptButton>
-          </div>
-        </aside>
-      </section>
-    </div>
   );
 }
 

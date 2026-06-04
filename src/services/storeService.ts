@@ -13,7 +13,6 @@ import {
   isSellerConfirmationAdvanceType,
   type SellerConfirmationAdvanceType,
 } from "../lib/confirmationAdvance";
-import type { StorefrontThemeId } from "../storefront/themes/types";
 import type { Store, StoreSlugReservation } from "../types/firestore";
 
 export type StoreCustomizationInput = {
@@ -30,9 +29,13 @@ export type StoreCustomizationInput = {
   logoUrl?: string;
   logoKey?: string;
   heroHeading?: string;
+  heroTitle?: string;
   heroImageUrl?: string;
   heroImageKey?: string;
   heroSubtitle?: string;
+  heroEyebrowText?: string;
+  heroPrimaryCtaText?: string;
+  heroSecondaryCtaText?: string;
   announcementText?: string;
   themeStyle?: string;
   primaryColor?: string;
@@ -123,28 +126,6 @@ export async function updateStorePublishStatus(
   });
 }
 
-const VALID_STOREFRONT_THEME_IDS: StorefrontThemeId[] = [
-  "theme1",
-  "theme2",
-  "theme3",
-];
-
-export async function updateStoreTheme(
-  storeId: string,
-  themeId: StorefrontThemeId
-): Promise<Pick<Store, "themeId">> {
-  if (!VALID_STOREFRONT_THEME_IDS.includes(themeId)) {
-    throw new Error("Please choose a valid storefront theme.");
-  }
-
-  await updateDoc(doc(db, "stores", storeId), {
-    themeId,
-    updatedAt: serverTimestamp(),
-  });
-
-  return { themeId };
-}
-
 export async function updateStoreCustomization(
   storeId: string,
   input: StoreCustomizationInput
@@ -200,8 +181,21 @@ export async function updateStoreCustomization(
     payload.logoUrl = logoUrl;
     payload.storeLogoUrl = logoUrl;
   }
-  if (input.heroHeading !== undefined) payload.heroTitle = input.heroHeading.trim();
+  if (input.heroTitle !== undefined) {
+    payload.heroTitle = input.heroTitle.trim();
+  } else if (input.heroHeading !== undefined) {
+    payload.heroTitle = input.heroHeading.trim();
+  }
   if (input.heroSubtitle !== undefined) payload.heroSubtitle = input.heroSubtitle.trim();
+  if (input.heroEyebrowText !== undefined) {
+    payload.heroEyebrowText = input.heroEyebrowText.trim();
+  }
+  if (input.heroPrimaryCtaText !== undefined) {
+    payload.heroPrimaryCtaText = input.heroPrimaryCtaText.trim();
+  }
+  if (input.heroSecondaryCtaText !== undefined) {
+    payload.heroSecondaryCtaText = input.heroSecondaryCtaText.trim();
+  }
   if (input.heroImageUrl !== undefined) {
     const heroImageUrl = input.heroImageUrl.trim();
     if (heroImageUrl && !getDurableImageUrl(heroImageUrl)) {

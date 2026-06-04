@@ -18,7 +18,7 @@ import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import { normalizeIndianMobileInput } from "@/lib/phone";
 import { getAvailableQuantity, isProductBookable } from "@/lib/productAvailability";
 import { getProductById, getPublicProductById } from "@/services/productService";
-import { getPublicStoreData } from "@/services/publicStoreService";
+import { getPublicStoreShellData } from "@/services/publicStoreService";
 import { startMockBookingPayment } from "@/services/mockPaymentService";
 import { sendBuyerBookingConfirmationEmail } from "@/services/emailEventService";
 import { markCheckoutEmailEventSent } from "@/services/checkoutService";
@@ -130,7 +130,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { storeSlug = "", productId = "" } = useParams();
   const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuthUser();
+  const { user } = useAuthUser();
 
   const [store, setStore] = useState<Store | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
@@ -148,8 +148,6 @@ export default function CheckoutPage() {
   const [buyerPincode, setBuyerPincode] = useState("");
 
   useEffect(() => {
-    if (authLoading) return;
-
     let cancelled = false;
 
     async function loadCheckout() {
@@ -157,10 +155,14 @@ export default function CheckoutPage() {
         setLoading(true);
         setError("");
 
-        const storeData = await getPublicStoreData(storeSlug, user?.uid);
-        const productData = storeData?.isOwnerPreview
-          ? await getProductById(productId)
-          : await getPublicProductById(productId);
+        const [storeData, publicProductData] = await Promise.all([
+          getPublicStoreShellData(storeSlug, user?.uid),
+          getPublicProductById(productId),
+        ]);
+        const productData =
+          storeData?.isOwnerPreview && !publicProductData
+            ? await getProductById(productId)
+            : publicProductData;
 
         if (!storeData || !productData || productData.storeId !== storeData.store.storeId) {
           throw new Error("This product is unavailable.");
@@ -188,7 +190,7 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, productId, storeSlug, user?.uid]);
+  }, [productId, storeSlug, user?.uid]);
 
   const availableQuantity = product ? getAvailableQuantity(product) : 0;
   const selectedVariantId = searchParams.get("variantId") || "";
@@ -361,7 +363,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (loading || authLoading) {
+  if (loading) {
     return <CheckoutLoading />;
   }
 

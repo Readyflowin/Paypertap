@@ -9,6 +9,9 @@ type Theme1HeroStore = {
   heroTitle?: string;
   heroHeading?: string;
   heroSubtitle?: string;
+  heroEyebrowText?: string;
+  heroPrimaryCtaText?: string;
+  heroSecondaryCtaText?: string;
   bio?: string;
   description?: string;
   tagline?: string;
@@ -42,12 +45,27 @@ function getHeroSubtitle(store: Theme1HeroStore) {
   );
 }
 
+function getHeroEyebrowText(store: Theme1HeroStore) {
+  return store.heroEyebrowText || "Premium thrift / archive drop";
+}
+
+function getHeroPrimaryCtaText(store: Theme1HeroStore) {
+  return store.heroPrimaryCtaText || "Shop new drop";
+}
+
+function getHeroSecondaryCtaText(store: Theme1HeroStore) {
+  return store.heroSecondaryCtaText || "How booking works";
+}
+
 function getTextFallbackTitle(store: Theme1HeroStore) {
-  return store.heroTitle || store.heroHeading || "Fresh drops are live";
+  return store.heroTitle || store.heroHeading || "Curated drops, one piece at a time.";
 }
 
 function getTextFallbackSubtitle(store: Theme1HeroStore) {
-  return store.heroSubtitle || "Fresh pieces, limited stock, ready to reserve.";
+  return (
+    store.heroSubtitle ||
+    "Browse available pieces and reserve before the chat moves to WhatsApp."
+  );
 }
 
 function getHeroImageUrl({
@@ -100,7 +118,7 @@ export function Theme1HeroSection({
         <div className="grid gap-4 bg-[#111111] p-5 text-[#F6F1E8] sm:p-8 lg:grid-cols-[1fr_0.72fr] lg:items-end">
           <div className="min-w-0">
             <p className="w-fit border border-[#F6F1E8]/35 bg-[#2d1b16] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#EFE3C8]">
-              New drop
+              {getHeroEyebrowText(store)}
             </p>
             <h1
               className="mt-5 max-w-4xl break-words text-5xl font-semibold leading-[0.96] text-[#F6F1E8] sm:text-6xl lg:text-7xl"
@@ -116,14 +134,14 @@ export function Theme1HeroSection({
                 href="#products"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F6F1E8] px-5 text-sm font-bold !text-[#111111] hover:!text-[#111111]"
               >
-                Shop new drop
+                {getHeroPrimaryCtaText(store)}
                 <ArrowRight size={16} aria-hidden="true" />
               </a>
               <a
                 href="#booking"
                 className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-5 text-sm font-bold !text-[#F6F1E8] hover:!text-[#EFE3C8]"
               >
-                How booking works
+                {getHeroSecondaryCtaText(store)}
               </a>
             </div>
           </div>
@@ -175,7 +193,7 @@ export function Theme1HeroSection({
           <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/30 to-transparent" />
           <div className={`absolute inset-x-0 bottom-0 p-4 text-[#F6F1E8] ${isPreviewMobile ? "" : "sm:p-8"}`}>
             <p className="w-fit border border-[#F6F1E8]/40 bg-[#111111]/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
-              Premium thrift / archive drop
+              {getHeroEyebrowText(store)}
             </p>
             <h1
               className={`mt-4 max-w-3xl break-words text-[clamp(2.2rem,10vw,2.65rem)] font-semibold leading-[0.98] ${
@@ -193,14 +211,14 @@ export function Theme1HeroSection({
                 href="#products"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F6F1E8] px-5 text-sm font-bold !text-[#111111] hover:!text-[#111111]"
               >
-                Shop new drop
+                {getHeroPrimaryCtaText(store)}
                 <ArrowRight size={16} aria-hidden="true" />
               </a>
               <a
                 href="#booking"
                 className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-5 text-sm font-bold !text-[#F6F1E8] hover:!text-[#EFE3C8]"
               >
-                How booking works
+                {getHeroSecondaryCtaText(store)}
               </a>
             </div>
           </div>

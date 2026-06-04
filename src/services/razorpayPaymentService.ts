@@ -175,7 +175,6 @@ export async function startRazorpayBookingPayment(
   reservationApplied: boolean;
 }> {
   onStatus?.("creating");
-  await loadRazorpayCheckoutScript();
 
   const booking = {
     sellerId: input.sellerId,
@@ -208,9 +207,12 @@ export async function startRazorpayBookingPayment(
     ...(input.buyerEmail ? { buyerEmail: input.buyerEmail } : {}),
   };
 
-  const order = await postJson<RazorpayOrderResponse>("/api/razorpay/create-order", {
-    ...booking,
-  });
+  const [, order] = await Promise.all([
+    loadRazorpayCheckoutScript(),
+    postJson<RazorpayOrderResponse>("/api/razorpay/create-order", {
+      ...booking,
+    }),
+  ]);
 
   if (!order.success || !order.keyId || !order.orderId || !order.amount || !order.currency) {
     throw new Error(order.error || "Could not create Razorpay order.");
