@@ -2,7 +2,8 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 
 import {
   type AdminSellerOnboardedPayload,
-  type BookingCreatedPayload,
+  type WalletRechargeSuccessfulPayload,
+  type WalletStatePayload,
   getEmailTemplate,
 } from "./emailTemplates.js";
 import { isValidEmail, sendResendEmail } from "./resendClient.js";
@@ -10,30 +11,6 @@ import { isValidEmail, sendResendEmail } from "./resendClient.js";
 const ADMIN_ONBOARDING_EMAIL = "info.paypertap@gmail.com";
 
 type AdminDb = Firestore;
-
-type CheckoutSessionData = {
-  checkoutId?: string;
-  sellerId?: string;
-  storeId?: string;
-  productId?: string;
-  productTitle?: string;
-  productPrice?: number;
-  bookingAdvanceAmount?: number;
-  sellerCollectAmount?: number;
-  sellerConfirmationAmountPending?: number;
-  finalBalanceAfterConfirmation?: number;
-  buyerName?: string;
-  buyerPhone?: string;
-  buyerAddress?: string;
-  buyerCity?: string;
-  buyerPincode?: string;
-  selectedVariantLabel?: string;
-  selectedVariantOptions?: Record<string, string>;
-  emailEvents?: {
-    sellerBookingSentAt?: unknown;
-  };
-  createdAt?: unknown;
-};
 
 type SellerData = {
   sellerId?: string;
@@ -52,12 +29,28 @@ type StoreData = {
   supportEmail?: string;
   phone?: string;
   whatsappPhone?: string;
-  sellerConfirmationAdvanceType?: string;
-  sellerConfirmationAdvanceFixedAmount?: number | null;
-  sellerConfirmationAdvancePercent?: number | null;
   adminOnboardingEmailSentAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
+};
+
+type WalletData = {
+  balance?: number;
+  freeOrdersRemaining?: number;
+  emailEvents?: {
+    lowWalletSentAt?: unknown;
+    walletEmptySentAt?: unknown;
+  };
+};
+
+type WalletRechargeData = {
+  amount?: number;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  referenceId?: string;
+  emailEvents?: {
+    rechargeSuccessfulSentAt?: unknown;
+  };
 };
 
 function toText(value: unknown) {
@@ -122,18 +115,6 @@ function getDashboardUrl() {
   return `${getAppUrl()}/dashboard`;
 }
 
-function getVariantDetails(checkout: CheckoutSessionData) {
-  const label = toText(checkout.selectedVariantLabel);
-  if (label) return label;
-
-  const options = checkout.selectedVariantOptions;
-  if (!options || typeof options !== "object") return "";
-
-  return Object.entries(options)
-    .map(([name, value]) => `${name}: ${value}`)
-    .join(", ");
-}
-
 function getSellerEmail(seller: SellerData, store: StoreData) {
   const sellerRecord = seller as Record<string, unknown>;
   const candidates = [
@@ -154,114 +135,6 @@ function getSellerEmail(seller: SellerData, store: StoreData) {
 
 function safeEmailError(error: unknown) {
   return error instanceof Error ? error.message : "Unknown email error";
-}
-
-export async function sendSellerBookingEmailIfNeeded({
-  checkoutId,
-  db,
-}: {
-  checkoutId: string;
-  db: AdminDb;
-}) {
-  const checkoutRef = db.collection("checkoutSessions").doc(checkoutId);
-  const checkoutSnap = await checkoutRef.get();
-
-  if (!checkoutSnap.exists) {
-    console.warn("Seller booking email skipped: checkout session missing", { checkoutId });
-    return;
-  }
-
-  const checkout = checkoutSnap.data() as CheckoutSessionData;
-
-  if (checkout.emailEvents?.sellerBookingSentAt) {
-    console.info("Seller booking email skipped: already sent", { checkoutId });
-    return;
-  }
-
-  const sellerId = toText(checkout.sellerId);
-  const storeId = toText(checkout.storeId);
-
-  if (!sellerId || !storeId) {
-    console.warn("Seller booking email skipped: seller/store missing", { checkoutId });
-    return;
-  }
-
-  const [sellerSnap, storeSnap] = await Promise.all([
-    db.collection("sellers").doc(sellerId).get(),
-    db.collection("stores").doc(storeId).get(),
-  ]);
-  const seller = sellerSnap.exists ? (sellerSnap.data() as SellerData) : {};
-  const store = storeSnap.exists ? (storeSnap.data() as StoreData) : {};
-  const sellerEmail = getSellerEmail(seller, store);
-
-  if (!sellerEmail) {
-    console.warn("Seller booking email skipped: seller email missing", {
-      checkoutId,
-      sellerId,
-      storeId,
-    });
-    return;
-  }
-
-  const payload: BookingCreatedPayload = {
-    sellerEmail,
-    storeName: toText(store.storeName) || "PayPerTap store",
-    productTitle: toText(checkout.productTitle),
-    productUrl: getProductUrl(store, toText(checkout.productId)),
-    variantDetails: getVariantDetails(checkout),
-    productPrice: toFiniteNumber(checkout.productPrice),
-    bookingAdvanceAmount: toFiniteNumber(checkout.bookingAdvanceAmount, 20),
-    sellerCollectAmount: toFiniteNumber(checkout.sellerCollectAmount),
-    sellerConfirmationAmountPending: toFiniteNumber(
-      checkout.sellerConfirmationAmountPending
-    ),
-    finalBalanceAfterConfirmation: toFiniteNumber(
-      checkout.finalBalanceAfterConfirmation,
-      toFiniteNumber(checkout.sellerCollectAmount)
-    ),
-    buyerName: toText(checkout.buyerName),
-    buyerPhone: toText(checkout.buyerPhone),
-    buyerAddress: toText(checkout.buyerAddress),
-    buyerCity: toText(checkout.buyerCity),
-    buyerPincode: toText(checkout.buyerPincode),
-    checkoutId,
-    bookingDateText: formatDateTime(checkout.createdAt),
-    dashboardUrl: getDashboardUrl(),
-  };
-  const template = getEmailTemplate("booking_created", payload);
-  const id = await sendResendEmail({
-    to: sellerEmail,
-    subject: template.subject,
-    html: template.html,
-    text: template.text,
-  });
-
-  await checkoutRef.set(
-    {
-      emailEvents: {
-        ...(checkout.emailEvents || {}),
-        sellerBookingSentAt: FieldValue.serverTimestamp(),
-      },
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
-
-  console.info("Seller booking email sent", { checkoutId, sellerId, storeId, id });
-}
-
-export async function sendSellerBookingEmailSafely(input: {
-  checkoutId: string;
-  db: AdminDb;
-}) {
-  try {
-    await sendSellerBookingEmailIfNeeded(input);
-  } catch (error) {
-    console.error("Email failed: seller booking", {
-      checkoutId: input.checkoutId,
-      error: safeEmailError(error),
-    });
-  }
 }
 
 export async function sendAdminSellerOnboardedEmailIfNeeded({
@@ -305,9 +178,6 @@ export async function sendAdminSellerOnboardedEmailIfNeeded({
     storeName: toText(store.storeName) || storeId,
     storeSlug: toText(store.storeSlug) || storeId,
     storeUrl: getStoreUrl(store),
-    sellerConfirmationAdvanceType: toText(store.sellerConfirmationAdvanceType),
-    sellerConfirmationAdvanceFixedAmount: store.sellerConfirmationAdvanceFixedAmount ?? null,
-    sellerConfirmationAdvancePercent: store.sellerConfirmationAdvancePercent ?? null,
     createdAtText: formatDateTime(store.createdAt || store.updatedAt),
     sellerId,
     storeId,
@@ -329,4 +199,179 @@ export async function sendAdminSellerOnboardedEmailIfNeeded({
   );
 
   console.info("Admin seller onboarding email sent", { sellerId, storeId, id });
+}
+
+async function getWalletSellerContext({
+  db,
+  sellerId,
+}: {
+  db: AdminDb;
+  sellerId: string;
+}) {
+  const sellerSnap = await db.collection("sellers").doc(sellerId).get();
+  const seller = sellerSnap.exists ? (sellerSnap.data() as SellerData) : {};
+  const storeId = toText(seller.storeId);
+  const storeSnap = storeId ? await db.collection("stores").doc(storeId).get() : null;
+  const store = storeSnap?.exists ? (storeSnap.data() as StoreData) : {};
+  const sellerEmail = getSellerEmail(seller, store);
+
+  return { seller, store, sellerEmail };
+}
+
+export async function sendWalletRechargeSuccessfulEmailIfNeeded({
+  db,
+  rechargeId,
+  sellerId,
+}: {
+  db: AdminDb;
+  rechargeId: string;
+  sellerId: string;
+}) {
+  const rechargeRef = db.collection("walletRecharges").doc(rechargeId);
+  const rechargeSnap = await rechargeRef.get();
+
+  if (!rechargeSnap.exists) {
+    console.warn("Wallet recharge email skipped: recharge missing", { rechargeId });
+    return;
+  }
+
+  const recharge = rechargeSnap.data() as WalletRechargeData;
+
+  if (recharge.emailEvents?.rechargeSuccessfulSentAt) {
+    console.info("Wallet recharge email skipped: already sent", { rechargeId });
+    return;
+  }
+
+  const { seller, sellerEmail } = await getWalletSellerContext({ db, sellerId });
+
+  if (!sellerEmail) {
+    console.warn("Wallet recharge email skipped: seller email missing", {
+      rechargeId,
+      sellerId,
+    });
+    return;
+  }
+
+  const payload: WalletRechargeSuccessfulPayload = {
+    sellerEmail,
+    sellerName: toText(seller.name),
+    amount: toFiniteNumber(recharge.amount),
+    balanceBefore: toFiniteNumber(recharge.balanceBefore),
+    balanceAfter: toFiniteNumber(recharge.balanceAfter),
+    referenceId: toText(recharge.referenceId) || rechargeId,
+    dashboardUrl: getDashboardUrl(),
+  };
+  const template = getEmailTemplate("wallet_recharge_successful", payload);
+  const id = await sendResendEmail({
+    to: sellerEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text,
+  });
+
+  await rechargeRef.set(
+    {
+      emailEvents: {
+        ...(recharge.emailEvents || {}),
+        rechargeSuccessfulSentAt: FieldValue.serverTimestamp(),
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  console.info("Wallet recharge email sent", { rechargeId, sellerId, id });
+}
+
+export async function sendWalletRechargeSuccessfulEmailSafely(input: {
+  db: AdminDb;
+  rechargeId: string;
+  sellerId: string;
+}) {
+  try {
+    await sendWalletRechargeSuccessfulEmailIfNeeded(input);
+  } catch (error) {
+    console.error("Email failed: wallet recharge successful", {
+      rechargeId: input.rechargeId,
+      sellerId: input.sellerId,
+      error: safeEmailError(error),
+    });
+  }
+}
+
+export async function sendWalletStateEmailIfNeeded({
+  db,
+  sellerId,
+  state,
+}: {
+  db: AdminDb;
+  sellerId: string;
+  state: "low" | "empty";
+}) {
+  const walletRef = db.collection("wallets").doc(sellerId);
+  const walletSnap = await walletRef.get();
+
+  if (!walletSnap.exists) {
+    console.warn("Wallet state email skipped: wallet missing", { sellerId, state });
+    return;
+  }
+
+  const wallet = walletSnap.data() as WalletData;
+  const eventField = state === "low" ? "lowWalletSentAt" : "walletEmptySentAt";
+
+  if (wallet.emailEvents?.[eventField]) {
+    console.info("Wallet state email skipped: already sent", { sellerId, state });
+    return;
+  }
+
+  const { seller, sellerEmail } = await getWalletSellerContext({ db, sellerId });
+
+  if (!sellerEmail) {
+    console.warn("Wallet state email skipped: seller email missing", { sellerId, state });
+    return;
+  }
+
+  const payload: WalletStatePayload = {
+    sellerEmail,
+    sellerName: toText(seller.name),
+    balance: toFiniteNumber(wallet.balance),
+    freeOrdersRemaining: toFiniteNumber(wallet.freeOrdersRemaining),
+    dashboardUrl: getDashboardUrl(),
+  };
+  const template = getEmailTemplate(state === "low" ? "wallet_low" : "wallet_empty", payload);
+  const id = await sendResendEmail({
+    to: sellerEmail,
+    subject: template.subject,
+    html: template.html,
+    text: template.text,
+  });
+
+  await walletRef.set(
+    {
+      emailEvents: {
+        ...(wallet.emailEvents || {}),
+        [eventField]: FieldValue.serverTimestamp(),
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  console.info("Wallet state email sent", { sellerId, state, id });
+}
+
+export async function sendWalletStateEmailSafely(input: {
+  db: AdminDb;
+  sellerId: string;
+  state: "low" | "empty";
+}) {
+  try {
+    await sendWalletStateEmailIfNeeded(input);
+  } catch (error) {
+    console.error("Email failed: wallet state", {
+      sellerId: input.sellerId,
+      state: input.state,
+      error: safeEmailError(error),
+    });
+  }
 }

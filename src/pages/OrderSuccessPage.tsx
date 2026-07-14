@@ -8,18 +8,15 @@ import {
   PptButton,
   PptEmptyState,
   PptNotice,
-  PptPriceBreakdown,
   PptTapLoader,
 } from "@/components/ui";
 import { formatINR } from "@/lib/money";
-import { calculateConfirmationAdvance } from "@/lib/confirmationAdvance";
 import { buildWhatsAppUrl, normalizeIndianMobileInput } from "@/lib/phone";
 import { getVariantDetailsText } from "@/lib/productVariants";
 import { getProductById } from "@/services/productService";
 import { getStoreById } from "@/services/storeService";
-import {
-  buildBuyerBookingMessage,
-} from "@/services/whatsappService";
+import { getOrderById } from "@/services/checkoutService";
+import { buildBuyerOrderMessage } from "@/services/whatsappService";
 import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
@@ -31,7 +28,7 @@ type SuccessState = {
   error: string;
 };
 
-export default function BookingSuccessPage() {
+export default function OrderSuccessPage() {
   const navigate = useNavigate();
   const { storeSlug = "", checkoutId = "" } = useParams();
   const [state, setState] = useState<SuccessState>({
@@ -51,10 +48,11 @@ export default function BookingSuccessPage() {
         setState((current) => ({ ...current, loading: true, error: "" }));
 
         const storedCheckout = sessionStorage.getItem(`paypertap:checkout:${checkoutId}`);
-        const checkout = storedCheckout ? (JSON.parse(storedCheckout) as CheckoutSession) : null;
+        const checkout =
+          storedCheckout ? (JSON.parse(storedCheckout) as CheckoutSession) : await getOrderById(checkoutId);
 
         if (!checkout) {
-          throw new Error("Booking details are not available on this device.");
+          throw new Error("order details are not available.");
         }
 
         const [store, product] = await Promise.all([
@@ -63,7 +61,7 @@ export default function BookingSuccessPage() {
         ]);
 
         if (!store || (store.storeSlug || store.storeId) !== storeSlug) {
-          throw new Error("Booking not found.");
+          throw new Error("Order not found.");
         }
 
         if (!cancelled) {
@@ -76,7 +74,7 @@ export default function BookingSuccessPage() {
           });
         }
       } catch (error) {
-        console.warn("Booking success load failed:", error);
+        console.warn("Order success load failed:", error);
 
         if (!cancelled) {
           setState({
@@ -84,7 +82,7 @@ export default function BookingSuccessPage() {
             product: null,
             store: null,
             loading: false,
-            error: "Booking not found.",
+            error: "Order not found.",
           });
         }
       }
@@ -103,18 +101,13 @@ export default function BookingSuccessPage() {
     return {
       storeSlug,
       storeName: state.store?.storeName,
-      sellerConfirmationAdvanceType: state.store?.sellerConfirmationAdvanceType,
-      sellerConfirmationAdvanceFixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
-      sellerConfirmationAdvancePercent: state.store?.sellerConfirmationAdvancePercent,
       productId: state.checkout.productId,
       productTitle: state.checkout.productTitle,
       productPrice: state.checkout.productPrice,
-      bookingAdvanceAmount: state.checkout.bookingAdvanceAmount,
-      sellerCollectAmount: state.checkout.sellerCollectAmount,
-      confirmationAdvanceType: state.checkout.confirmationAdvanceType,
-      totalConfirmationAdvance: state.checkout.totalConfirmationAdvance,
-      sellerConfirmationAmountPending: state.checkout.sellerConfirmationAmountPending,
-      finalBalanceAfterConfirmation: state.checkout.finalBalanceAfterConfirmation,
+      advanceAmount: state.checkout.advanceAmount,
+      sellerAmountDue: state.checkout.sellerAmountDue,
+      paymentAmount: state.checkout.paymentAmount,
+      paymentMode: state.checkout.paymentMode,
       buyerName: state.checkout.buyerName,
       buyerPhone: state.checkout.buyerPhone,
       buyerAddress: state.checkout.buyerAddress,
@@ -126,7 +119,7 @@ export default function BookingSuccessPage() {
     };
   }, [state.checkout, state.store, storeSlug]);
 
-  const whatsappMessage = whatsappInput ? buildBuyerBookingMessage(whatsappInput) : "";
+  const whatsappMessage = whatsappInput ? buildBuyerOrderMessage(whatsappInput) : "";
   const sellerWhatsAppPhone = [
     state.checkout?.sellerWhatsAppPhone,
     state.checkout?.sellerWhatsAppE164,
@@ -157,7 +150,7 @@ export default function BookingSuccessPage() {
     return (
       <main className="pds-page grid place-items-center">
         <PptTapLoader
-          title="Loading booking..."
+          title="Loading order..."
           description="Preparing your WhatsApp message."
         />
       </main>
@@ -168,7 +161,7 @@ export default function BookingSuccessPage() {
     return (
       <main className="pds-page grid place-items-center px-4">
         <PptEmptyState
-          title="Booking not found"
+          title="Order not found"
           description="Please go back to the store and try again."
           icon={<MessageCircle size={28} aria-hidden="true" />}
           action={
@@ -188,33 +181,7 @@ export default function BookingSuccessPage() {
   }
 
   const checkout = state.checkout;
-  const fallbackConfirmationAdvance = calculateConfirmationAdvance({
-    productPrice: checkout.productPrice,
-    sellerConfirmationAdvanceType: state.store?.sellerConfirmationAdvanceType,
-    sellerConfirmationAdvanceFixedAmount: state.store?.sellerConfirmationAdvanceFixedAmount,
-    sellerConfirmationAdvancePercent: state.store?.sellerConfirmationAdvancePercent,
-    bookingPaid: checkout.bookingAdvanceAmount,
-  });
-  const hasConfirmationSnapshot =
-    typeof checkout.sellerConfirmationAmountPending === "number" &&
-    typeof checkout.finalBalanceAfterConfirmation === "number" &&
-    typeof checkout.totalConfirmationAdvance === "number";
-  const confirmationAdvance = hasConfirmationSnapshot
-    ? {
-        ...fallbackConfirmationAdvance,
-        sellerConfirmationAdvanceType:
-          checkout.confirmationAdvanceType ||
-          fallbackConfirmationAdvance.sellerConfirmationAdvanceType,
-        paypertapBookingPaid: checkout.bookingAdvanceAmount,
-        totalConfirmationAdvance: checkout.totalConfirmationAdvance || checkout.bookingAdvanceAmount,
-        sellerConfirmationAmountPending: checkout.sellerConfirmationAmountPending || 0,
-        finalBalanceAfterConfirmation: checkout.finalBalanceAfterConfirmation || 0,
-      }
-    : fallbackConfirmationAdvance;
-  const reservationApplied = checkout.reservationApplied !== false;
-  const productImage = state.product?.images?.find(
-    (image) => image.thumbUrl || image.url || image.mediumUrl
-  );
+  const isPartialAdvance = checkout.paymentMode === "partial_advance";
   const productImageUrl = state.product ? getProductGridImageUrl(state.product) : "";
   const variantDetails = getVariantDetailsText(checkout);
 
@@ -225,35 +192,27 @@ export default function BookingSuccessPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[var(--pds-success-soft)] text-[var(--pds-success)]">
             <CheckCircle2 size={34} strokeWidth={2.4} aria-hidden="true" />
           </div>
-          <PptBadge tone={reservationApplied ? "success" : "warning"} className="mt-5">
-            Booking received
+          <PptBadge tone="success" className="mt-5">
+            order submitted
           </PptBadge>
           <h1 className="mt-4 text-4xl font-medium tracking-[-0.045em] text-[var(--pds-text)] sm:text-5xl">
-            Booking received
+            Order Submitted
           </h1>
           <p className="mx-auto mt-3 max-w-xl whitespace-pre-line text-base font-light leading-7 text-[var(--pds-muted)]">
-            {confirmationAdvance.sellerConfirmationAmountPending > 0
+            {isPartialAdvance
               ? [
-                  "Your item is now on hold.",
+                  "Your payment attempt has been completed.",
                   "",
-                  `You paid ${formatINR(
-                    confirmationAdvance.paypertapBookingPaid
-                  )} on PayPerTap.`,
+                  "The seller will verify your payment and contact you shortly.",
                   "",
-                  `To confirm the order, pay ${formatINR(
-                    confirmationAdvance.sellerConfirmationAmountPending
-                  )} directly to the seller on WhatsApp.`,
-                  "",
-                  "Tap below to send your product, size/color, payment, and delivery details.",
+                  "Tap below to share your order and delivery details.",
                 ].join("\n")
               : [
-                  "Your item is now on hold.",
+                  "Your order has been placed successfully.",
                   "",
-                  `You paid ${formatINR(
-                    confirmationAdvance.paypertapBookingPaid
-                  )} on PayPerTap.`,
+                  "The seller will contact you shortly.",
                   "",
-                  "Tap below to send your product, size/color, payment, and delivery details.",
+                  "Tap below to continue on WhatsApp.",
                 ].join("\n")}
           </p>
 
@@ -294,7 +253,7 @@ export default function BookingSuccessPage() {
                 {productImageUrl ? (
                   <img
                     src={productImageUrl}
-                    alt={productImage?.alt || checkout.productTitle}
+                    alt={checkout.productTitle}
                     className="h-full w-full object-cover"
                     decoding="async"
                     loading="lazy"
@@ -307,7 +266,9 @@ export default function BookingSuccessPage() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <PptBadge tone="success">₹20 paid</PptBadge>
+                <PptBadge tone={isPartialAdvance ? "warning" : "success"}>
+                  {isPartialAdvance ? "Seller will verify payment" : "Pending confirmation"}
+                </PptBadge>
                 <h2 className="mt-3 line-clamp-2 text-xl font-medium tracking-[-0.03em] text-[var(--pds-text)]">
                   {checkout.productTitle}
                 </h2>
@@ -321,21 +282,49 @@ export default function BookingSuccessPage() {
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <PptBadge tone="neutral">Price {formatINR(checkout.productPrice)}</PptBadge>
-                  <PptBadge tone="primary">
-                    Remaining at COD {formatINR(confirmationAdvance.finalBalanceAfterConfirmation)}
-                  </PptBadge>
+                  {isPartialAdvance ? (
+                    <PptBadge tone="primary">
+                      Advance {formatINR(checkout.paymentAmount || checkout.advanceAmount || 0)}
+                    </PptBadge>
+                  ) : (
+                    <PptBadge tone="primary">COD</PptBadge>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-6">
-            <PptPriceBreakdown
-              productPrice={checkout.productPrice}
-              advanceAmount={checkout.bookingAdvanceAmount}
-              currency="₹"
-              note="Pay the remaining amount directly to the seller."
-            />
+            <div className="pds-panel">
+              <h2 className="text-base font-semibold tracking-tight">Payment summary</h2>
+              <div className="mt-4 grid gap-3 text-sm text-[var(--pds-muted)]">
+                <div className="flex justify-between gap-3">
+                  <span>Product price</span>
+                  <strong className="text-[var(--pds-text)]">{formatINR(checkout.productPrice)}</strong>
+                </div>
+                {isPartialAdvance ? (
+                  <>
+                    <div className="flex justify-between gap-3">
+                      <span>Advance to seller</span>
+                      <strong className="text-[var(--pds-text)]">
+                        {formatINR(checkout.paymentAmount || checkout.advanceAmount || 0)}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span>Remaining with seller</span>
+                      <strong className="text-[var(--pds-text)]">
+                        {formatINR(checkout.sellerAmountDue || 0)}
+                      </strong>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between gap-3">
+                    <span>Payment mode</span>
+                    <strong className="text-[var(--pds-text)]">Cash on Delivery</strong>
+                  </div>
+                )}
+              </div>
+            </div>
           </aside>
         </div>
 

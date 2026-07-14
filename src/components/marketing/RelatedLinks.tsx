@@ -5,14 +5,14 @@ import { MarketingSection } from "./MarketingSection";
 import { type RelatedLink } from "../../seo-pages/seoPageTypes";
 
 export const howItWorksLink: RelatedLink = {
-  label: "See how booking works",
+  label: "See how order works",
   path: "/how-it-works",
 };
 
 const defaultRelatedLinks: RelatedLink[] = [
-  { label: "Pricing and ₹20 booking", path: "/pricing" },
+  { label: "Pricing and order", path: "/pricing" },
   howItWorksLink,
-  { label: "Verified booking", path: "/features/verified-booking" },
+  { label: "Verified order", path: "/features/verified-order" },
   { label: "Link-in-bio storefront", path: "/features/link-in-bio-storefront" },
   { label: "WhatsApp handoff", path: "/features/whatsapp-handoff" },
   { label: "Compare selling tools", path: "/compare" },

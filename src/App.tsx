@@ -5,7 +5,6 @@ import { NoIndex, RouteMeta } from "./seo/Seo";
 import { staticRoutes } from "./seo/staticRoutes";
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
-const BookingSuccessPage = lazy(() => import("./pages/BookingSuccessPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const DesignSystemPage = lazy(() => import("./pages/DesignSystemPage"));
@@ -13,8 +12,11 @@ const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const ProductOnboardingPage = lazy(() => import("./pages/ProductOnboardingPage"));
 const PublicStorePage = lazy(() => import("./pages/PublicStorePage"));
+const PaymentReturnPage = lazy(() => import("./pages/PaymentReturnPage"));
+const OrderSuccessPage = lazy(() => import("./pages/OrderSuccessPage"));
 const StoreOnboardingPage = lazy(() => import("./pages/StoreOnboardingPage"));
 const StorePolicyPage = lazy(() => import("./pages/StorePolicyPage"));
+const WalletRechargeReturnPage = lazy(() => import("./pages/WalletRechargeReturnPage"));
 
 const enableIntegrationTests =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTEGRATION_TESTS === "true";
@@ -129,6 +131,22 @@ export default function App() {
             />
           ) : null}
           <Route
+            path="/payment-return/:token"
+            element={
+              <NoIndexAppRoute>
+                <PaymentReturnPage />
+              </NoIndexAppRoute>
+            }
+          />
+          <Route
+            path="/wallet/recharge-return/:token"
+            element={
+              <NoIndexAppRoute>
+                <WalletRechargeReturnPage />
+              </NoIndexAppRoute>
+            }
+          />
+          <Route
             path="/:storeSlug/product/:productId"
             element={
               <PublicAppRoute>
@@ -153,10 +171,10 @@ export default function App() {
             }
           />
           <Route
-            path="/:storeSlug/booking-success/:checkoutId"
+            path="/:storeSlug/order-success/:checkoutId"
             element={
               <NoIndexAppRoute>
-                <BookingSuccessPage />
+                <OrderSuccessPage />
               </NoIndexAppRoute>
             }
           />

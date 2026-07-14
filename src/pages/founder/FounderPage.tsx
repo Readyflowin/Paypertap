@@ -1,4 +1,4 @@
-﻿import { ArrowRight, Mail, Quote, UserRoundCheck } from "lucide-react";
+import { ArrowRight, Mail, Quote, UserRoundCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
@@ -16,8 +16,8 @@ import { marketingFaqs } from "../faq/faqContent";
 const founderFaqs = marketingFaqs.filter((item) =>
   [
     "What is PayPerTap?",
-    "How does the ₹20 booking work?",
-    "Does the seller receive the ₹20?",
+    "How does the order work?",
+    "Does PayPerTap process buyer payments?",
     "Is PayPerTap made for Instagram sellers?",
     "Is PayPerTap useful for WhatsApp sellers?",
     "Can sellers share direct product links?",
@@ -40,7 +40,7 @@ function FounderPortrait() {
           Aditya, founder of PayPerTap
         </p>
         <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
-          Verified booking storefront founder
+          Verified order storefront founder
         </p>
       </div>
     </div>
@@ -63,7 +63,7 @@ export function FounderPage() {
         eyebrow="Founder"
         h1="Founder of PayPerTap"
         path="/founder"
-        subtitle="Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers. PayPerTap was created to help small sellers collect a fixed ₹20 booking and move booked buyers to WhatsApp with order details ready."
+        subtitle="Aditya is the founder of PayPerTap, a verified order storefront for Indian Instagram and WhatsApp sellers. PayPerTap was created to help small sellers receive an order and move buyers to WhatsApp with order details ready."
       />
       <PageTrustMeta path="/founder" />
 
@@ -84,7 +84,7 @@ export function FounderPage() {
                 <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
                   Aditya is the founder of PayPerTap. The PayPerTap founder is focused
                   on Indian Instagram and WhatsApp sellers who need a practical way to
-                  organize product discovery and record buyer booking intent before handoff.
+                  organize product discovery and record buyer order intent before handoff.
                 </p>
               </div>
             </MarketingCard>
@@ -94,8 +94,8 @@ export function FounderPage() {
               </h2>
               <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
                 Sellers should not need to chase every DM, repeat every price, or hold
-                products without booking context. PayPerTap adds a booking-first
-                storefront and a fixed ₹20 verified booking before the WhatsApp
+                products without order context. PayPerTap adds an order-first
+                storefront and an order before the WhatsApp
                 conversation continues.
               </p>
             </MarketingCard>
@@ -130,8 +130,8 @@ export function FounderPage() {
             <Link to="/contact" className="ppt-secondary-link">
               Contact
             </Link>
-            <Link to="/features/verified-booking" className="ppt-secondary-link">
-              Verified booking
+            <Link to="/features/verified-order" className="ppt-secondary-link">
+              Verified order
             </Link>
           </div>
         </MarketingCard>
@@ -155,18 +155,18 @@ export function FounderPage() {
                 social commerce market
               </a>{" "}
               in India includes growing mobile-first discovery. PayPerTap is Aditya&apos;s
-              booking-first storefront approach for Indian Instagram and WhatsApp
+              order-first storefront approach for Indian Instagram and WhatsApp
               sellers working within that everyday buying pattern.
             </p>
           </MarketingCard>
           <MarketingCard>
-            <h3 className="text-xl font-bold text-neutral-950">A limited Phase 1 promise</h3>
+            <h3 className="text-xl font-bold text-neutral-950">A limited focused promise</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              The product records a fixed ₹20 verified booking and prepares a
+              The product records an order and prepares a
               WhatsApp handoff. It does not promise full ecommerce settlement:
               sellers receive no payout from that fee and continue remaining payment,
               delivery, and product support directly. This narrow scope is the
-              booking-first storefront mission behind PayPerTap.
+              order-first storefront mission behind PayPerTap.
             </p>
           </MarketingCard>
         </div>
@@ -174,7 +174,7 @@ export function FounderPage() {
 
       <MarketingSection
         className="ppt-core-page-section"
-        title="Founder page booking questions"
+        title="Founder page order questions"
         intro="These are the model details PayPerTap aims to communicate plainly."
       >
         <FAQBlock items={founderFaqs} />

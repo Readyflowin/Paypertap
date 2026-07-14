@@ -55,13 +55,13 @@ export function Footer() {
             <span className="text-lg font-extrabold">PayPerTap</span>
           </Link>
           <p className="ppt-home-copy mt-4 max-w-sm text-sm leading-6 text-[#070707]/50">
-            India-first verified booking storefronts for Instagram and WhatsApp sellers.
+            India-first verified order storefronts for Instagram and WhatsApp sellers.
             PayPerTap is not a full payment gateway.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <SharePageButton />
             <p className="text-xs text-[#070707]/40">
-              © {year} PayPerTap. All rights reserved.
+              (c) {year} PayPerTap. All rights reserved.
             </p>
           </div>
         </div>

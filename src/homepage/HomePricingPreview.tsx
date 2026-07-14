@@ -7,7 +7,7 @@ import { MarketingSection } from "../components/marketing/MarketingSection";
 const pricingFacts = [
   {
     icon: <IndianRupee size={20} strokeWidth={2.2} />,
-    title: "Buyer pays fixed ₹20 booking through PayPerTap.",
+    title: "Seller wallet covers PayPerTap's per-order charge.",
   },
   {
     icon: <UserCheck size={20} strokeWidth={2.2} />,
@@ -27,24 +27,24 @@ export function HomePricingPreview() {
   return (
     <MarketingSection
       eyebrow="Pricing clarity"
-      title="What happens after a buyer books?"
-      intro="The booking fee is fixed. The remaining product amount stays between buyer and seller."
+      title="What happens after a buyer orders?"
+      intro="The seller wallet charge is fixed. Customer payments still stay between buyer and seller."
     >
       <MarketingCard className="ppt-pricing-panel">
         <div className="ppt-pricing-amount">
-          <span>Fixed buyer booking</span>
-          <span className="ppt-faux-strong">₹20</span>
-          <p>PayPerTap keeps this as the platform verified-booking fee.</p>
+          <span>Per successful order</span>
+          <span className="ppt-faux-strong">Seller wallet</span>
+          <p>PayPerTap charges the seller wallet through the platform per-order charge.</p>
         </div>
 
-        <div className="ppt-pricing-route" aria-label="PayPerTap payment route">
+        <div className="ppt-pricing-route" aria-label="Seller wallet route">
           <div>
             <span>Buyer</span>
-            <span className="ppt-faux-strong">Books through PayPerTap</span>
+            <span className="ppt-faux-strong">Places order</span>
           </div>
           <div>
             <span>PayPerTap</span>
-            <span className="ppt-faux-strong">Keeps ₹20 booking fee</span>
+            <span className="ppt-faux-strong">Charges seller wallet</span>
           </div>
           <div>
             <span>Seller</span>

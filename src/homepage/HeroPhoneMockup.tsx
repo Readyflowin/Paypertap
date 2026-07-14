@@ -10,28 +10,28 @@ const products = [
     image:
       "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=420&q=74",
     name: "Denim jacket",
-    price: "₹1,499",
+    price: "- Rs 1,499",
   },
   {
     alt: "Neutral linen clothing flatlay",
     image:
       "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=420&q=74",
     name: "Linen co-ord",
-    price: "₹899",
+    price: "- Rs 899",
   },
   {
     alt: "Handmade tote bag and accessories",
     image:
       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=420&q=74",
     name: "Handmade bag",
-    price: "₹649",
+    price: "- Rs 649",
   },
   {
     alt: "Minimal jewellery on a boutique tray",
     image:
       "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=420&q=74",
     name: "Drop earrings",
-    price: "₹399",
+    price: "- Rs 399",
   },
 ];
 
@@ -82,9 +82,9 @@ export function HeroPhoneMockup() {
             <div className="ppt-store-hero-card">
               <div className="ppt-store-hero-copy">
                 <span>New drop</span>
-                <span className="ppt-faux-strong">Reserved through verified bookings</span>
+                <span className="ppt-faux-strong">Reserved through verified orders</span>
               </div>
-              <div className="ppt-store-hero-metric">₹20</div>
+              <div className="ppt-store-hero-metric">seller wallet</div>
             </div>
 
             <div className="ppt-store-search">
@@ -119,10 +119,10 @@ export function HeroPhoneMockup() {
               ))}
             </div>
 
-            <div className="ppt-store-booking-strip">
+            <div className="ppt-store-Order-strip">
               <ShieldCheck size={16} strokeWidth={2.2} />
               <div>
-                <span className="ppt-faux-strong">₹20 booking via PayPerTap</span>
+                <span className="ppt-faux-strong">order via PayPerTap</span>
                 <span>Remaining amount paid directly to seller</span>
               </div>
             </div>

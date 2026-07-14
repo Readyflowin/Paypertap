@@ -1,4 +1,5 @@
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 type ServiceAccountShape = {
@@ -125,4 +126,12 @@ export function getAdminDbIfConfigured() {
   }
 
   return getFirestore();
+}
+
+export function getAdminAuthIfConfigured() {
+  const db = getAdminDbIfConfigured();
+
+  if (!db) return null;
+
+  return getAuth();
 }

@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Store as StoreIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { getDisplayImageUrl } from "@/lib/imageUrls";
 
@@ -9,21 +9,14 @@ type Theme1HeroStore = {
   heroTitle?: string;
   heroHeading?: string;
   heroSubtitle?: string;
-  heroEyebrowText?: string;
   heroPrimaryCtaText?: string;
-  heroSecondaryCtaText?: string;
-  bio?: string;
-  description?: string;
   tagline?: string;
-  socialProof?: string[];
+  bio?: string;
 };
 
 type Theme1HeroProduct = {
   title?: string;
-  description?: string;
   imageUrl?: string;
-  scarcity?: string;
-  badge?: string;
 };
 
 function getStoreName(store: Theme1HeroStore) {
@@ -31,41 +24,11 @@ function getStoreName(store: Theme1HeroStore) {
 }
 
 function getHeroTitle(store: Theme1HeroStore) {
-  return (
-    store.heroTitle ||
-    store.heroHeading ||
-    "Curated drops, one piece at a time."
-  );
+  return store.heroTitle || store.heroHeading || getStoreName(store);
 }
 
 function getHeroSubtitle(store: Theme1HeroStore) {
-  return (
-    store.heroSubtitle ||
-    "Browse available pieces and reserve before the chat moves to WhatsApp."
-  );
-}
-
-function getHeroEyebrowText(store: Theme1HeroStore) {
-  return store.heroEyebrowText || "Premium thrift / archive drop";
-}
-
-function getHeroPrimaryCtaText(store: Theme1HeroStore) {
-  return store.heroPrimaryCtaText || "Shop new drop";
-}
-
-function getHeroSecondaryCtaText(store: Theme1HeroStore) {
-  return store.heroSecondaryCtaText || "How booking works";
-}
-
-function getTextFallbackTitle(store: Theme1HeroStore) {
-  return store.heroTitle || store.heroHeading || "Curated drops, one piece at a time.";
-}
-
-function getTextFallbackSubtitle(store: Theme1HeroStore) {
-  return (
-    store.heroSubtitle ||
-    "Browse available pieces and reserve before the chat moves to WhatsApp."
-  );
+  return store.heroSubtitle || store.tagline || store.bio || "New arrivals are live now.";
 }
 
 function getHeroImageUrl({
@@ -99,193 +62,66 @@ export function Theme1HeroSection({
     store,
     useFeaturedProductAsHeroImage,
   });
-  const storeHeroImageUrl = getDisplayImageUrl(store.heroImageUrl);
-  const featuredProductImageUrl = getDisplayImageUrl(featuredProduct?.imageUrl);
-  const isUsingFeaturedProductHeroImage =
-    !storeHeroImageUrl &&
-    useFeaturedProductAsHeroImage &&
-    Boolean(featuredProductImageUrl) &&
-    heroImageUrl === featuredProductImageUrl;
-  const showCoverPiece = Boolean(featuredProduct && !isUsingFeaturedProductHeroImage);
-  const coverProduct = showCoverPiece ? featuredProduct : null;
-  const socialProof = store.socialProof?.length
-    ? store.socialProof
-    : ["Verified booking", "Limited stock", "WhatsApp confirmation"];
 
   if (!heroImageUrl) {
     return (
-      <section className="mx-auto max-w-7xl px-3 py-5 sm:px-4 lg:py-8">
-        <div className="grid gap-4 bg-[#111111] p-5 text-[#F6F1E8] sm:p-8 lg:grid-cols-[1fr_0.72fr] lg:items-end">
-          <div className="min-w-0">
-            <p className="w-fit border border-[#F6F1E8]/35 bg-[#2d1b16] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#EFE3C8]">
-              {getHeroEyebrowText(store)}
-            </p>
-            <h1
-              className="mt-5 max-w-4xl break-words text-5xl font-semibold leading-[0.96] text-[#F6F1E8] sm:text-6xl lg:text-7xl"
-              style={{ fontFamily: "Georgia, ui-serif, serif" }}
-            >
-              {getTextFallbackTitle(store)}
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-[#F6F1E8]/72 sm:text-base">
-              {getTextFallbackSubtitle(store)}
-            </p>
-            <div className="mt-6 grid gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
-              <a
-                href="#products"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F6F1E8] px-5 text-sm font-bold !text-[#111111] hover:!text-[#111111]"
-              >
-                {getHeroPrimaryCtaText(store)}
-                <ArrowRight size={16} aria-hidden="true" />
-              </a>
-              <a
-                href="#booking"
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-5 text-sm font-bold !text-[#F6F1E8] hover:!text-[#EFE3C8]"
-              >
-                {getHeroSecondaryCtaText(store)}
-              </a>
-            </div>
-          </div>
-          <div className="grid gap-3">
-            <div className="border border-[#F6F1E8]/16 bg-[#F6F1E8]/8 p-5">
-              <StoreIcon size={22} aria-hidden="true" className="text-[#EFE3C8]" />
-              <p
-                className="mt-4 text-2xl font-semibold leading-tight text-[#F6F1E8]"
-                style={{ fontFamily: "Georgia, ui-serif, serif" }}
-              >
-                {getStoreName(store)}
-              </p>
-              <p className="mt-3 text-sm leading-6 text-[#F6F1E8]/62">
-                Fresh pieces, limited stock, ready to reserve.
-              </p>
-            </div>
-            {socialProof.slice(0, 3).map((item) => (
-              <div key={item} className="border border-[#F6F1E8]/16 bg-[#F6F1E8]/6 p-4">
-                <BadgeCheck size={18} aria-hidden="true" className="text-[#EFE3C8]" />
-                <p className="mt-3 text-sm font-semibold text-[#F6F1E8]">{item}</p>
-              </div>
-            ))}
-          </div>
+      <section className="mx-auto max-w-7xl px-4 py-5">
+        <div className="rounded-[30px] bg-[#111111] px-5 py-12 text-center text-white sm:py-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/62">
+            New drop
+          </p>
+          <h1
+            className="mx-auto mt-3 max-w-2xl text-4xl font-semibold leading-tight tracking-[-0.04em] sm:text-5xl"
+            style={{ fontFamily: "Georgia, ui-serif, serif" }}
+          >
+            {getHeroTitle(store)}
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
+            {getHeroSubtitle(store)}
+          </p>
+          <a
+            href="#products"
+            className="mx-auto mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold !text-[#111111]"
+          >
+            Shop all
+            <ArrowRight size={16} aria-hidden="true" />
+          </a>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-3 py-4 sm:px-4 lg:py-8">
+    <section className="mx-auto max-w-7xl px-4 py-4">
       <div
-        className={`grid gap-4 ${
-          isPreviewMobile ? "" : "lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch"
+        className={`relative overflow-hidden rounded-[30px] bg-[#111111] ${
+          isPreviewMobile ? "min-h-[470px]" : "min-h-[470px] sm:min-h-[620px]"
         }`}
       >
-        <div
-          className={`relative min-h-[456px] overflow-hidden rounded-lg bg-[#111111] ${
-            isPreviewMobile ? "" : "sm:min-h-[620px]"
-          }`}
-        >
-          <img
-            src={heroImageUrl}
-            alt={`${getStoreName(store)} drop`}
-            decoding="async"
-            fetchPriority="high"
-            loading="eager"
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.82]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/90 via-[#111111]/30 to-transparent" />
-          <div className={`absolute inset-x-0 bottom-0 p-4 text-[#F6F1E8] ${isPreviewMobile ? "" : "sm:p-8"}`}>
-            <p className="w-fit border border-[#F6F1E8]/40 bg-[#111111]/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
-              {getHeroEyebrowText(store)}
-            </p>
-            <h1
-              className={`mt-4 max-w-3xl break-words text-[clamp(2.2rem,10vw,2.65rem)] font-semibold leading-[0.98] ${
-                isPreviewMobile ? "" : "sm:text-[56px] lg:text-[74px]"
-              }`}
-              style={{ fontFamily: "Georgia, ui-serif, serif" }}
-            >
-              {getHeroTitle(store)}
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#F6F1E8]/80 sm:text-base sm:leading-7">
-              {getHeroSubtitle(store)}
-            </p>
-            <div className={`mt-4 grid gap-2.5 ${isPreviewMobile ? "" : "sm:mt-6 sm:flex sm:flex-wrap sm:gap-3"}`}>
-              <a
-                href="#products"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#F6F1E8] px-5 text-sm font-bold !text-[#111111] hover:!text-[#111111]"
-              >
-                {getHeroPrimaryCtaText(store)}
-                <ArrowRight size={16} aria-hidden="true" />
-              </a>
-              <a
-                href="#booking"
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#F6F1E8]/40 px-5 text-sm font-bold !text-[#F6F1E8] hover:!text-[#EFE3C8]"
-              >
-                {getHeroSecondaryCtaText(store)}
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          {coverProduct ? (
-            <div className="border border-[#DDD4C7] bg-[#F4EFE6] p-4 sm:p-6">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7A2E2E]">
-                Cover piece
-              </p>
-              <div
-                className={`mt-4 grid gap-4 ${
-                  isPreviewMobile ? "grid-cols-[84px_1fr]" : "grid-cols-[84px_1fr] sm:grid-cols-[130px_1fr]"
-                }`}
-              >
-                {coverProduct.imageUrl ? (
-                  <img
-                    src={coverProduct.imageUrl}
-                    alt={coverProduct.title || "Cover piece"}
-                    decoding="async"
-                    className="aspect-[4/5] w-full object-cover"
-                  />
-                ) : (
-                  <span className="grid aspect-[4/5] w-full place-items-center bg-[#EFE3C8] text-[#6F6A60]">
-                    <StoreIcon size={18} aria-hidden="true" />
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <h2
-                    className="text-2xl font-semibold leading-tight text-[#111111] sm:text-3xl"
-                    style={{ fontFamily: "Georgia, ui-serif, serif" }}
-                  >
-                    {coverProduct.title || "Featured piece"}
-                  </h2>
-                  {coverProduct.description ? (
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#6F6A60]">
-                      {coverProduct.description}
-                    </p>
-                  ) : null}
-                  <span className="mt-4 inline-flex bg-[#EFE3C8] px-3 py-1 text-xs font-semibold text-[#7A2E2E]">
-                    {coverProduct.scarcity || coverProduct.badge || "Limited drop"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className={`grid gap-3 ${isPreviewMobile ? "" : "sm:grid-cols-3 lg:grid-cols-1"}`}>
-            {socialProof.slice(0, 3).map((item) => (
-              <div key={item} className="border border-[#DDD4C7] bg-[#F6F1E8] p-4">
-                <BadgeCheck size={18} aria-hidden="true" className="text-[#5F6448]" />
-                <p className="mt-3 text-sm font-semibold text-[#111111]">{item}</p>
-              </div>
-            ))}
-          </div>
-          <div className="border border-[#DDD4C7] bg-[#111111] p-5 text-[#F6F1E8]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#EFE3C8]">
-              Drop note
-            </p>
-            <p
-              className="mt-3 text-2xl font-semibold leading-tight"
-              style={{ fontFamily: "Georgia, ui-serif, serif" }}
-            >
-              One-off pieces move fast. Reserve first, confirm details on WhatsApp.
-            </p>
-          </div>
+        <img
+          src={heroImageUrl}
+          alt={`${getStoreName(store)} hero`}
+          decoding="async"
+          fetchPriority="high"
+          loading="eager"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#111111]/82 via-[#111111]/18 to-transparent px-5 pb-7 pt-24 text-center text-white sm:px-8 sm:pb-10">
+          <h1
+            className="mx-auto max-w-2xl text-4xl font-semibold leading-tight tracking-[-0.04em] sm:text-6xl"
+            style={{ fontFamily: "Georgia, ui-serif, serif" }}
+          >
+            {getHeroTitle(store)}
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/78">
+            {getHeroSubtitle(store)}
+          </p>
+          <a
+            href="#products"
+            className="mx-auto mt-5 inline-flex min-h-12 items-center justify-center rounded-full border border-white/70 bg-white/8 px-7 text-sm font-semibold !text-white backdrop-blur transition hover:bg-white hover:!text-[#111111]"
+          >
+            {store.heroPrimaryCtaText || "Shop all"}
+          </a>
         </div>
       </div>
     </section>

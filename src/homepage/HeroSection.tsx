@@ -15,7 +15,7 @@ const trustPoints = [
   },
   {
     icon: <ShieldCheck size={17} strokeWidth={2.1} />,
-    label: "Booking intent step",
+    label: "Order intent step",
   },
   {
     icon: <WhatsAppIcon size={17} />,
@@ -60,7 +60,7 @@ export function HeroSection() {
                 DMs into
                 {" "}
                 <br />
-                <span className="ppt-hero-title-highlight">confirmed bookings.</span>
+                <span className="ppt-hero-title-highlight">confirmed Orders.</span>
               </h1>
             </motion.div>
 
@@ -70,7 +70,7 @@ export function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={quickTransition(0.14)}
             >
-              Create a clean product store link, verify buyer intent with a booking step,
+              Create a clean product store link, verify buyer intent with an order step,
               and continue order confirmation on WhatsApp.
             </motion.p>
 
@@ -108,7 +108,7 @@ export function HeroSection() {
             </motion.div>
           </div>
 
-          <div className="ppt-hero-visual" aria-label="PayPerTap storefront and booking preview">
+          <div className="ppt-hero-visual" aria-label="PayPerTap storefront and Order preview">
             <HeroPhoneMockup />
             <HeroFlowCards />
           </div>
@@ -119,13 +119,13 @@ export function HeroSection() {
         <div className="ppt-hero-answer-card ppt-home-copy">
           <p className="ppt-hero-answer-kicker">What PayPerTap does</p>
           <h2 id="ppt-hero-answer-title">
-            PayPerTap helps sellers turn Instagram DMs into confirmed bookings.
+            PayPerTap helps sellers turn Instagram DMs into confirmed Orders.
           </h2>
           <p>
-            PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp
-            sellers. Sellers share a product or store link, buyers complete a fixed booking
+            PayPerTap is a verified order storefront for Indian Instagram and WhatsApp
+            sellers. Sellers share a product or store link, buyers complete an order
             step to show intent, and the conversation continues on WhatsApp with product,
-            price, booking, and buyer details ready.
+            price, Order, and buyer details ready.
           </p>
         </div>
       </section>

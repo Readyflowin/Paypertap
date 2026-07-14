@@ -1,0 +1,7 @@
+export const FREE_ORDER_COUNT = 5;
+export const ORDER_CHARGE = 19;
+export const MINIMUM_ORDER_BALANCE = ORDER_CHARGE;
+export const LOW_BALANCE_THRESHOLD = 95;
+export const WALLET_RECHARGE_AMOUNTS = [190, 380, 950, 1900] as const;
+export const WALLET_RECHARGE_MIN_AMOUNT = 100;
+export const WALLET_RECHARGE_MAX_AMOUNT = 25000;

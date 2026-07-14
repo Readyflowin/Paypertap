@@ -7,9 +7,9 @@ import { WhatsAppIcon } from "./HeroBadge";
 const messageRows = [
   ["Product", "Vintage denim jacket"],
   ["Product link", "paypertap.in/aditya.thrift/denim-jacket"],
-  ["Product price", "₹1,499"],
-  ["Booking paid via PayPerTap", "₹20"],
-  ["Remaining amount to pay seller", "₹1,479"],
+  ["Product price", "- Rs 1,499"],
+  ["order submitted via PayPerTap", "seller wallet"],
+  ["Remaining amount to pay seller", "- Rs 1,479"],
   ["Buyer details", "Aarav, +91 98XXXXXX21, Bengaluru"],
 ];
 
@@ -18,7 +18,7 @@ export function HomeBuyerFlow() {
     <MarketingSection
       eyebrow="WhatsApp handoff"
       title="Why does WhatsApp handoff matter?"
-      intro="PayPerTap prepares the booking context. The seller still owns the WhatsApp conversation."
+      intro="PayPerTap prepares the order context. The seller still owns the WhatsApp conversation."
     >
       <MarketingCard className="ppt-whatsapp-panel">
         <div className="ppt-whatsapp-copy">
@@ -27,7 +27,7 @@ export function HomeBuyerFlow() {
           </div>
           <h3>Seller keeps the relationship in WhatsApp.</h3>
           <p>
-            After the ₹20 booking via PayPerTap, the buyer continues to WhatsApp with
+            After the order via PayPerTap, the buyer continues to WhatsApp with
             their details ready to share. Official{" "}
             <a
               href="https://whatsappbusiness.com/products/business-platform/"

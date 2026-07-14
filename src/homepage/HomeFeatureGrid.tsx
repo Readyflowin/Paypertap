@@ -27,9 +27,9 @@ const storefrontFeatures = [
 
 const featureLinks = [
   {
-    copy: "Filter casual chats with a fixed ₹20 booking via PayPerTap.",
-    label: "Verified booking",
-    path: "/features/verified-booking",
+    copy: "Filter casual chats with an order via PayPerTap.",
+    label: "Verified order",
+    path: "/features/verified-order",
   },
   {
     copy: "Use one bio-ready link for discovery and reservations.",
@@ -37,13 +37,13 @@ const featureLinks = [
     path: "/features/link-in-bio-storefront",
   },
   {
-    copy: "Move buyers to WhatsApp with booking context intact.",
+    copy: "Move buyers to WhatsApp with order context intact.",
     label: "WhatsApp handoff",
     path: "/features/whatsapp-handoff",
   },
   {
-    copy: "Keep bookings, buyer context, and follow-up status clearer.",
-    label: "Order organization",
+    copy: "Keep Orders, buyer context, and follow-up status clearer.",
+    label: "order organization",
     path: "/features/order-organization",
   },
   {
@@ -64,28 +64,28 @@ const products = [
     image:
       "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=520&q=74",
     name: "Denim jacket",
-    price: "₹1,499",
+    price: "- Rs 1,499",
   },
   {
     alt: "Neutral linen outfit flatlay",
     image:
       "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=520&q=74",
     name: "Linen co-ord",
-    price: "₹899",
+    price: "- Rs 899",
   },
   {
     alt: "Handmade tote bag close up",
     image:
       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=520&q=74",
     name: "Handmade bag",
-    price: "₹649",
+    price: "- Rs 649",
   },
   {
     alt: "Minimal jewellery tray",
     image:
       "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=520&q=74",
     name: "Drop earrings",
-    price: "₹399",
+    price: "- Rs 399",
   },
 ];
 
@@ -94,7 +94,7 @@ export function HomeFeatureGrid() {
     <MarketingSection
       eyebrow="What sellers get"
       title="A storefront that looks cleaner than a screenshot catalog."
-      intro="Product pages, collections, search, booking, and handoff in one seller-owned flow."
+      intro="Product pages, collections, search, Order, and handoff in one seller-owned flow."
     >
       <div className="ppt-storefront-layout">
         <MarketingCard className="ppt-storefront-preview">
@@ -111,7 +111,7 @@ export function HomeFeatureGrid() {
               <h3>Curated thrift pieces</h3>
               <p>Reserve the item, then confirm delivery and remaining payment on WhatsApp.</p>
             </div>
-            <div className="ppt-storefront-badge">₹20 booking</div>
+            <div className="ppt-storefront-badge">order</div>
           </div>
 
           <div className="ppt-storefront-search">

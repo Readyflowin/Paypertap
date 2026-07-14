@@ -9,7 +9,7 @@ export type InventoryProductFields = {
 const TERMINAL_RESERVATION_STATUSES = new Set([
   "cancelled",
   "released",
-  "sold",
+  "completed",
 ]);
 
 function safeCount(value: unknown): number {
@@ -45,15 +45,15 @@ export function deriveProductStatus(product: InventoryProductFields): ProductSta
   return "open";
 }
 
-export function canReleaseReservation(booking: Pick<CheckoutSession, "reservationApplied" | "status">) {
+export function canReleaseReservation(order: Pick<CheckoutSession, "reservationApplied" | "status">) {
   return (
-    booking.reservationApplied === true &&
-    !TERMINAL_RESERVATION_STATUSES.has(booking.status)
+    order.reservationApplied === true &&
+    !TERMINAL_RESERVATION_STATUSES.has(order.status)
   );
 }
 
-export function canMarkBookingSold(booking: Pick<CheckoutSession, "reservationApplied" | "status">) {
-  return canReleaseReservation(booking);
+export function canCompleteReservedOrder(order: Pick<CheckoutSession, "reservationApplied" | "status">) {
+  return canReleaseReservation(order);
 }
 
 export function applyReservationRelease(

@@ -14,8 +14,8 @@ import { marketingFaqs } from "./faqContent";
 
 const faqCategoryTitles = [
   "PayPerTap basics",
-  "₹20 booking model",
-  "Seller payments and Phase 1 limits",
+  "order model",
+  "Seller payments and platform limits",
   "WhatsApp handoff",
   "Storefronts, products, links, collections",
   "Inventory, reserved, sold, and availability",
@@ -34,7 +34,7 @@ const faqCategories = faqCategoryTitles.map((title) => ({
 const hubLinks = [
   { label: "Pricing", path: "/pricing" },
   { label: "How it works", path: "/how-it-works" },
-  { label: "Verified booking", path: "/features/verified-booking" },
+  { label: "Verified order", path: "/features/verified-order" },
   { label: "WhatsApp handoff", path: "/features/whatsapp-handoff" },
   { label: "Storefront feature", path: "/features/link-in-bio-storefront" },
   { label: "Customer leads", path: "/features/customer-leads" },
@@ -47,15 +47,15 @@ export function FAQPage() {
     <MarketingLayout>
       <Seo
         canonicalPath="/faq"
-        title="PayPerTap FAQ | ₹20 Booking and WhatsApp Seller Flow"
-        description="Clear answers about PayPerTap, ₹20 verified booking, seller payments, WhatsApp handoff, KYC, cancellations, and platform limits."
+        title="PayPerTap FAQ | order and WhatsApp Seller Flow"
+        description="Clear answers about PayPerTap, seller wallet verified order, seller payments, WhatsApp handoff, KYC, cancellations, and platform limits."
         jsonLd={[breadcrumbListSchema([{ name: "Home", path: "/" }, { name: "FAQ", path: "/faq" }])]}
       />
       <SectionHeader
         eyebrow="FAQ"
         h1="PayPerTap FAQ for Instagram and WhatsApp sellers."
         path="/faq"
-        subtitle="PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp sellers. Buyers pay a fixed ₹20 booking through PayPerTap to reserve a product, then continue to WhatsApp so the seller can collect the remaining amount directly and confirm delivery."
+        subtitle="PayPerTap is a verified order storefront for Indian Instagram and WhatsApp sellers. buyers place orders through PayPerTap to reserve a product, then continue to WhatsApp so the seller can collect the remaining amount directly and confirm delivery."
       />
       <PageTrustMeta path="/faq" />
       <TopCreateStoreCTA
@@ -67,16 +67,16 @@ export function FAQPage() {
       <MarketingSection
         className="ppt-core-page-section"
         title="Start with the short version"
-        intro="These answers define the Phase 1 boundary before the detailed questions below."
+        intro="These answers define the platform boundary before the detailed questions below."
       >
         <div className="grid gap-4 md:grid-cols-3">
           <MarketingCard>
             <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-neutral-950">
-              What PayPerTap handles
+              What PayPerTap records
             </h2>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              PayPerTap handles storefront links, product booking context, the fixed
-              ₹20 verified-booking fee, product reservation in the booking flow,
+              PayPerTap records storefront links, product order context, the fixed
+              seller wallet per-order charge, product reservation in the order flow,
               buyer details needed for handoff, and the prepared WhatsApp message.
             </p>
           </MarketingCard>
@@ -95,7 +95,7 @@ export function FAQPage() {
               What PayPerTap is not
             </h2>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              PayPerTap is not a full payment gateway in Phase 1. It does not
+              PayPerTap is not a full payment gateway in current model. It does not
               provide seller payouts, split payments, custom seller advances,
               automated WhatsApp replies, or full product-payment settlement.
             </p>
@@ -127,8 +127,8 @@ export function FAQPage() {
 
       <MarketingSection
         className="ppt-core-page-section"
-        title="Who handles each part of a booking?"
-        intro="This quick reference separates PayPerTap's Phase 1 role from the seller's direct product transaction."
+        title="Who handles each part of an order?"
+        intro="This quick reference separates PayPerTap's current model role from the seller's direct product transaction."
       >
         <div className="ppt-core-comparison overflow-hidden rounded-[24px] border backdrop-blur-xl">
           <table className="w-full text-left">
@@ -140,9 +140,9 @@ export function FAQPage() {
             </thead>
             <tbody>
               <tr className="ppt-core-comparison-row border-t">
-                <th className="p-4 text-sm font-bold text-neutral-950">₹20 booking fee</th>
+                <th className="p-4 text-sm font-bold text-neutral-950">seller wallet charge</th>
                 <td className="p-4 text-sm leading-7 text-neutral-700">
-                  Paid by the buyer and kept by PayPerTap as its platform verified-booking fee in Phase 1.
+                  Charged to the seller wallet by PayPerTap after successful orders.
                 </td>
               </tr>
               <tr className="ppt-core-comparison-row border-t">
@@ -168,10 +168,10 @@ export function FAQPage() {
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <MarketingCard>
-            <h3 className="text-xl font-bold text-neutral-950">What should a buyer check before booking?</h3>
+            <h3 className="text-xl font-bold text-neutral-950">What should a buyer check before Order?</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
               A buyer should review the product, displayed price, seller information,
-              applicable seller policies, and the meaning of the ₹20 booking fee before
+              applicable seller policies, and the meaning of the seller wallet charge before
               proceeding. After handoff, the buyer should confirm remaining payment and
               delivery details with the seller before paying that seller directly.
             </p>
@@ -179,7 +179,7 @@ export function FAQPage() {
           <MarketingCard>
             <h3 className="text-xl font-bold text-neutral-950">Where can I read the policies?</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              PayPerTap policies explain platform handling of the fixed booking,
+              PayPerTap policies explain platform handling of the order,
               privacy, terms, and cancellation boundaries. Sellers remain responsible
               for product terms and the direct buyer transaction after handoff.
             </p>

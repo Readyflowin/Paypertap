@@ -13,21 +13,23 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   BarChart3,
+  Bell,
   CalendarCheck,
   CheckCircle2,
   Copy,
   CreditCard,
-  Download,
   ExternalLink,
   FolderOpen,
   Link2,
-  MoreVertical,
   PackageOpen,
   Plus,
+  Search,
   Settings,
   ShoppingBag,
   Store as StoreIcon,
   Users,
+  Wallet as WalletIcon,
+  X,
 } from "lucide-react";
 import {
   PptBadge,
@@ -53,7 +55,6 @@ import {
   normalizeCollectionName,
 } from "../lib/collections";
 import { formatINR } from "../lib/money";
-import type { SellerConfirmationAdvanceType } from "../lib/confirmationAdvance";
 import { normalizeIndianMobileInput } from "../lib/phone";
 import {
   getDisplayImageUrl,
@@ -62,7 +63,6 @@ import {
   productHasTemporaryImageUrls,
 } from "../lib/imageUrls";
 import { getAvailableQuantity, getProductUnavailableLabel } from "../lib/productAvailability";
-import { buildBookingLabelData } from "../lib/labelData";
 import {
   generateVariantCombinations,
   getVariantDetailsText,
@@ -73,10 +73,8 @@ import {
   type ProductVariantOption,
 } from "../lib/productVariants";
 import {
-  getCheckoutSessionsBySellerId,
-  markBookingCancelled,
-  markBookingSold,
-  repairMissingCheckoutReservation,
+  getOrdersBySellerId,
+  repairMissingOrderReservation,
 } from "../services/checkoutService";
 import {
   createSellerProduct,
@@ -96,10 +94,28 @@ import {
   prepareSellerAfterAuth,
 } from "../services/sellerService";
 import {
+  getStorePaymentSettings,
   getStoreById,
+  updateStorePaymentSettings,
   updateStoreCustomization,
   updateStorePublishStatus,
+  type StorePaymentSettings,
+  type StorePaymentMode,
 } from "../services/storeService";
+import {
+  getWallet,
+  getWalletTransactions,
+  INITIAL_FREE_ORDERS,
+  reconcileWalletFromActivity,
+  startWalletRecharge,
+  WALLET_LOW_BALANCE_THRESHOLD,
+  WALLET_ORDER_CHARGE_AMOUNT,
+  WALLET_RECHARGE_AMOUNTS,
+  WALLET_RECHARGE_MAX_AMOUNT,
+  WALLET_RECHARGE_MIN_AMOUNT,
+  type SellerWallet,
+  type WalletTransactionRecord,
+} from "../services/walletService";
 import { getProductGridImageUrl } from "../storefront/imageMedia";
 import {
   DEFAULT_STOREFRONT_THEME_ID,
@@ -108,7 +124,7 @@ import {
 import type { StorefrontThemeId } from "../storefront/themes/types";
 import { uploadImageToR2, uploadOptimizedHeroImage } from "../services/uploadService";
 import {
-  buildBookingWhatsAppUrl,
+  buildOrderWhatsAppUrl,
   buildDeliveryDetailsMessage,
   buildOrderConfirmedMessage,
   buildSellerPaymentCollectionMessage,
@@ -126,6 +142,7 @@ import type {
   Store,
   StoreCollection,
 } from "../types/firestore";
+import { OrderManagementDashboard } from "../components/orders";
 
 function sanitizePositiveNumberInput(value: string): string {
   const digits = value.replace(/[^\d]/g, "");
@@ -136,13 +153,14 @@ function sanitizePositiveNumberInput(value: string): string {
 }
 
 const sidebarItems = [
-  "Overview",
+  "Dashboard",
+  "Orders",
   "Products",
-  "Collections",
-  "Bookings",
   "Customers",
-  "Store",
-  "Payments",
+  "Storefront",
+  "Marketing",
+  "Wallet",
+  "Settings",
 ] as const;
 
 type DashboardTab = (typeof sidebarItems)[number];
@@ -151,27 +169,28 @@ const DEFAULT_HERO_SUBTITLE =
   "Browse available pieces and reserve before the chat moves to WhatsApp.";
 const DEFAULT_HERO_EYEBROW_TEXT = "Premium thrift / archive drop";
 const DEFAULT_HERO_PRIMARY_CTA_TEXT = "Shop new drop";
-const DEFAULT_HERO_SECONDARY_CTA_TEXT = "How booking works";
-const DEFAULT_ANNOUNCEMENT_TEXT = "LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE";
+const DEFAULT_HERO_SECONDARY_CTA_TEXT = "How ordering works";
+const DEFAULT_ANNOUNCEMENT_TEXT = "LIMITED DROP LIVE - ORDER BEFORE IT'S GONE";
 
 const mobileNavItems = [
-  "Overview",
+  "Dashboard",
+  "Orders",
   "Products",
-  "Collections",
-  "Bookings",
   "Customers",
-  "Store",
-  "Payments",
+  "Storefront",
+  "Wallet",
+  "Settings",
 ] as const satisfies readonly DashboardTab[];
 
 const sidebarIcons: Record<DashboardTab, typeof BarChart3> = {
-  Overview: BarChart3,
+  Dashboard: BarChart3,
+  Orders: CalendarCheck,
   Products: ShoppingBag,
-  Collections: FolderOpen,
-  Bookings: CalendarCheck,
   Customers: Users,
-  Store: StoreIcon,
-  Payments: CreditCard,
+  Storefront: StoreIcon,
+  Marketing: Bell,
+  Wallet: WalletIcon,
+  Settings,
 };
 
 function getProductImage(product: Product): string {
@@ -237,8 +256,8 @@ function getVariantPayload(input: {
   };
 }
 
-function BookingVariantLine({ booking }: { booking: CheckoutSession }) {
-  const details = getVariantDetailsText(booking);
+function OrderVariantLine({ order }: { order: CheckoutSession }) {
+  const details = getVariantDetailsText(order);
 
   if (!details) return null;
 
@@ -262,6 +281,10 @@ function getProductPreviewImageItems(product: Product): Array<{ url: string; alt
       alt: image.alt || `${product.title} image ${index + 1}`,
     }))
     .filter((image) => Boolean(image.url));
+}
+
+function getProductSizeChartImageUrl(product: Product): string {
+  return product.sizeChartImageUrl || product.sizeChartImage || "";
 }
 
 function ProductImagePreviewGrid({
@@ -350,6 +373,32 @@ function formatDate(value: unknown): string {
   }).format(new Date(millis));
 }
 
+function formatRelativeTime(value: unknown): string {
+  const millis = getTimeValue(value);
+
+  if (!millis) return "Just now";
+
+  const diffMs = Date.now() - millis;
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) {
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  }
+
+  return formatDate(value);
+}
+
 function getShortDate(value: unknown): string {
   const millis = getTimeValue(value);
 
@@ -372,97 +421,85 @@ function getSelectedStorefrontThemeId(store?: Store | null): StorefrontThemeId {
 }
 
 function getCheckoutStatusTone(status: CheckoutSession["status"]): PptTone {
-  if (status === "confirmed") return "success";
-  if (status === "sold") return "neutral";
+  if (status === "confirmed" || status === "processing") return "success";
+  if (status === "completed") return "neutral";
   if (status === "cancelled" || status === "released") return "neutral";
-  if (status === "payment_pending") return "warning";
-  if (status === "booking_paid") return "primary";
+  if (
+    status === "pending_payment" ||
+    status === "awaiting_payment" ||
+    status === "payment_returned"
+  ) return "warning";
+  if (status === "pending_confirmation") return "primary";
   return "info";
 }
 
 function getStatusLabel(status: CheckoutSession["status"]): string {
   if (!status) return "Choose action";
-  if (["started", "details_submitted", "payment_pending", "booking_paid"].includes(status)) {
-    return "New booking";
-  }
-  if (status === "whatsapp_opened") return "Contacted";
-  if (status === "contacted") return "Contacted";
-  if (status === "remaining_paid") return "Remaining paid";
+  if (status === "pending_payment") return "Pending payment";
+  if (status === "pending_confirmation") return "Pending confirmation";
+  if (status === "awaiting_payment") return "Awaiting payment";
+  if (status === "payment_returned") return "Payment Returned";
   if (status === "confirmed") return "Confirmed";
-  if (status === "sold") return "Sold";
+  if (status === "processing") return "Processing";
+  if (status === "completed") return "Completed";
   if (status === "released") return "Released";
   if (status === "cancelled") return "Cancelled";
-  if (status === "abandoned") return "Cancelled";
   return status.replace(/_/g, " ");
 }
 
-function getSellerCollectAmountFromBooking(booking: CheckoutSession): number {
-  const bookingWithLegacyAmounts = booking as CheckoutSession & {
-    collectFromBuyer?: number;
-    remainingAmount?: number;
-  };
-
-  return Math.max(
-    0,
-    Number(
-      booking.sellerCollectAmount ||
-        bookingWithLegacyAmounts.collectFromBuyer ||
-        bookingWithLegacyAmounts.remainingAmount ||
-        0
-    )
-  );
+function getSellerAmountDueFromOrder(order: CheckoutSession): number {
+  return Math.max(0, Number(order.sellerAmountDue || 0));
 }
 
-function isActiveBookingLead(status: CheckoutSession["status"]): boolean {
+function isActiveOrderLead(status: CheckoutSession["status"]): boolean {
   return [
-    "payment_pending",
-    "booking_paid",
-    "whatsapp_opened",
-    "contacted",
-    "remaining_paid",
+    "pending_payment",
+    "pending_confirmation",
+    "awaiting_payment",
+    "payment_returned",
     "confirmed",
-    "sold",
+    "processing",
   ].includes(status);
 }
 
-function deriveCustomerLeads(bookings: CheckoutSession[]): DerivedCustomerLead[] {
+function deriveCustomerLeads(orders: CheckoutSession[]): DerivedCustomerLead[] {
   const leadsByPhone = new Map<string, DerivedCustomerLead>();
 
-  bookings.forEach((booking) => {
-    const key = booking.buyerPhone.replace(/[^\d]/g, "") || booking.buyerPhone;
+  orders.forEach((order) => {
+    const key = order.buyerPhone.replace(/[^\d]/g, "") || order.buyerPhone;
     const existing = leadsByPhone.get(key);
-    const bookingTime = getTimeValue(booking.createdAt);
+    const orderTime = getTimeValue(order.createdAt);
     const existingTime = getTimeValue(existing?.lastCreatedAt);
 
     if (!existing) {
       leadsByPhone.set(key, {
-        buyerName: booking.buyerName,
-        buyerPhone: booking.buyerPhone,
-        buyerCity: booking.buyerCity,
-        buyerPincode: booking.buyerPincode,
-        totalBookings: 1,
-        lastProductTitle: booking.productTitle,
-        lastProductId: booking.productId,
-        lastVariantLabel: booking.selectedVariantLabel,
-        lastVariantOptions: booking.selectedVariantOptions,
-        lastBookingStatus: booking.status,
-        lastCreatedAt: booking.createdAt,
+        buyerName: order.buyerName,
+        buyerPhone: order.buyerPhone,
+        buyerCity: order.buyerCity,
+        buyerPincode: order.buyerPincode,
+        totalOrders: 1,
+        lastProductTitle: order.productTitle,
+        lastProductId: order.productId,
+        lastVariantLabel: order.selectedVariantLabel,
+        lastVariantOptions: order.selectedVariantOptions,
+        lastOrderstatus: order.status,
+        lastCreatedAt: order.createdAt,
       });
       return;
     }
 
-    existing.totalBookings += 1;
+    existing.totalOrders += 1;
 
-    if (bookingTime >= existingTime) {
-      existing.buyerName = booking.buyerName || existing.buyerName;
-      existing.buyerCity = booking.buyerCity || existing.buyerCity;
-      existing.buyerPincode = booking.buyerPincode || existing.buyerPincode;
-      existing.lastProductTitle = booking.productTitle;
-      existing.lastProductId = booking.productId;
-      existing.lastVariantLabel = booking.selectedVariantLabel;
-      existing.lastVariantOptions = booking.selectedVariantOptions;
-      existing.lastBookingStatus = booking.status;
-      existing.lastCreatedAt = booking.createdAt;
+    if (orderTime >= existingTime) {
+      existing.buyerName = order.buyerName || existing.buyerName;
+      existing.buyerCity = order.buyerCity || existing.buyerCity;
+      existing.buyerPincode = order.buyerPincode || existing.buyerPincode;
+      existing.lastProductTitle = order.productTitle;
+      existing.lastProductId = order.productId;
+      existing.lastVariantLabel = order.selectedVariantLabel;
+      existing.lastVariantOptions = order.selectedVariantOptions;
+      existing.lastOrderstatus = order.status;
+      existing.lastCreatedAt = order.createdAt;
     }
   });
 
@@ -476,18 +513,18 @@ async function copyText(text: string): Promise<void> {
 }
 
 async function repairMissingReservations(
-  bookings: CheckoutSession[]
+  orders: CheckoutSession[]
 ): Promise<boolean> {
-  const staleBookings = bookings.filter(
-    (booking) => booking.reservationApplied === false
+  const staleOrders = orders.filter(
+    (order) => order.reservationApplied === false
   );
 
-  if (!staleBookings.length) return false;
+  if (!staleOrders.length) return false;
 
   const results = await Promise.all(
-    staleBookings.map((booking) =>
-      repairMissingCheckoutReservation(booking).catch((error) => {
-        console.warn("Could not repair booking reservation:", error);
+    staleOrders.map((order) =>
+      repairMissingOrderReservation(order).catch((error) => {
+        console.warn("Could not repair order reservation:", error);
         return false;
       })
     )
@@ -504,8 +541,13 @@ export default function DashboardPage() {
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [collections, setCollections] = useState<StoreCollection[]>([]);
-  const [bookings, setBookings] = useState<CheckoutSession[]>([]);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("Overview");
+  const [Orders, setOrders] = useState<CheckoutSession[]>([]);
+  const [wallet, setWallet] = useState<SellerWallet | null>(null);
+  const [walletTransactions, setWalletTransactions] = useState<
+    WalletTransactionRecord[]
+  >([]);
+  const [walletError, setWalletError] = useState("");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("Dashboard");
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
@@ -540,47 +582,79 @@ export default function DashboardPage() {
           return;
         }
 
-        const [sellerData, storeData] = await Promise.all([
+        const [sellerData, storeData, walletResult, walletTransactionData] = await Promise.all([
           getSellerByUid(uid),
           getStoreById(prepared.storeId),
+          getWallet(uid)
+            .then((walletData) => ({ walletData, error: "" }))
+            .catch((walletLoadError) => {
+              console.warn("Wallet unavailable:", walletLoadError);
+              return {
+                walletData: null,
+                error: "Wallet information is temporarily unavailable.",
+              };
+            }),
+          getWalletTransactions(uid).catch((walletActivityError) => {
+            console.warn("Wallet activity unavailable:", walletActivityError);
+            return [];
+          }),
         ]);
+        const paymentSettings = storeData
+          ? await getStorePaymentSettings(storeData.storeId).catch((paymentSettingsError) => {
+              console.warn("Payment settings unavailable:", paymentSettingsError);
+              return null;
+            })
+          : null;
+        const storeWithPaymentSettings = storeData
+          ? {
+              ...storeData,
+              ...(paymentSettings || {}),
+            }
+          : null;
 
-        const [productData, bookingData] = storeData
+        const [productData, OrderData] = storeWithPaymentSettings
           ? await Promise.all([
-              getSellerProductsForStore(uid, storeData.storeId),
-              getCheckoutSessionsBySellerId(uid, storeData.storeId).catch((bookingError) => {
-                console.warn("Bookings unavailable:", bookingError);
+              getSellerProductsForStore(uid, storeWithPaymentSettings.storeId),
+              getOrdersBySellerId(uid, storeWithPaymentSettings.storeId).catch((OrderError) => {
+                console.warn("Orders unavailable:", OrderError);
                 return [];
               }),
             ])
           : [[], []];
-        const repairedReservations = storeData
-          ? await repairMissingReservations(bookingData)
+        const repairedReservations = storeWithPaymentSettings
+          ? await repairMissingReservations(OrderData)
           : false;
-        const [currentProductData, currentBookingData] =
-          storeData && repairedReservations
+        const [currentProductData, currentOrderData] =
+          storeWithPaymentSettings && repairedReservations
             ? await Promise.all([
-                getSellerProductsForStore(uid, storeData.storeId),
-                getCheckoutSessionsBySellerId(uid, storeData.storeId).catch((bookingError) => {
-                  console.warn("Bookings unavailable:", bookingError);
-                  return bookingData;
+                getSellerProductsForStore(uid, storeWithPaymentSettings.storeId),
+                getOrdersBySellerId(uid, storeWithPaymentSettings.storeId).catch((OrderError) => {
+                  console.warn("Orders unavailable:", OrderError);
+                  return OrderData;
                 }),
               ])
-            : [productData, bookingData];
-        const collectionData = storeData
-          ? await listStoreCollections(storeData.storeId, currentProductData).catch((collectionError) => {
+            : [productData, OrderData];
+        const collectionData = storeWithPaymentSettings
+          ? await listStoreCollections(storeWithPaymentSettings.storeId, currentProductData).catch((collectionError) => {
               console.warn("Collections unavailable:", collectionError);
               return [];
             })
           : [];
+        const currentWalletData = await reconcileWalletIfActivityIsAhead(
+          walletResult.walletData,
+          walletTransactionData
+        );
 
         if (cancelled) return;
 
         setSeller(sellerData);
-        setStore(storeData);
+        setStore(storeWithPaymentSettings);
         setProducts(currentProductData);
         setCollections(collectionData);
-        setBookings(currentBookingData);
+        setOrders(currentOrderData);
+        setWallet(currentWalletData);
+        setWalletTransactions(walletTransactionData);
+        setWalletError(walletResult.error);
       } catch (err) {
         console.error("Dashboard load failed:", err);
         if (!cancelled) {
@@ -600,9 +674,27 @@ export default function DashboardPage() {
     };
   }, [authLoading, navigate, user]);
 
-  const customers = useMemo(() => deriveCustomerLeads(bookings), [bookings]);
+  const customers = useMemo(() => deriveCustomerLeads(Orders), [Orders]);
   const storeSlug = store?.storeSlug || store?.storeId || seller?.storeId || "";
   const storeLink = storeSlug ? `${window.location.origin}/${storeSlug}` : "";
+  const ordersNeedingAction = Orders.filter((order) =>
+    [
+      "pending_payment",
+      "pending_confirmation",
+      "awaiting_payment",
+      "payment_returned",
+    ].includes(order.status)
+  ).length;
+  const walletNeedsAttention =
+    wallet &&
+    wallet.freeOrdersRemaining <= 0 &&
+    wallet.balance < WALLET_LOW_BALANCE_THRESHOLD;
+
+  function getNavBadge(item: DashboardTab): string {
+    if (item === "Orders" && ordersNeedingAction > 0) return String(ordersNeedingAction);
+    if (item === "Wallet" && walletNeedsAttention) return "!";
+    return "";
+  }
 
   function openAddProduct() {
     setActiveTab("Products");
@@ -637,26 +729,34 @@ export default function DashboardPage() {
     );
   }
 
-  async function refreshProductsAndBookings() {
+  async function refreshProductsAndOrders() {
     if (!user || !store?.storeId) return;
 
-    const [productData, bookingData] = await Promise.all([
+    const [productData, OrderData, walletData, walletTransactionData] = await Promise.all([
       getSellerProductsForStore(user.uid, store.storeId),
-      getCheckoutSessionsBySellerId(user.uid, store.storeId).catch((bookingError) => {
-        console.warn("Bookings unavailable:", bookingError);
+      getOrdersBySellerId(user.uid, store.storeId).catch((OrderError) => {
+        console.warn("Orders unavailable:", OrderError);
         return [];
       }),
+      getWallet(user.uid).catch((walletLoadError) => {
+        console.warn("Wallet unavailable:", walletLoadError);
+        return wallet;
+      }),
+      getWalletTransactions(user.uid).catch((walletActivityError) => {
+        console.warn("Wallet activity unavailable:", walletActivityError);
+        return walletTransactions;
+      }),
     ]);
-    const repairedReservations = await repairMissingReservations(bookingData);
-    const [currentProductData, currentBookingData] = repairedReservations
+    const repairedReservations = await repairMissingReservations(OrderData);
+    const [currentProductData, currentOrderData] = repairedReservations
       ? await Promise.all([
           getSellerProductsForStore(user.uid, store.storeId),
-          getCheckoutSessionsBySellerId(user.uid, store.storeId).catch((bookingError) => {
-            console.warn("Bookings unavailable:", bookingError);
-            return bookingData;
+            getOrdersBySellerId(user.uid, store.storeId).catch((OrderError) => {
+            console.warn("Orders unavailable:", OrderError);
+            return OrderData;
           }),
         ])
-      : [productData, bookingData];
+      : [productData, OrderData];
     const collectionData = await listStoreCollections(
       store.storeId,
       currentProductData
@@ -664,10 +764,16 @@ export default function DashboardPage() {
       console.warn("Collections unavailable:", collectionError);
       return collections;
     });
+    const currentWalletData = await reconcileWalletIfActivityIsAhead(
+      walletData,
+      walletTransactionData
+    );
 
     setProducts(currentProductData);
     setCollections(collectionData);
-    setBookings(currentBookingData);
+    setOrders(currentOrderData);
+    setWallet(currentWalletData);
+    setWalletTransactions(walletTransactionData);
   }
 
   async function handleTogglePublish() {
@@ -720,7 +826,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="ppt-dashboard-page">
+    <main className="ppt-dashboard-page ppt-admin-workspace">
       <div className="ppt-dashboard-shell">
         <aside className="ppt-dashboard-sidebar">
           <div className="ppt-dashboard-brand">
@@ -744,6 +850,9 @@ export default function DashboardPage() {
                 >
                   <Icon size={17} aria-hidden="true" />
                   <span>{item}</span>
+                  {getNavBadge(item) ? (
+                    <strong className="ppt-dashboard-nav-badge">{getNavBadge(item)}</strong>
+                  ) : null}
                 </button>
               );
             })}
@@ -758,9 +867,12 @@ export default function DashboardPage() {
                 <PptBadge tone={store?.isPublished ? "success" : "warning"}>
                   {store?.isPublished ? "Live" : "Unpublished"}
                 </PptBadge>
+                {ordersNeedingAction > 0 ? (
+                  <PptBadge tone="warning">{ordersNeedingAction} need action</PptBadge>
+                ) : null}
               </div>
               <h1>{store?.storeName || "Your store"}</h1>
-              <p>Manage bookings, products and WhatsApp follow-ups.</p>
+              <p>Run daily orders, products, storefront, customers, and wallet from one workspace.</p>
             </div>
 
             {storeSlug ? (
@@ -774,6 +886,12 @@ export default function DashboardPage() {
                 </PptIconButton>
               </div>
             ) : null}
+
+            <div className="ppt-dashboard-commandbar" role="search">
+              <Search size={16} aria-hidden="true" />
+              <span>Search orders, products, customers</span>
+              <kbd>/</kbd>
+            </div>
 
             <div className="ppt-dashboard-header-actions">
               <PptButton
@@ -828,14 +946,17 @@ export default function DashboardPage() {
                   >
                     <Icon size={16} aria-hidden="true" />
                     <span>{item}</span>
+                    {getNavBadge(item) ? (
+                      <strong className="ppt-dashboard-nav-badge">{getNavBadge(item)}</strong>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
 
-            {activeTab === "Overview" ? (
+            {activeTab === "Dashboard" ? (
               <OverviewTab
-                bookings={bookings}
+                Orders={Orders}
                 customers={customers}
                 onSelectTab={setActiveTab}
                 products={products}
@@ -843,41 +964,33 @@ export default function DashboardPage() {
                 storeLink={storeLink}
                 onCopyStoreLink={handleCopyStoreLink}
                 copiedStoreLink={copiedStoreLink}
+                wallet={wallet}
+                walletError={walletError}
               />
             ) : null}
 
             {activeTab === "Products" ? (
-              <ProductsTab
+              <ProductsWorkspace
                 collections={collections}
+                onAddProduct={openAddProduct}
+                onCollectionsChanged={setCollections}
+                onProductsChanged={setProducts}
                 onSelectTab={setActiveTab}
                 openAddProductSignal={addProductRequest}
                 onProductCreated={handleProductCreated}
                 onProductRemoved={handleProductRemoved}
                 onProductUpdated={handleProductUpdated}
-                bookings={bookings}
+                Orders={Orders}
                 products={products}
                 store={store}
                 user={user}
               />
             ) : null}
 
-            {activeTab === "Collections" ? (
-              <CollectionsManager
-                collections={collections}
-                onAddProduct={openAddProduct}
-                onCollectionsChanged={setCollections}
-                onProductsChanged={setProducts}
-                onViewProducts={() => setActiveTab("Products")}
-                products={products}
-                store={store}
-                user={user}
-              />
-            ) : null}
-
-            {activeTab === "Bookings" ? (
-              <BookingsTab
-                bookings={bookings}
-                onBookingChanged={refreshProductsAndBookings}
+            {activeTab === "Orders" ? (
+              <OrderManagementDashboard
+                orders={Orders}
+                onOrderChanged={refreshProductsAndOrders}
                 products={products}
                 store={store}
               />
@@ -885,15 +998,15 @@ export default function DashboardPage() {
 
             {activeTab === "Customers" ? (
               <CustomersTab
-                bookings={bookings}
+                Orders={Orders}
                 customers={customers}
                 products={products}
                 storeLink={storeLink}
               />
             ) : null}
 
-            {activeTab === "Store" ? (
-              <StoreTab
+            {activeTab === "Storefront" ? (
+              <StorefrontWorkspace
                 onTogglePublish={handleTogglePublish}
                 onStoreUpdated={(updatedStore) => setStore(updatedStore)}
                 publishing={publishing}
@@ -903,7 +1016,33 @@ export default function DashboardPage() {
               />
             ) : null}
 
-            {activeTab === "Payments" ? <PaymentsTab /> : null}
+            {activeTab === "Marketing" ? (
+              <MarketingWorkspace
+                Orders={Orders}
+                customers={customers}
+                products={products}
+                storeLink={storeLink}
+              />
+            ) : null}
+
+            {activeTab === "Wallet" ? (
+              <WalletWorkspace
+                wallet={wallet}
+                walletError={walletError}
+                walletTransactions={walletTransactions}
+              />
+            ) : null}
+
+            {activeTab === "Settings" ? (
+              <SettingsWorkspace
+                onTogglePublish={handleTogglePublish}
+                onStoreUpdated={(updatedStore) => setStore(updatedStore)}
+                publishing={publishing}
+                store={store}
+                storeLink={storeLink}
+                storeSlug={storeSlug}
+              />
+            ) : null}
           </div>
         </section>
       </div>
@@ -912,7 +1051,7 @@ export default function DashboardPage() {
 }
 
 function OverviewTab({
-  bookings,
+  Orders,
   copiedStoreLink,
   customers,
   onCopyStoreLink,
@@ -920,8 +1059,10 @@ function OverviewTab({
   products,
   store,
   storeLink,
+  wallet,
+  walletError,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   copiedStoreLink: boolean;
   customers: DerivedCustomerLead[];
   onCopyStoreLink: () => void;
@@ -929,28 +1070,42 @@ function OverviewTab({
   products: Product[];
   store: Store | null;
   storeLink: string;
+  wallet: SellerWallet | null;
+  walletError: string;
 }) {
-  const activeBookingLeads = bookings.filter((booking) =>
-    !["cancelled", "released"].includes(booking.status)
+  const activeOrderLeads = Orders.filter((Order) =>
+    !["cancelled", "released"].includes(Order.status)
   ).length;
-  const verifiedBookings = bookings.filter((booking) =>
-    ["booking_paid", "contacted", "remaining_paid", "confirmed", "sold"].includes(
-      booking.status
-    )
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todaysOrders = Orders.filter((order) => {
+    const created = getTimeValue(order.createdAt);
+    return created && new Date(created).toISOString().slice(0, 10) === todayKey;
+  });
+  const pendingFollowUps = Orders.filter((Order) =>
+    [
+      "pending_payment",
+      "pending_confirmation",
+      "awaiting_payment",
+      "payment_returned",
+    ].includes(Order.status)
   ).length;
-  const pendingFollowUps = bookings.filter((booking) =>
-    ["booking_paid", "whatsapp_opened", "payment_pending", "contacted"].includes(
-      booking.status
-    )
-  ).length;
-  const soldBookings = bookings.filter((booking) => booking.status === "sold");
-  const sellerRevenue = soldBookings.reduce(
-    (total, booking) => total + getSellerCollectAmountFromBooking(booking),
+  const completedOrders = Orders.filter((Order) => Order.status === "completed");
+  const sellerRevenue = completedOrders.reduce(
+    (total, order) => total + getSellerAmountDueFromOrder(order),
     0
   );
-  const recentBookings = [...bookings]
+  const recentOrders = [...Orders]
     .sort((a, b) => getTimeValue(b.createdAt) - getTimeValue(a.createdAt))
     .slice(0, 3);
+  const topProducts = products
+    .map((product) => {
+      const productId = product.productId || product.id;
+      const orderCount = Orders.filter((order) => order.productId === productId).length;
+
+      return { product, orderCount };
+    })
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 4);
   const instagramProfile = getStoreInstagramProfile(store);
   const nextAction = getNextDashboardAction({
     products,
@@ -963,24 +1118,46 @@ function OverviewTab({
 
   return (
     <div className="ppt-dashboard-overview">
+      <section className="ppt-dashboard-home-hero">
+        <div className="min-w-0">
+          <PptBadge tone="primary">Business today</PptBadge>
+          <h2>What needs attention right now?</h2>
+          <p>
+            A compact view of orders, wallet health, storefront readiness, and the
+            next best action for your store.
+          </p>
+        </div>
+        <div className="ppt-dashboard-home-actions">
+          <PptButton type="button" variant="primary" icon={<Plus size={16} />} onClick={() => onSelectTab("Products")}>
+            Add Product
+          </PptButton>
+          <PptButton type="button" variant="secondary" icon={<WalletIcon size={16} />} onClick={() => onSelectTab("Wallet")}>
+            Recharge
+          </PptButton>
+          <PptButton type="button" variant="ghost" icon={<ExternalLink size={16} />} disabled={!storeLink} onClick={() => storeLink && window.open(new URL(storeLink).pathname, "_self")}>
+            Open Store
+          </PptButton>
+        </div>
+      </section>
+
       <div className="ppt-dashboard-compact-grid">
         <CompactStatCard
           icon={<CalendarCheck size={16} aria-hidden="true" />}
-          label="Bookings"
-          value={bookings.length}
-          helper={`${verifiedBookings} progressed`}
+          label="Today's orders"
+          value={todaysOrders.length}
+          helper={`${pendingFollowUps} need action`}
         />
         <CompactStatCard
           icon={<CreditCard size={16} aria-hidden="true" />}
-          label="Total seller revenue"
+          label="Revenue"
           value={formatINR(sellerRevenue)}
-          helper="from sold bookings"
+          helper="from completed orders"
           tone="success"
         />
         <CompactStatCard
           icon={<CheckCircle2 size={16} aria-hidden="true" />}
-          label="Sold"
-          value={soldBookings.length}
+          label="Completed"
+          value={completedOrders.length}
           helper="completed sales"
           tone="info"
         />
@@ -988,11 +1165,28 @@ function OverviewTab({
           icon={<Users size={16} aria-hidden="true" />}
           label="Customers"
           value={customers.length}
-          helper={`${activeBookingLeads} active buyer bookings`}
+          helper={`${activeOrderLeads} active buyer orders`}
         />
       </div>
 
-      <NextActionCard action={nextAction} />
+      <div className="ppt-dashboard-home-grid">
+        <NextActionCard action={nextAction} />
+        <WalletSnapshotCard
+          error={walletError}
+          onOpenWallet={() => onSelectTab("Wallet")}
+          wallet={wallet}
+        />
+      </div>
+
+      <div className="ppt-dashboard-home-grid">
+        <StorefrontSnapshotCard
+          onCopyStoreLink={onCopyStoreLink}
+          onOpenStorefront={() => onSelectTab("Storefront")}
+          store={store}
+          storeLink={storeLink}
+        />
+        <TopProductsCard products={topProducts} onOpenProducts={() => onSelectTab("Products")} />
+      </div>
 
       <section className="ppt-dashboard-quick-card">
         <div className="ppt-dashboard-quick-head">
@@ -1021,16 +1215,16 @@ function OverviewTab({
           />
           <QuickActionCard
             icon={<CalendarCheck size={20} aria-hidden="true" />}
-            title="Check bookings"
-            description="Follow up with buyers who booked through PayPerTap."
+            title="Check orders"
+            description="Follow up with buyers who need confirmation or payment checks."
             action={
               <PptButton
                 type="button"
                 size="sm"
                 variant="dark"
-                onClick={() => onSelectTab("Bookings")}
+                onClick={() => onSelectTab("Orders")}
               >
-                Open bookings
+                Open orders
               </PptButton>
             }
           />
@@ -1038,10 +1232,534 @@ function OverviewTab({
       </section>
 
       <CompactRecentActivity
-        bookings={recentBookings}
+        Orders={recentOrders}
         onSelectTab={onSelectTab}
         store={store}
       />
+    </div>
+  );
+}
+
+type WalletDisplayStatus = {
+  label: string;
+  tone: PptTone;
+};
+
+function getWalletDisplayStatus(wallet: SellerWallet): WalletDisplayStatus {
+  if (
+    wallet.freeOrdersRemaining > 0 ||
+    wallet.balance >= WALLET_LOW_BALANCE_THRESHOLD
+  ) {
+    return { label: "Active", tone: "success" };
+  }
+
+  if (
+    wallet.balance >= WALLET_ORDER_CHARGE_AMOUNT &&
+    wallet.balance < WALLET_LOW_BALANCE_THRESHOLD
+  ) {
+    return { label: "Low balance", tone: "warning" };
+  }
+
+  return { label: "Paused", tone: "danger" };
+}
+
+function WalletSnapshotCard({
+  error,
+  onOpenWallet,
+  wallet,
+}: {
+  error: string;
+  onOpenWallet: () => void;
+  wallet: SellerWallet | null;
+}) {
+  const status = wallet ? getWalletDisplayStatus(wallet) : null;
+  const paidOrdersRemaining = wallet
+    ? Math.floor(wallet.balance / WALLET_ORDER_CHARGE_AMOUNT)
+    : 0;
+
+  return (
+    <section className="ppt-dashboard-snapshot-card">
+      <div className="ppt-dashboard-snapshot-head">
+        <div>
+          <PptBadge tone={status?.tone || "neutral"}>{status?.label || "Wallet"}</PptBadge>
+          <h2>Wallet</h2>
+        </div>
+        <button type="button" onClick={onOpenWallet}>Open</button>
+      </div>
+      {wallet ? (
+        <div className="ppt-dashboard-snapshot-metrics">
+          <Metric label="Balance" value={formatINR(wallet.balance)} />
+          <Metric label="Free orders" value={String(wallet.freeOrdersRemaining)} />
+          <Metric label="Paid orders left" value={String(paidOrdersRemaining)} />
+        </div>
+      ) : (
+        <p className="ppt-dashboard-snapshot-note">
+          {error || "Wallet information is temporarily unavailable."}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function StorefrontSnapshotCard({
+  onCopyStoreLink,
+  onOpenStorefront,
+  store,
+  storeLink,
+}: {
+  onCopyStoreLink: () => void;
+  onOpenStorefront: () => void;
+  store: Store | null;
+  storeLink: string;
+}) {
+  const hasWhatsApp = normalizeIndianMobileInput(
+    store?.whatsappPhone || store?.phone || ""
+  ).ok;
+
+  return (
+    <section className="ppt-dashboard-snapshot-card">
+      <div className="ppt-dashboard-snapshot-head">
+        <div>
+          <PptBadge tone={store?.isPublished ? "success" : "warning"}>
+            {store?.isPublished ? "Published" : "Unpublished"}
+          </PptBadge>
+          <h2>Storefront</h2>
+        </div>
+        <button type="button" onClick={onOpenStorefront}>Customize</button>
+      </div>
+      <div className="ppt-dashboard-readiness">
+        <StatusLine label="Store URL" tone={storeLink ? "success" : "warning"} value={storeLink ? "Ready" : "Missing"} />
+        <StatusLine label="WhatsApp" tone={hasWhatsApp ? "success" : "warning"} value={hasWhatsApp ? "Connected" : "Missing"} />
+        <StatusLine label="Products" tone="neutral" value="Managed in Products" />
+      </div>
+      <PptButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={!storeLink}
+        icon={<Copy size={15} aria-hidden="true" />}
+        onClick={onCopyStoreLink}
+      >
+        Share Store
+      </PptButton>
+    </section>
+  );
+}
+
+function TopProductsCard({
+  onOpenProducts,
+  products,
+}: {
+  onOpenProducts: () => void;
+  products: Array<{ product: Product; orderCount: number }>;
+}) {
+  return (
+    <section className="ppt-dashboard-snapshot-card">
+      <div className="ppt-dashboard-snapshot-head">
+        <div>
+          <PptBadge tone="info">Performance</PptBadge>
+          <h2>Top Products</h2>
+        </div>
+        <button type="button" onClick={onOpenProducts}>Manage</button>
+      </div>
+      {products.length ? (
+        <div className="ppt-dashboard-mini-list">
+          {products.map(({ product, orderCount }) => (
+            <div key={product.productId || product.id}>
+              <span>{product.title}</span>
+              <strong>{orderCount} order{orderCount === 1 ? "" : "s"}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="ppt-dashboard-snapshot-note">
+          Product performance appears after your first order.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function getWalletTransactionTypeLabel(type: WalletTransactionRecord["type"]) {
+  const labels: Record<WalletTransactionRecord["type"], string> = {
+    adjustment: "Adjustment",
+    bonus: "Bonus",
+    free_order: "Free Order",
+    order_charge: "Order Charge",
+    recharge: "Recharge",
+    refund: "Refund",
+  };
+
+  return labels[type] || type.replace(/_/g, " ");
+}
+
+function getLatestTransactionBalanceAfter(
+  transactions: WalletTransactionRecord[]
+): number {
+  const latestTransaction = [...transactions]
+    .filter((transaction) => transaction.balanceAfter !== undefined)
+    .sort((a, b) => getTimeValue(b.createdAt) - getTimeValue(a.createdAt))[0];
+
+  return Number(latestTransaction?.balanceAfter) || 0;
+}
+
+async function reconcileWalletIfActivityIsAhead(
+  wallet: SellerWallet | null,
+  transactions: WalletTransactionRecord[]
+): Promise<SellerWallet | null> {
+  if (!wallet) return wallet;
+
+  const latestTransactionBalanceAfter = getLatestTransactionBalanceAfter(transactions);
+
+  if (latestTransactionBalanceAfter <= wallet.balance) return wallet;
+
+  try {
+    const result = await reconcileWalletFromActivity();
+
+    return result.wallet;
+  } catch (error) {
+    console.warn("Wallet balance repair unavailable:", error);
+    return {
+      ...wallet,
+      balance: latestTransactionBalanceAfter,
+    };
+  }
+}
+
+function WalletDashboardSection({
+  error,
+  transactions,
+  wallet,
+}: {
+  error: string;
+  transactions: WalletTransactionRecord[];
+  wallet: SellerWallet | null;
+}) {
+  const [dismissedWalletNotice, setDismissedWalletNotice] = useState("");
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [selectedRechargeAmount, setSelectedRechargeAmount] = useState<number | "custom">(
+    WALLET_RECHARGE_AMOUNTS[0]
+  );
+  const [customRechargeAmount, setCustomRechargeAmount] = useState("");
+  const [rechargeError, setRechargeError] = useState("");
+  const [rechargeLoading, setRechargeLoading] = useState(false);
+
+  if (!wallet) {
+    return (
+      <section className="ppt-dashboard-wallet-card">
+        <div className="ppt-dashboard-wallet-head">
+          <div className="ppt-dashboard-wallet-title">
+            <span className="ppt-dashboard-wallet-icon">
+              <WalletIcon size={18} aria-hidden="true" />
+            </span>
+            <div>
+              <PptBadge tone="primary">Wallet</PptBadge>
+              <h2>Wallet Balance</h2>
+            </div>
+          </div>
+        </div>
+        <div className="ppt-dashboard-wallet-empty">
+          {error || "Wallet information is temporarily unavailable."}
+        </div>
+      </section>
+    );
+  }
+
+  const latestTransactionBalanceAfter = getLatestTransactionBalanceAfter(transactions);
+  const displayWallet =
+    latestTransactionBalanceAfter > wallet.balance
+      ? {
+          ...wallet,
+          balance: latestTransactionBalanceAfter,
+        }
+      : wallet;
+  const displayStatus = getWalletDisplayStatus(displayWallet);
+  const paidOrdersRemaining = Math.floor(
+    displayWallet.balance / WALLET_ORDER_CHARGE_AMOUNT
+  );
+  const walletNotice =
+    displayStatus.label === "Paused"
+      ? {
+          key: "paused",
+          tone: "danger" as const,
+          title: "Wallet paused",
+          message: "Recharge required to receive new orders.",
+        }
+      : displayStatus.label === "Low balance"
+        ? {
+            key: "low",
+            tone: "warning" as const,
+            title: "Wallet running low",
+            message: "Recharge recommended so new orders are not interrupted.",
+          }
+        : null;
+  const rechargeAmount =
+    selectedRechargeAmount === "custom"
+      ? Math.round(Number(customRechargeAmount) || 0)
+      : selectedRechargeAmount;
+
+  async function handleStartRecharge() {
+    try {
+      setRechargeLoading(true);
+      setRechargeError("");
+
+      if (
+        rechargeAmount < WALLET_RECHARGE_MIN_AMOUNT ||
+        rechargeAmount > WALLET_RECHARGE_MAX_AMOUNT
+      ) {
+        throw new Error(
+          `Recharge amount must be between ${formatINR(WALLET_RECHARGE_MIN_AMOUNT)} and ${formatINR(WALLET_RECHARGE_MAX_AMOUNT)}.`
+        );
+      }
+
+      const recharge = await startWalletRecharge(rechargeAmount);
+      window.location.assign(recharge.paymentLink);
+    } catch (err) {
+      setRechargeError(
+        err instanceof Error ? err.message : "Wallet recharge could not be started."
+      );
+    } finally {
+      setRechargeLoading(false);
+    }
+  }
+
+  return (
+    <div className="ppt-dashboard-wallet-stack">
+      {walletNotice && dismissedWalletNotice !== walletNotice.key ? (
+        <div className="relative">
+          <PptNotice tone={walletNotice.tone} title={walletNotice.title}>
+            {walletNotice.message}
+          </PptNotice>
+          <button
+            type="button"
+            aria-label="Dismiss wallet notice"
+            className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full border border-black/10 bg-white/70 text-gray-600 transition hover:bg-white hover:text-gray-950"
+            onClick={() => setDismissedWalletNotice(walletNotice.key)}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
+
+      <section className="ppt-dashboard-wallet-card">
+        <div className="ppt-dashboard-wallet-head">
+          <div className="ppt-dashboard-wallet-title">
+            <span className="ppt-dashboard-wallet-icon">
+              <WalletIcon size={18} aria-hidden="true" />
+            </span>
+            <div>
+              <PptBadge tone="primary">Wallet</PptBadge>
+              <h2>Wallet Balance</h2>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <PptBadge tone={displayStatus.tone}>{displayStatus.label}</PptBadge>
+            <PptButton
+              type="button"
+              variant="dark"
+              size="sm"
+              rounded="pill"
+              icon={<WalletIcon size={15} aria-hidden="true" />}
+              onClick={() => setRechargeOpen(true)}
+            >
+              Recharge Wallet
+            </PptButton>
+          </div>
+        </div>
+
+        <div className="ppt-dashboard-wallet-summary">
+          <div className="ppt-dashboard-wallet-balance">
+            <span>Wallet Balance</span>
+            <div className="ppt-dashboard-wallet-balance-value">
+              <strong>{formatINR(displayWallet.balance)}</strong>
+              <button
+                type="button"
+                className="ppt-dashboard-wallet-balance-add"
+                aria-label="Add money to wallet"
+                title="Add money to wallet"
+                onClick={() => setRechargeOpen(true)}
+              >
+                <Plus size={18} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div className="ppt-dashboard-wallet-metrics">
+            <Metric
+              label="Free Orders Remaining"
+              value={String(displayWallet.freeOrdersRemaining)}
+            />
+            <Metric
+              label="Estimated Paid Orders Remaining"
+              value={String(paidOrdersRemaining)}
+            />
+            <Metric label="Wallet Status" value={displayStatus.label} />
+            <Metric
+              label="Last Updated"
+              value={formatRelativeTime(displayWallet.updatedAt || displayWallet.createdAt)}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="ppt-dashboard-wallet-help">
+        <h2>How Wallet Works</h2>
+        <ul>
+          <li>Your first {INITIAL_FREE_ORDERS} orders are free.</li>
+          <li>
+            After free orders are exhausted, {formatINR(WALLET_ORDER_CHARGE_AMOUNT)} will
+            be deducted from your wallet for every new order.
+          </li>
+          <li>
+            When your wallet runs low, we'll notify you by email and inside your
+            dashboard.
+          </li>
+          <li>
+            If your wallet reaches {formatINR(0)}, your store will temporarily stop
+            receiving new orders until you recharge.
+          </li>
+        </ul>
+      </section>
+
+      <section className="ppt-dashboard-wallet-activity">
+        <div className="ppt-dashboard-wallet-activity-head">
+          <div>
+            <PptBadge tone="info">Wallet Activity</PptBadge>
+            <h2>Transaction history</h2>
+          </div>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="ppt-dashboard-wallet-empty">
+            No wallet activity yet.
+          </div>
+        ) : (
+          <div className="ppt-dashboard-wallet-table-wrap">
+            <table className="ppt-dashboard-wallet-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Balance After</th>
+                  <th>Reference</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((transaction) => (
+                  <tr key={transaction.transactionId}>
+                    <td>{formatDate(transaction.createdAt)}</td>
+                    <td>{getWalletTransactionTypeLabel(transaction.type)}</td>
+                    <td>{formatINR(transaction.amount)}</td>
+                    <td>{formatINR(transaction.balanceAfter)}</td>
+                    <td>{transaction.referenceId || "-"}</td>
+                    <td>{transaction.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {rechargeOpen ? (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/40 p-3">
+          <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <header className="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  PayPerTap Wallet
+                </p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight text-gray-950">
+                  Recharge Wallet
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-gray-500">
+                  This balance is only for seller wallet charges. Customer payments still go directly to you.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close recharge"
+                className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 text-gray-600 transition hover:border-gray-950 hover:text-gray-950"
+                onClick={() => setRechargeOpen(false)}
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="grid gap-5 p-5">
+              <div className="grid gap-2 sm:grid-cols-4">
+                {WALLET_RECHARGE_AMOUNTS.map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                      selectedRechargeAmount === amount
+                        ? "border-gray-950 bg-gray-950 text-white"
+                        : "border-gray-200 bg-white text-gray-900 hover:border-gray-400"
+                    }`}
+                    onClick={() => {
+                      setSelectedRechargeAmount(amount);
+                      setRechargeError("");
+                    }}
+                  >
+                    {formatINR(amount)}
+                  </button>
+                ))}
+              </div>
+
+              <label className="block text-sm font-medium text-gray-800">
+                Custom Amount
+                <input
+                  value={customRechargeAmount}
+                  onChange={(event) => {
+                    setSelectedRechargeAmount("custom");
+                    setCustomRechargeAmount(
+                      event.target.value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "")
+                    );
+                    setRechargeError("");
+                  }}
+                  placeholder={`${WALLET_RECHARGE_MIN_AMOUNT}`}
+                  type="number"
+                  min={WALLET_RECHARGE_MIN_AMOUNT}
+                  max={WALLET_RECHARGE_MAX_AMOUNT}
+                  inputMode="numeric"
+                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
+                />
+                <span className="mt-1 block text-xs leading-5 text-gray-500">
+                  Minimum {formatINR(WALLET_RECHARGE_MIN_AMOUNT)}. Maximum{" "}
+                  {formatINR(WALLET_RECHARGE_MAX_AMOUNT)}.
+                </span>
+              </label>
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <Metric label="Selected recharge" value={formatINR(rechargeAmount)} />
+              </div>
+
+              {rechargeError ? <ErrorBox message={rechargeError} /> : null}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <PptButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setRechargeOpen(false)}
+                >
+                  Cancel
+                </PptButton>
+                <PptButton
+                  type="button"
+                  variant="primary"
+                  loading={rechargeLoading}
+                  icon={<WalletIcon size={16} aria-hidden="true" />}
+                  onClick={handleStartRecharge}
+                >
+                  Proceed to Recharge
+                </PptButton>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1077,7 +1795,7 @@ function getNextDashboardAction({
     return {
       badge: "Start here",
       title: "Add your first product",
-      helper: "Create one bookable product before sharing your store.",
+      helper: "Create one order-ready product before sharing your store.",
       cta: "Add product",
       onClick: () => onSelectTab("Products"),
     };
@@ -1086,10 +1804,10 @@ function getNextDashboardAction({
   if (pendingFollowUps > 0) {
     return {
       badge: "Needs follow-up",
-      title: "Follow up pending bookings",
+      title: "Follow up pending orders",
       helper: `${pendingFollowUps} buyer${pendingFollowUps === 1 ? "" : "s"} need a WhatsApp reply.`,
-      cta: "Open bookings",
-      onClick: () => onSelectTab("Bookings"),
+      cta: "Open orders",
+      onClick: () => onSelectTab("Orders"),
     };
   }
 
@@ -1099,7 +1817,7 @@ function getNextDashboardAction({
       title: "Add Instagram profile",
       helper: "Visible social proof helps buyers trust your store faster.",
       cta: "Customize store",
-      onClick: () => onSelectTab("Store"),
+      onClick: () => onSelectTab("Storefront"),
     };
   }
 
@@ -1190,11 +1908,11 @@ function OverviewQuickAction({
 }
 
 function CompactRecentActivity({
-  bookings,
+  Orders,
   onSelectTab,
   store,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   onSelectTab: (tab: DashboardTab) => void;
   store: Store | null;
 }) {
@@ -1203,43 +1921,43 @@ function CompactRecentActivity({
       <div className="ppt-dashboard-activity-head">
         <div>
           <PptBadge tone="info">Recent activity</PptBadge>
-          <h2>Latest bookings</h2>
+          <h2>Latest orders</h2>
         </div>
-        <button type="button" onClick={() => onSelectTab("Bookings")}>
+        <button type="button" onClick={() => onSelectTab("Orders")}>
           View all
         </button>
       </div>
 
-      {bookings.length === 0 ? (
+      {Orders.length === 0 ? (
         <PptEmptyState
-          title="No bookings yet"
-          description={`Bookings will appear here when buyers reserve with ${formatINR(20)}.`}
+          title="No orders yet"
+          description="Orders will appear here when buyers submit their details."
           icon={<CalendarCheck size={22} aria-hidden="true" />}
           className="ppt-dashboard-empty-compact"
         />
       ) : (
         <div className="ppt-dashboard-activity-list">
-          {bookings.map((booking) => {
+          {Orders.map((order) => {
             const message = buildSellerPaymentCollectionMessage(
-              checkoutToSellerMessageInput(booking, store)
+              checkoutToSellerMessageInput(order, store)
             );
-            const whatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, message);
+            const whatsappUrl = buildOrderWhatsAppUrl(order.buyerPhone, message);
 
             return (
-              <article className="ppt-dashboard-activity-row" key={booking.checkoutId}>
+              <article className="ppt-dashboard-activity-row" key={order.checkoutId}>
                 <div className="min-w-0">
-                  <strong>{booking.buyerName || "Buyer"}</strong>
-                  <span>{booking.productTitle}</span>
-                  <BookingVariantLine booking={booking} />
+                  <strong>{order.buyerName || "Buyer"}</strong>
+                  <span>{order.productTitle}</span>
+                  <OrderVariantLine order={order} />
                   <small>
-                    Collect {formatINR(booking.sellerCollectAmount)} - {getShortDate(booking.createdAt)}
+                    Amount due {formatINR(getSellerAmountDueFromOrder(order))} - {getShortDate(order.createdAt)}
                   </small>
                 </div>
                 <PptBadge
-                  tone={getCheckoutStatusTone(booking.status)}
+                  tone={getCheckoutStatusTone(order.status)}
                   className="ppt-dashboard-activity-badge"
                 >
-                  {getStatusLabel(booking.status)}
+                  {getStatusLabel(order.status)}
                 </PptBadge>
                 <a href={whatsappUrl} target="_blank" rel="noreferrer">
                   <PptBrandIcon type="whatsapp" size={14} />
@@ -1254,13 +1972,13 @@ function CompactRecentActivity({
   );
 }
 
-type BookingTrendPoint = {
+type OrderTrendPoint = {
   key: string;
   label: string;
   count: number;
 };
 
-function getLastSevenDayBookingTrend(bookings: CheckoutSession[]): BookingTrendPoint[] {
+function getLastSevenDayOrderTrend(Orders: CheckoutSession[]): OrderTrendPoint[] {
   const today = new Date();
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(today);
@@ -1276,8 +1994,8 @@ function getLastSevenDayBookingTrend(bookings: CheckoutSession[]): BookingTrendP
   });
   const byKey = new Map(days.map((day) => [day.key, day]));
 
-  bookings.forEach((booking) => {
-    const millis = getTimeValue(booking.createdAt);
+  Orders.forEach((Order) => {
+    const millis = getTimeValue(Order.createdAt);
     if (!millis) return;
 
     const date = new Date(millis);
@@ -1293,7 +2011,7 @@ function getLastSevenDayBookingTrend(bookings: CheckoutSession[]): BookingTrendP
   return days.map(({ key, label, count }) => ({ key, label, count }));
 }
 
-function BookingTrendCard({ trend }: { trend: BookingTrendPoint[] }) {
+function OrderTrendCard({ trend }: { trend: OrderTrendPoint[] }) {
   const hasData = trend.some((point) => point.count > 0);
   const maxCount = Math.max(...trend.map((point) => point.count), 1);
   const width = 360;
@@ -1310,8 +2028,8 @@ function BookingTrendCard({ trend }: { trend: BookingTrendPoint[] }) {
     <section className="pds-chart-card">
       <div className="pds-chart-head">
         <div>
-          <strong>Booking trend</strong>
-          <span>Last 7 days of real booking sessions.</span>
+          <strong>Order trend</strong>
+          <span>Last 7 days of real orders.</span>
         </div>
         <PptBadge tone="primary">7 days</PptBadge>
       </div>
@@ -1319,16 +2037,16 @@ function BookingTrendCard({ trend }: { trend: BookingTrendPoint[] }) {
       {hasData ? (
         <div className="ppt-dashboard-chart-wrap">
           <svg className="pds-chart" viewBox={`0 0 ${width} ${height}`} role="img">
-            <title>Bookings over the last seven days</title>
+            <title>Orders over the last seven days</title>
             <defs>
-              <linearGradient id="pptBookingTrendFill" x1="0" x2="0" y1="0" y2="1">
+              <linearGradient id="pptOrderTrendFill" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="rgba(91,53,245,.20)" />
                 <stop offset="100%" stopColor="rgba(91,53,245,0)" />
               </linearGradient>
             </defs>
             <polyline
               points={`${points[0].x},${height - 18} ${path} ${points[points.length - 1].x},${height - 18}`}
-              fill="url(#pptBookingTrendFill)"
+              fill="url(#pptOrderTrendFill)"
               stroke="none"
             />
             <polyline
@@ -1362,8 +2080,8 @@ function BookingTrendCard({ trend }: { trend: BookingTrendPoint[] }) {
         </div>
       ) : (
         <PptEmptyState
-          title="Your booking trend will appear after your first booking."
-          description="When buyers reserve products with ₹20, daily counts will show here."
+          title="Your order trend will appear after your first order."
+          description="When buyers place orders, daily counts will show here."
           icon={<BarChart3 size={24} aria-hidden="true" />}
           className="ppt-dashboard-empty-compact"
         />
@@ -1442,7 +2160,7 @@ function StoreStatusCard({
           variant="ghost"
           size="sm"
           icon={<Settings size={15} aria-hidden="true" />}
-          onClick={() => onSelectTab("Store")}
+          onClick={() => onSelectTab("Storefront")}
         >
           Store settings
         </PptButton>
@@ -1491,12 +2209,12 @@ function QuickActionCard({
   );
 }
 
-function RecentBookingsCard({
-  bookings,
+function RecentOrdersCard({
+  Orders,
   onSelectTab,
   store,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   onSelectTab: (tab: DashboardTab) => void;
   store: Store | null;
 }) {
@@ -1505,44 +2223,44 @@ function RecentBookingsCard({
       <div className="ppt-dashboard-section-head">
         <div>
           <PptBadge tone="info">Recent activity</PptBadge>
-          <h2>Recent bookings</h2>
-          <p>Buyer reservations and WhatsApp follow-ups.</p>
+          <h2>Recent orders</h2>
+          <p>Buyer orders and WhatsApp follow-ups.</p>
         </div>
-        <PptButton type="button" variant="ghost" size="sm" onClick={() => onSelectTab("Bookings")}>
+        <PptButton type="button" variant="ghost" size="sm" onClick={() => onSelectTab("Orders")}>
           View all
         </PptButton>
       </div>
 
-      {bookings.length === 0 ? (
+      {Orders.length === 0 ? (
         <PptEmptyState
-          title="No bookings yet"
-          description="Bookings will appear here when buyers reserve products with ₹20."
+          title="No orders yet"
+          description="Orders will appear here when buyers submit their details."
           icon={<CalendarCheck size={24} aria-hidden="true" />}
           className="ppt-dashboard-empty-compact"
         />
       ) : (
         <div className="ppt-dashboard-list">
-          {bookings.map((booking) => {
+          {Orders.map((order) => {
             const message = buildSellerPaymentCollectionMessage(
-              checkoutToSellerMessageInput(booking, store)
+              checkoutToSellerMessageInput(order, store)
             );
-            const whatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, message);
+            const whatsappUrl = buildOrderWhatsAppUrl(order.buyerPhone, message);
 
             return (
-              <article className="ppt-dashboard-row" key={booking.checkoutId}>
+              <article className="ppt-dashboard-row" key={order.checkoutId}>
                 <div className="ppt-dashboard-row-icon">
                   <PptBrandIcon type="whatsapp" size={18} />
                 </div>
                 <div className="min-w-0">
-                  <strong>{booking.buyerName || "Buyer"}</strong>
-                  <span>{booking.productTitle}</span>
-                  <BookingVariantLine booking={booking} />
+                  <strong>{order.buyerName || "Buyer"}</strong>
+                  <span>{order.productTitle}</span>
+                  <OrderVariantLine order={order} />
                   <small>
-                    {booking.buyerPhone} · Remaining {formatINR(booking.sellerCollectAmount)}
+                    {order.buyerPhone} - Amount due {formatINR(getSellerAmountDueFromOrder(order))}
                   </small>
                 </div>
-                <PptBadge tone={booking.status === "booking_paid" ? "success" : "neutral"}>
-                  {booking.status === "booking_paid" ? "₹20 paid" : getStatusLabel(booking.status)}
+                <PptBadge tone={getCheckoutStatusTone(order.status)}>
+                  {getStatusLabel(order.status)}
                 </PptBadge>
                 <a
                   href={whatsappUrl}
@@ -1655,6 +2373,12 @@ function getSelectedProductImageFiles(fileList: FileList | null) {
   const files = Array.from(fileList ?? []);
   assertValidImageFiles(files, MAX_PRODUCT_IMAGE_COUNT);
   return files;
+}
+
+function getSelectedSingleImageFile(fileList: FileList | null) {
+  const file = fileList?.[0] ?? null;
+  if (file) assertValidImageFile(file);
+  return file;
 }
 
 const NO_COLLECTION_VALUE = "__no_collection__";
@@ -1797,7 +2521,7 @@ function ProductVariantEditor({
         <span className="min-w-0">
           <span className="block">This product has size/color options</span>
           <span className="mt-1 block text-xs font-normal leading-5 text-gray-500">
-            Keep pricing at product level. Buyers select the exact piece before booking.
+            Keep pricing at product level. Buyers select the exact piece before ordering.
           </span>
         </span>
       </label>
@@ -1858,7 +2582,7 @@ function ProductVariantEditor({
                       <p className="mt-1 break-words text-xs text-gray-500">
                         {Object.entries(variant.options)
                           .map(([name, value]) => `${name}: ${value}`)
-                          .join(" · ")}
+                          .join(" - ")}
                       </p>
                     </div>
                     <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
@@ -1910,8 +2634,126 @@ function ProductVariantEditor({
   );
 }
 
+function WorkspaceSectionHeader({
+  action,
+  eyebrow,
+  helper,
+  title,
+}: {
+  action?: ReactNode;
+  eyebrow: string;
+  helper: string;
+  title: string;
+}) {
+  return (
+    <section className="ppt-dashboard-workspace-head">
+      <div>
+        <p>{eyebrow}</p>
+        <h2>{title}</h2>
+        <span>{helper}</span>
+      </div>
+      {action ? <div className="ppt-dashboard-workspace-actions">{action}</div> : null}
+    </section>
+  );
+}
+
+function ProductsWorkspace({
+  Orders,
+  collections,
+  onAddProduct,
+  onCollectionsChanged,
+  onProductCreated,
+  onProductRemoved,
+  onProductUpdated,
+  onProductsChanged,
+  onSelectTab,
+  openAddProductSignal,
+  products,
+  store,
+  user,
+}: {
+  Orders: CheckoutSession[];
+  collections: StoreCollection[];
+  onAddProduct: () => void;
+  onCollectionsChanged: (collections: StoreCollection[]) => void;
+  onProductCreated: (product: Product) => void;
+  onProductRemoved: (productId: string) => void;
+  onProductUpdated: (product: Product) => void;
+  onProductsChanged: (products: Product[]) => void;
+  onSelectTab: (tab: DashboardTab) => void;
+  openAddProductSignal: number;
+  products: Product[] | null | undefined;
+  store: Store | null;
+  user: User | null;
+}) {
+  const safeProducts = Array.isArray(products) ? products : [];
+  const liveProducts = safeProducts.filter(
+    (product) => product.status === "open" && getAvailableQuantity(product) > 0
+  ).length;
+  const outOfStock = safeProducts.filter((product) => getAvailableQuantity(product) <= 0).length;
+
+  return (
+    <section className="ppt-dashboard-workspace">
+      <WorkspaceSectionHeader
+        eyebrow="Catalog"
+        title="Products"
+        helper="Manage live products, inventory, variants, images, size charts, and collections."
+        action={
+          <>
+            <PptButton type="button" variant="primary" icon={<Plus size={16} />} onClick={onAddProduct}>
+              Add Product
+            </PptButton>
+            <PptButton
+              type="button"
+              variant="secondary"
+              icon={<FolderOpen size={16} />}
+              onClick={() =>
+                document
+                  .getElementById("dashboard-collections")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+            >
+              Collections below
+            </PptButton>
+          </>
+        }
+      />
+      <div className="ppt-dashboard-compact-grid">
+        <CompactStatCard icon={<ShoppingBag size={16} />} label="Products" value={safeProducts.length} helper={`${liveProducts} live`} />
+        <CompactStatCard icon={<CheckCircle2 size={16} />} label="Collections" value={collections.length} helper="storefront groups" tone="info" />
+        <CompactStatCard icon={<AlertTriangle size={16} />} label="Out of stock" value={outOfStock} helper="need attention" />
+        <CompactStatCard icon={<CalendarCheck size={16} />} label="Product orders" value={Orders.length} helper="all-time orders" tone="success" />
+      </div>
+      <ProductsTab
+        Orders={Orders}
+        collections={collections}
+        onProductCreated={onProductCreated}
+        onProductRemoved={onProductRemoved}
+        onProductUpdated={onProductUpdated}
+        onSelectTab={onSelectTab}
+        openAddProductSignal={openAddProductSignal}
+        products={products}
+        store={store}
+        user={user}
+      />
+      <div id="dashboard-collections">
+        <CollectionsManager
+          collections={collections}
+          onAddProduct={onAddProduct}
+          onCollectionsChanged={onCollectionsChanged}
+          onProductsChanged={onProductsChanged}
+          onViewProducts={() => onSelectTab("Products")}
+          products={safeProducts}
+          store={store}
+          user={user}
+        />
+      </div>
+    </section>
+  );
+}
+
 function ProductsTab({
-  bookings,
+  Orders,
   collections,
   onSelectTab,
   onProductRemoved,
@@ -1922,7 +2764,7 @@ function ProductsTab({
   store,
   onProductCreated,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   collections: StoreCollection[];
   onSelectTab: (tab: DashboardTab) => void;
   openAddProductSignal: number;
@@ -1948,6 +2790,9 @@ function ProductsTab({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageFileName, setImageFileName] = useState("");
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
+  const [sizeChartFileName, setSizeChartFileName] = useState("");
+  const [sizeChartPreviewUrl, setSizeChartPreviewUrl] = useState("");
   const [saveProgress, setSaveProgress] = useState<ProductSaveProgress | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1959,9 +2804,9 @@ function ProductsTab({
   const visibleProducts = safeProducts.slice(0, visibleProductRows);
   const canLoadMoreProductRows = visibleProductRows < safeProducts.length;
 
-  function getProductBookingCount(product: Product): number {
+  function getProductOrderCount(product: Product): number {
     const productId = product.productId || product.id;
-    return bookings.filter((booking) => booking.productId === productId).length;
+    return Orders.filter((Order) => Order.productId === productId).length;
   }
 
   async function handleProductDeleted(product: Product) {
@@ -1969,11 +2814,11 @@ function ProductsTab({
 
     if (!productId) return;
 
-    const bookingCount = getProductBookingCount(product);
+    const OrderCount = getProductOrderCount(product);
 
-    if (bookingCount > 0) {
+    if (OrderCount > 0) {
       const confirmed = window.confirm(
-        `This product has ${bookingCount} booking record${bookingCount === 1 ? "" : "s"}. It will be removed from the storefront and kept in history. Continue?`
+        `This product has ${OrderCount} order record${OrderCount === 1 ? "" : "s"}. It will be removed from the storefront and kept in history. Continue?`
       );
 
       if (!confirmed) return;
@@ -1995,7 +2840,7 @@ function ProductsTab({
       setError("");
 
       const result = await deleteSellerProduct(user, product, {
-        preserveHistory: bookingCount > 0,
+        preserveHistory: OrderCount > 0,
       });
 
       if (result.deleted) {
@@ -2050,6 +2895,18 @@ function ProductsTab({
     return () => objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   }, [imageFiles]);
 
+  useEffect(() => {
+    if (!sizeChartImageFile) {
+      setSizeChartPreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(sizeChartImageFile);
+    setSizeChartPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [sizeChartImageFile]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2077,6 +2934,7 @@ function ProductsTab({
         collectionName: selectedCollection.collectionName,
         inventoryQuantity: Number(inventoryQuantity),
         imageFiles,
+        sizeChartImageFile,
         status,
         ...getVariantPayload({
           hasVariants,
@@ -2101,6 +2959,8 @@ function ProductsTab({
       setVariantRows([]);
       setImageFiles([]);
       setImageFileName("");
+      setSizeChartImageFile(null);
+      setSizeChartFileName("");
       setShowForm(false);
     } catch (err) {
       console.error("Product create failed:", err);
@@ -2118,7 +2978,7 @@ function ProductsTab({
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Products</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Add and manage the items buyers can book from your storefront.
+              Add and manage the items buyers can order from your storefront.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -2135,7 +2995,7 @@ function ProductsTab({
             </button>
             <button
               type="button"
-              onClick={() => onSelectTab("Collections")}
+              onClick={() => onSelectTab("Products")}
               className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
             >
               Manage collections
@@ -2166,7 +3026,7 @@ function ProductsTab({
                 onChange={setPrice}
               />
               <p className="-mt-2 text-xs leading-5 text-gray-500 sm:col-start-2">
-                Enter the full product price. Buyers book first, then pay the remaining amount directly to you.
+                Enter the full product price. Buyers place an order first, then pay you directly.
               </p>
             </div>
 
@@ -2199,7 +3059,7 @@ function ProductsTab({
                   <option value="unpublished">Unpublished</option>
                 </select>
                 <p className="mt-2 text-xs leading-5 text-gray-500">
-                  Open: buyers can book. Reserved: temporarily unavailable. Sold: no longer bookable. Draft or Unpublished: hidden from buyers.
+                  Open: buyers can order. Reserved: temporarily unavailable. Sold: no longer available. Draft or unpublished: hidden from buyers.
                 </p>
               </label>
             </div>
@@ -2305,7 +3165,7 @@ function ProductsTab({
             }}
             onDeleted={handleProductDeleted}
             collections={collections}
-            bookingCount={getProductBookingCount(editingProduct)}
+            OrderCount={getProductOrderCount(editingProduct)}
             product={editingProduct}
             user={user}
           />
@@ -2322,7 +3182,7 @@ function ProductsTab({
         {safeProducts.length === 0 ? (
           <EmptyState
             title="No products yet"
-            message="Add your first product so buyers can book from your store."
+            message="Add your first product so buyers can order from your store."
           >
             <button
               type="button"
@@ -2337,7 +3197,7 @@ function ProductsTab({
             </button>
             <button
               type="button"
-              onClick={() => onSelectTab("Collections")}
+              onClick={() => onSelectTab("Products")}
               className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
             >
               Create collection
@@ -2626,7 +3486,7 @@ function CollectionsManager({
             Group products into storefront sections like New Drops, Thrift, Handmade, Sale, or Accessories.
           </p>
           <p className="mt-2 text-xs leading-5 text-gray-500">
-            Collections are storefront groups, not sellable products. Add price, stock, and booking status on products.
+            Collections are storefront groups, not sellable products. Add price, stock, and order status on products.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -2763,7 +3623,7 @@ function CollectionsManager({
 }
 
 function EditProductForm({
-  bookingCount,
+  OrderCount,
   collections,
   onDeleted,
   onCancel,
@@ -2771,7 +3631,7 @@ function EditProductForm({
   product,
   user,
 }: {
-  bookingCount: number;
+  OrderCount: number;
   collections: StoreCollection[];
   onDeleted: (product: Product) => Promise<void>;
   onCancel: () => void;
@@ -2800,6 +3660,11 @@ function EditProductForm({
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>(
     getProductPreviewImages(product)
   );
+  const [sizeChartImageFile, setSizeChartImageFile] = useState<File | null>(null);
+  const [sizeChartFileName, setSizeChartFileName] = useState("");
+  const [sizeChartPreviewUrl, setSizeChartPreviewUrl] = useState(
+    getProductSizeChartImageUrl(product)
+  );
   const [saveProgress, setSaveProgress] = useState<ProductSaveProgress | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -2807,6 +3672,7 @@ function EditProductForm({
   const editFormRef = useRef<HTMLFormElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
   const savedImageItems = getProductPreviewImageItems(product);
+  const savedSizeChartImageUrl = getProductSizeChartImageUrl(product);
   const previewImageItems =
     imageFiles.length > 0
       ? imagePreviewUrls.map((imagePreviewUrl, index) => ({
@@ -2847,6 +3713,18 @@ function EditProductForm({
 
     return () => objectUrls.forEach((objectUrl) => URL.revokeObjectURL(objectUrl));
   }, [imageFiles, product]);
+
+  useEffect(() => {
+    if (!sizeChartImageFile) {
+      setSizeChartPreviewUrl(getProductSizeChartImageUrl(product));
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(sizeChartImageFile);
+    setSizeChartPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [sizeChartImageFile, product]);
 
   useEffect(() => {
     window.requestAnimationFrame(() => {
@@ -2892,6 +3770,7 @@ function EditProductForm({
         inventoryQuantity: requestedInventory,
         status,
         imageFiles,
+        sizeChartImageFile,
         ...getVariantPayload({
           hasVariants,
           sizeValues,
@@ -2903,6 +3782,8 @@ function EditProductForm({
 
       setImageFiles([]);
       setImageFileName("");
+      setSizeChartImageFile(null);
+      setSizeChartFileName("");
       setSuccessMessage("Product saved.");
       onSaved(updatedProduct);
     } catch (err) {
@@ -2968,7 +3849,7 @@ function EditProductForm({
           onChange={setPrice}
         />
         <p className="-mt-2 text-xs leading-5 text-gray-500 sm:col-start-2">
-          Enter the full product price. Buyers book first, then pay the remaining amount directly to you.
+          Enter the full product price. Buyers place an order first, then pay you directly.
         </p>
       </div>
 
@@ -3017,7 +3898,7 @@ function EditProductForm({
             <option value="unpublished">Unpublished</option>
           </select>
           <p className="mt-2 text-xs leading-5 text-gray-500">
-            Open: buyers can book. Reserved: temporarily unavailable. Sold: no longer bookable. Draft or Unpublished: hidden from buyers.
+            Open: buyers can order. Reserved: temporarily unavailable. Sold: no longer available. Draft or unpublished: hidden from buyers.
           </p>
         </label>
       </div>
@@ -3063,7 +3944,9 @@ function EditProductForm({
       />
 
       <div>
-        <label className="text-sm font-medium text-gray-800">Replace images (up to 3 images max)</label>
+        <label className="text-sm font-medium text-gray-800">
+          Replace images (up to {MAX_PRODUCT_IMAGE_COUNT} images max)
+        </label>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -3119,9 +4002,9 @@ function EditProductForm({
       <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
         <p className="text-sm font-semibold text-red-900">Delete product</p>
         <p className="mt-1 text-xs leading-5 text-red-700">
-          {bookingCount > 0
-            ? "This product has booking history, so delete will hide it from the storefront and keep past records intact."
-            : "This product has no bookings, so delete will permanently remove it."}
+          {OrderCount > 0
+            ? "This product has order history, so delete will hide it from the storefront and keep past records intact."
+            : "This product has no orders, so delete will permanently remove it."}
         </p>
         <button
           type="button"
@@ -3129,7 +4012,7 @@ function EditProductForm({
           disabled={saving}
           className="mt-3 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {bookingCount > 0 ? "Remove from storefront" : "Delete product"}
+          {OrderCount > 0 ? "Remove from storefront" : "Delete product"}
         </button>
       </div>
     </form>
@@ -3232,467 +4115,18 @@ function ProductRow({
       </div>
       <div className="grid gap-2 text-sm lg:min-w-56">
         <InfoRow label="Price" value={formatINR(product.price)} />
-        <InfoRow label="Advance" value={formatINR(product.bookingAdvanceAmount)} />
-        <InfoRow label="Collect" value={formatINR(product.sellerCollectAmount)} />
       </div>
-    </div>
-  );
-}
-
-function BookingsTab({
-  bookings,
-  onBookingChanged,
-  products,
-  store,
-}: {
-  bookings: CheckoutSession[];
-  onBookingChanged: () => Promise<void>;
-  products: Product[];
-  store: Store | null;
-}) {
-  return (
-    <section className="space-y-4">
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Bookings</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          These are buyers who booked or started booking your products. Open WhatsApp to confirm delivery and collect the remaining amount directly.
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        {bookings.length === 0 ? (
-          <section className="rounded-2xl border border-gray-200 bg-white">
-            <EmptyState
-              title="No bookings yet"
-              message="Buyer bookings will appear here after someone starts or completes a booking."
-            />
-          </section>
-        ) : (
-          bookings.map((booking) => {
-            const matchedProduct =
-              products.find(
-                (product) =>
-                  (product.productId || product.id) === booking.productId
-              ) || null;
-
-            return (
-              <BookingCard
-                key={booking.checkoutId}
-                booking={booking}
-                onBookingChanged={onBookingChanged}
-                product={matchedProduct}
-                store={store}
-              />
-            );
-          })
-        )}
-      </div>
-    </section>
-  );
-}
-
-function BookingCard({
-  booking,
-  onBookingChanged,
-  product,
-  store,
-}: {
-  booking: CheckoutSession;
-  onBookingChanged: () => Promise<void>;
-  product: Product | null;
-  store: Store | null;
-}) {
-  const [copied, setCopied] = useState(false);
-  const [generatingLabel, setGeneratingLabel] = useState(false);
-  const [savingAction, setSavingAction] = useState("");
-  const [pendingConfirmation, setPendingConfirmation] = useState<
-    "cancelled" | "sold" | null
-  >(null);
-  const [actionError, setActionError] = useState("");
-  const [labelError, setLabelError] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<CheckoutSession["status"] | "">(
-    booking.status || ""
-  );
-  const sellerMessageInput = checkoutToSellerMessageInput(booking, store);
-  const message = buildSellerPaymentCollectionMessage(sellerMessageInput);
-  const deliveryMessage = buildDeliveryDetailsMessage(sellerMessageInput);
-  const confirmedMessage = buildOrderConfirmedMessage(sellerMessageInput);
-  const whatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, message);
-  const deliveryWhatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, deliveryMessage);
-  const confirmedWhatsappUrl = buildBookingWhatsAppUrl(booking.buyerPhone, confirmedMessage);
-  const sellerUpiId = getSellerUpiId(store);
-
-  useEffect(() => {
-    setSelectedStatus(booking.status || "");
-  }, [booking.checkoutId, booking.status]);
-
-  async function handleCopy() {
-    await copyText(message);
-    setCopied(true);
-  }
-
-  async function handleDownloadLabel() {
-    if (!store) {
-      setLabelError("Store details are required to generate a label.");
-      return;
-    }
-
-    try {
-      setGeneratingLabel(true);
-      setLabelError("");
-      const origin =
-        typeof window !== "undefined" && window.location.origin
-          ? window.location.origin
-          : "https://paypertap.in";
-      const labelData = buildBookingLabelData({
-        booking,
-        store,
-        product,
-        origin,
-      });
-      const { downloadBookingLabelPdf } = await import("../lib/labelPdf");
-
-      await downloadBookingLabelPdf(labelData);
-    } catch (err) {
-      setLabelError(err instanceof Error ? err.message : "Could not generate label.");
-    } finally {
-      setGeneratingLabel(false);
-    }
-  }
-
-  async function runBookingAction(
-    nextStatus: CheckoutSession["status"],
-    action: () => Promise<void>
-  ): Promise<boolean> {
-    const previousStatus = selectedStatus;
-
-    try {
-      setSavingAction(nextStatus);
-      setSelectedStatus(nextStatus);
-      setActionError("");
-      await action();
-      await onBookingChanged();
-      return true;
-    } catch (err) {
-      console.error("Booking action failed:", err);
-      setSelectedStatus(previousStatus);
-      setActionError(err instanceof Error ? err.message : "Could not update booking.");
-      return false;
-    } finally {
-      setSavingAction("");
-    }
-  }
-
-  async function handleConfirmBookingAction() {
-    if (savingAction) return;
-
-    if (pendingConfirmation === "cancelled") {
-      const succeeded = await runBookingAction("cancelled", () =>
-        markBookingCancelled(booking.checkoutId)
-      );
-      if (succeeded) setPendingConfirmation(null);
-      return;
-    }
-
-    if (pendingConfirmation === "sold") {
-      const succeeded = await runBookingAction("sold", () =>
-        markBookingSold(booking.checkoutId)
-      );
-      if (succeeded) setPendingConfirmation(null);
-    }
-  }
-
-  const confirmationContent =
-    pendingConfirmation === "cancelled"
-      ? {
-          title: "Cancel booking?",
-          description:
-            "This will release the reserved stock and make the product available again.",
-          detail:
-            "Use this only when the buyer did not complete confirmation or the order should not continue.",
-          confirmLabel: "Cancel booking",
-          cancelLabel: "Keep booking",
-          loadingLabel: "Cancelling...",
-          variant: "danger" as const,
-        }
-      : pendingConfirmation === "sold"
-        ? {
-            title: "Mark item sold?",
-            description: "This will move 1 reserved unit to sold inventory.",
-            detail: "Use this only after the order is confirmed/completed with the buyer.",
-            confirmLabel: "Mark sold",
-            cancelLabel: "Go back",
-            loadingLabel: "Marking sold...",
-            variant: "default" as const,
-          }
-        : null;
-
-  return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="min-w-0 text-base font-semibold tracking-tight text-gray-950">
-              {booking.productTitle}
-            </h3>
-            <PptBadge tone={getCheckoutStatusTone(booking.status)}>
-              {getStatusLabel(booking.status)}
-            </PptBadge>
-          </div>
-          <p className="mt-2 break-words text-sm text-gray-600">
-            {booking.buyerName} - {booking.buyerPhone}
-          </p>
-          <BookingVariantLine booking={booking} />
-          <p className="mt-1 text-xs text-gray-500">
-            {booking.buyerCity} {booking.buyerPincode} - Created {formatDate(booking.createdAt)}
-          </p>
-        </div>
-        <div className="grid gap-2 sm:min-w-64">
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="pds-button pds-button-whatsapp pds-button-md pds-button-rounded-lg is-full"
-          >
-            <PptBrandIcon type="whatsapp" size={17} />
-            <span>Open WhatsApp</span>
-          </a>
-          <button
-            type="button"
-            onClick={handleDownloadLabel}
-            disabled={generatingLabel || Boolean(savingAction)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-950 disabled:opacity-50"
-          >
-            <Download size={15} aria-hidden="true" />
-            <span>{generatingLabel ? "Generating label..." : "Download Label"}</span>
-          </button>
-          <div className="grid gap-2">
-            <span className="text-xs font-medium text-gray-500">Update status</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setActionError("");
-                  setPendingConfirmation("cancelled");
-                }}
-                disabled={Boolean(savingAction)}
-                className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition hover:border-gray-950 disabled:opacity-50"
-              >
-                Cancelled
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActionError("");
-                  setPendingConfirmation("sold");
-                }}
-                disabled={Boolean(savingAction)}
-                className="rounded-xl bg-gray-950 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
-              >
-                Sold
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-        <Metric label="Product price" value={formatINR(booking.productPrice)} />
-        {getVariantDetailsText(booking) ? (
-          <Metric label="Variant" value={getVariantDetailsText(booking)} />
-        ) : null}
-        <Metric label="PayPerTap booking fee" value={formatINR(booking.bookingAdvanceAmount)} />
-        <Metric label="Collect from buyer" value={formatINR(booking.sellerCollectAmount)} />
-      </div>
-
-      <details className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-gray-800">
-          <span>Details and messages</span>
-          <MoreVertical size={16} aria-hidden="true" />
-        </summary>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={Boolean(savingAction) || booking.status === "sold"}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 disabled:opacity-50"
-          >
-            {copied ? "Message copied" : "Copy follow-up message"}
-          </button>
-          <a
-            href={deliveryWhatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900"
-          >
-            <PptBrandIcon type="whatsapp" size={15} />
-            <span>Delivery details</span>
-          </a>
-          <a
-            href={confirmedWhatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900"
-          >
-            <PptBrandIcon type="whatsapp" size={15} />
-            <span>Order confirmed</span>
-          </a>
-          <Metric label="Buyer opened WhatsApp" value={booking.whatsappOpened ? "Yes" : "No"} />
-        </div>
-      </details>
-      {!sellerUpiId ? (
-        <p className="mt-3 text-xs leading-5 text-amber-700">
-          Add your UPI ID in Store settings later to auto-fill payment messages.
-        </p>
-      ) : null}
-      {labelError ? <ErrorBox message={labelError} /> : null}
-      {actionError ? <ErrorBox message={actionError} /> : null}
-      {confirmationContent ? (
-        <ConfirmActionModal
-          open={Boolean(pendingConfirmation)}
-          title={confirmationContent.title}
-          description={confirmationContent.description}
-          detail={confirmationContent.detail}
-          confirmLabel={confirmationContent.confirmLabel}
-          cancelLabel={confirmationContent.cancelLabel}
-          loadingLabel={confirmationContent.loadingLabel}
-          variant={confirmationContent.variant}
-          loading={Boolean(savingAction)}
-          errorMessage={actionError}
-          onCancel={() => setPendingConfirmation(null)}
-          onConfirm={() => void handleConfirmBookingAction()}
-        />
-      ) : null}
-    </article>
-  );
-}
-
-type ConfirmActionModalProps = {
-  cancelLabel: string;
-  confirmLabel: string;
-  description: string;
-  detail: string;
-  errorMessage?: string;
-  loading: boolean;
-  loadingLabel: string;
-  open: boolean;
-  title: string;
-  variant?: "danger" | "default";
-  onCancel: () => void;
-  onConfirm: () => void;
-};
-
-function ConfirmActionModal({
-  cancelLabel,
-  confirmLabel,
-  description,
-  detail,
-  errorMessage,
-  loading,
-  loadingLabel,
-  open,
-  title,
-  variant = "default",
-  onCancel,
-  onConfirm,
-}: ConfirmActionModalProps) {
-  const titleId = useId();
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
-  const isDanger = variant === "danger";
-
-  useEffect(() => {
-    if (!open) return;
-
-    confirmButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !loading) {
-        onCancel();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [loading, onCancel, open]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex min-h-dvh items-center justify-center bg-gray-950/45 px-4 py-6 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (!loading && event.target === event.currentTarget) {
-          onCancel();
-        }
-      }}
-    >
-      <section
-        aria-labelledby={titleId}
-        aria-modal="true"
-        role="dialog"
-        className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6"
-      >
-        <div className="flex items-start gap-4">
-          <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
-              isDanger
-                ? "border-red-100 bg-red-50 text-red-700"
-                : "border-gray-200 bg-gray-50 text-gray-950"
-            }`}
-          >
-            {isDanger ? (
-              <AlertTriangle size={21} aria-hidden="true" />
-            ) : (
-              <CheckCircle2 size={21} aria-hidden="true" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <h3 id={titleId} className="text-lg font-semibold tracking-tight text-gray-950">
-              {title}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-gray-700">{description}</p>
-            <p className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
-              {detail}
-            </p>
-          </div>
-        </div>
-
-        {errorMessage ? <ErrorBox message={errorMessage} /> : null}
-
-        <div className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto] sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:border-gray-950 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-32"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            ref={confirmButtonRef}
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-32 ${
-              isDanger ? "bg-red-600 hover:bg-red-700" : "bg-gray-950 hover:bg-gray-800"
-            }`}
-          >
-            {loading ? loadingLabel : confirmLabel}
-          </button>
-        </div>
-      </section>
     </div>
   );
 }
 
 function CustomersTab({
-  bookings,
+  Orders,
   customers,
   products,
   storeLink,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   customers: DerivedCustomerLead[];
   products: Product[];
   storeLink: string;
@@ -3706,24 +4140,24 @@ function CustomersTab({
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <h2 className="text-lg font-semibold tracking-tight">Buyer contacts</h2>
         <p className="mt-1 text-sm text-gray-500">
-          View people who booked or shared details through your store. Use this list to follow up on WhatsApp, confirm orders, or message previous buyers.
+          View people who ordered or shared details through your store. Use this list to follow up on WhatsApp, confirm orders, or message previous buyers.
         </p>
         <p className="mt-2 text-xs leading-5 text-gray-500">
-          Buyer details are shown here only to help you confirm bookings and follow up on orders.
+          Buyer details are shown here only to help you confirm orders and follow up with buyers.
         </p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white">
         {customers.length === 0 ? (
-          <EmptyState title="No buyer contacts yet" message="Buyer details will appear here after your first booking." />
+          <EmptyState title="No buyer contacts yet" message="Buyer details will appear here after your first order." />
         ) : (
           <div className="divide-y divide-gray-100">
             {customers.map((customer) => (
               <CustomerRow
-                bookings={bookings.filter((booking) => {
-                  const bookingPhone = booking.buyerPhone.replace(/[^\d]/g, "");
+                Orders={Orders.filter((Order) => {
+                  const OrderPhone = Order.buyerPhone.replace(/[^\d]/g, "");
                   const customerPhone = customer.buyerPhone.replace(/[^\d]/g, "");
-                  return bookingPhone === customerPhone;
+                  return OrderPhone === customerPhone;
                 })}
                 customer={customer}
                 key={customer.buyerPhone}
@@ -3739,12 +4173,12 @@ function CustomersTab({
 }
 
 function CustomerRow({
-  bookings,
+  Orders,
   customer,
   products,
   storeLink,
 }: {
-  bookings: CheckoutSession[];
+  Orders: CheckoutSession[];
   customer: DerivedCustomerLead;
   products: Product[];
   storeLink: string;
@@ -3783,8 +4217,8 @@ function CustomerRow({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-gray-950">{customer.buyerName}</p>
-            <PptBadge tone={getCheckoutStatusTone(customer.lastBookingStatus)}>
-              {getStatusLabel(customer.lastBookingStatus)}
+            <PptBadge tone={getCheckoutStatusTone(customer.lastOrderstatus)}>
+              {getStatusLabel(customer.lastOrderstatus)}
             </PptBadge>
           </div>
           <p className="mt-1 break-words text-xs text-gray-500">
@@ -3793,7 +4227,7 @@ function CustomerRow({
             {customer.buyerPincode ? ` ${customer.buyerPincode}` : ""}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-            <span>{customer.totalBookings} booking{customer.totalBookings === 1 ? "" : "s"}</span>
+            <span>{customer.totalOrders} order{customer.totalOrders === 1 ? "" : "s"}</span>
             <span>Last: {customer.lastProductTitle}</span>
             {getVariantDetailsText({
               selectedVariantLabel: customer.lastVariantLabel,
@@ -3833,24 +4267,24 @@ function CustomerRow({
         <div className="mt-4 grid gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Metric label="Phone" value={customer.buyerPhone} />
-            <Metric label="Email" value={bookings.find((booking) => booking.buyerEmail)?.buyerEmail || "Not shared"} />
-            <Metric label="Full address" value={bookings[0]?.buyerAddress || "Not shared"} />
-            <Metric label="Total bookings" value={String(customer.totalBookings)} />
+            <Metric label="Email" value={Orders.find((Order) => Order.buyerEmail)?.buyerEmail || "Not shared"} />
+            <Metric label="Full address" value={Orders[0]?.buyerAddress || "Not shared"} />
+            <Metric label="Total orders" value={String(customer.totalOrders)} />
           </div>
 
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Bookings</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Orders</p>
             <div className="mt-2 grid gap-2">
-              {bookings.map((booking) => (
+              {Orders.map((order) => (
                 <div
-                  key={booking.checkoutId}
+                  key={order.checkoutId}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm"
                 >
-                  <span className="font-medium text-gray-950">{booking.productTitle}</span>
-                  <BookingVariantLine booking={booking} />
-                  <span className="text-xs text-gray-500">{formatDate(booking.createdAt)}</span>
-                  <PptBadge tone={getCheckoutStatusTone(booking.status)}>
-                    {getStatusLabel(booking.status)}
+                  <span className="font-medium text-gray-950">{order.productTitle}</span>
+                  <OrderVariantLine order={order} />
+                  <span className="text-xs text-gray-500">{formatDate(order.createdAt)}</span>
+                  <PptBadge tone={getCheckoutStatusTone(order.status)}>
+                    {getStatusLabel(order.status)}
                   </PptBadge>
                 </div>
               ))}
@@ -3874,7 +4308,7 @@ function CustomerRow({
                 return (
                   <option key={productId} value={productId} disabled={disabled}>
                     {disabled
-                      ? `Already booked: ${product.title}`
+                      ? `Already ordered: ${product.title}`
                       : `${product.title} - ${formatINR(product.price)}`}
                   </option>
                 );
@@ -3892,6 +4326,144 @@ function CustomerRow({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function StorefrontWorkspace({
+  onStoreUpdated,
+  onTogglePublish,
+  publishing,
+  store,
+  storeLink,
+  storeSlug,
+}: {
+  onStoreUpdated: (store: Store) => void;
+  onTogglePublish: () => void;
+  publishing: boolean;
+  store: Store | null;
+  storeLink: string;
+  storeSlug: string;
+}) {
+  return (
+    <section className="ppt-dashboard-workspace">
+      <WorkspaceSectionHeader
+        eyebrow="Online store"
+        title="Storefront"
+        helper="Control the buyer-facing experience: hero, branding, logo, publish state, store URL, and preview."
+        action={
+          <>
+            <PptButton type="button" variant="secondary" disabled={!storeLink} icon={<ExternalLink size={16} />} onClick={() => storeLink && window.open(storeLink, "_blank", "noopener,noreferrer")}>
+              Preview
+            </PptButton>
+            <PptButton type="button" variant={store?.isPublished ? "secondary" : "primary"} loading={publishing} onClick={onTogglePublish}>
+              {store?.isPublished ? "Unpublish" : "Publish"}
+            </PptButton>
+          </>
+        }
+      />
+      <StoreTab
+        onStoreUpdated={onStoreUpdated}
+        onTogglePublish={onTogglePublish}
+        publishing={publishing}
+        store={store}
+        storeLink={storeLink}
+        storeSlug={storeSlug}
+      />
+    </section>
+  );
+}
+
+function MarketingWorkspace({
+  Orders,
+  customers,
+  products,
+  storeLink,
+}: {
+  Orders: CheckoutSession[];
+  customers: DerivedCustomerLead[];
+  products: Product[];
+  storeLink: string;
+}) {
+  return (
+    <section className="ppt-dashboard-workspace">
+      <WorkspaceSectionHeader
+        eyebrow="Growth"
+        title="Marketing"
+        helper="Reuse WhatsApp templates, retarget previous buyers, and share new drops without rebuilding messages every time."
+        action={
+          <PptButton type="button" variant="secondary" icon={<Copy size={16} />} disabled={!storeLink} onClick={() => storeLink && copyText(storeLink)}>
+            Copy Store Link
+          </PptButton>
+        }
+      />
+      <QuickReplies />
+      <CustomersTab
+        Orders={Orders}
+        customers={customers}
+        products={products}
+        storeLink={storeLink}
+      />
+    </section>
+  );
+}
+
+function WalletWorkspace({
+  wallet,
+  walletError,
+  walletTransactions,
+}: {
+  wallet: SellerWallet | null;
+  walletError: string;
+  walletTransactions: WalletTransactionRecord[];
+}) {
+  return (
+    <section className="ppt-dashboard-workspace">
+      <WorkspaceSectionHeader
+        eyebrow="Finance"
+        title="Wallet"
+        helper="Track PayPerTap order charges, recharge balance, free orders, transaction history, and wallet alerts."
+      />
+      <WalletDashboardSection
+        error={walletError}
+        transactions={walletTransactions}
+        wallet={wallet}
+      />
+      <PaymentsTab />
+    </section>
+  );
+}
+
+function SettingsWorkspace({
+  onStoreUpdated,
+  onTogglePublish,
+  publishing,
+  store,
+  storeLink,
+  storeSlug,
+}: {
+  onStoreUpdated: (store: Store) => void;
+  onTogglePublish: () => void;
+  publishing: boolean;
+  store: Store | null;
+  storeLink: string;
+  storeSlug: string;
+}) {
+  return (
+    <section className="ppt-dashboard-workspace">
+      <WorkspaceSectionHeader
+        eyebrow="Business settings"
+        title="Settings"
+        helper="Manage contact details, policies, order mode, payment link, return URL, and store safety controls."
+      />
+      <StoreTab
+        onStoreUpdated={onStoreUpdated}
+        onTogglePublish={onTogglePublish}
+        publishing={publishing}
+        store={store}
+        storeLink={storeLink}
+        storeSlug={storeSlug}
+      />
+    </section>
   );
 }
 
@@ -3923,20 +4495,17 @@ function StoreTab({
   const [returnsPolicyNotes, setReturnsPolicyNotes] = useState(
     store?.returnsPolicyNotes || ""
   );
-  const [confirmationAdvanceType, setConfirmationAdvanceType] =
-    useState<SellerConfirmationAdvanceType>(
-      store?.sellerConfirmationAdvanceType || "paypertap_only"
-    );
-  const [confirmationFixedAmount, setConfirmationFixedAmount] = useState(
-    store?.sellerConfirmationAdvanceFixedAmount
-      ? String(store.sellerConfirmationAdvanceFixedAmount)
-      : ""
+  const [paymentMode, setPaymentMode] = useState<StorePaymentMode>(
+    store?.paymentMode || "cod"
   );
-  const [confirmationPercent, setConfirmationPercent] = useState(
-    store?.sellerConfirmationAdvancePercent
-      ? String(store.sellerConfirmationAdvancePercent)
-      : ""
+  const [advanceAmount, setAdvanceAmount] = useState(
+    store?.advanceAmount ? String(store.advanceAmount) : "100"
   );
+  const [paymentLink, setPaymentLink] = useState(store?.paymentLink || "");
+  const [paymentReturnToken, setPaymentReturnToken] = useState(
+    store?.paymentReturnToken || ""
+  );
+  const [copiedPaymentReturnUrl, setCopiedPaymentReturnUrl] = useState(false);
   const [heroHeading, setHeroHeading] = useState(store?.heroTitle || store?.heroHeading || "");
   const [heroSubtitle, setHeroSubtitle] = useState(store?.heroSubtitle || "");
   const [heroEyebrowText, setHeroEyebrowText] = useState(store?.heroEyebrowText || "");
@@ -3962,14 +4531,7 @@ function StoreTab({
   const [appearanceProgress, setAppearanceProgress] = useState("");
   const [whatsappPhoneError, setWhatsappPhoneError] = useState("");
   const selectedThemeId = getSelectedStorefrontThemeId(store);
-  const draftFixedAmount =
-    confirmationAdvanceType === "fixed"
-      ? Math.max(20, Math.round(Number(confirmationFixedAmount) || 20))
-      : null;
-  const draftPercent =
-    confirmationAdvanceType === "percentage"
-      ? Math.max(1, Math.round(Number(confirmationPercent) || 0))
-      : null;
+  const paymentReturnUrl = getPaymentReturnUrl(paymentReturnToken);
   const draftStore: Store | null = store
     ? {
         ...store,
@@ -3983,9 +4545,11 @@ function StoreTab({
         supportPhone,
         returnsPolicyType,
         returnsPolicyNotes,
-        sellerConfirmationAdvanceType: confirmationAdvanceType,
-        sellerConfirmationAdvanceFixedAmount: draftFixedAmount,
-        sellerConfirmationAdvancePercent: draftPercent,
+        paymentMode,
+        advanceAmount: Math.max(1, Math.round(Number(advanceAmount) || 100)),
+        paymentProvider: "razorpay",
+        paymentLink,
+        paymentReturnToken,
         heroTitle: heroHeading,
         heroSubtitle,
         heroEyebrowText,
@@ -4018,17 +4582,11 @@ function StoreTab({
     setSupportPhone(store?.supportPhone || "");
     setReturnsPolicyType(store?.returnsPolicyType || "exchange_only");
     setReturnsPolicyNotes(store?.returnsPolicyNotes || "");
-    setConfirmationAdvanceType(store?.sellerConfirmationAdvanceType || "paypertap_only");
-    setConfirmationFixedAmount(
-      store?.sellerConfirmationAdvanceFixedAmount
-        ? String(store.sellerConfirmationAdvanceFixedAmount)
-        : ""
-    );
-    setConfirmationPercent(
-      store?.sellerConfirmationAdvancePercent
-        ? String(store.sellerConfirmationAdvancePercent)
-        : ""
-    );
+    setPaymentMode(store?.paymentMode || "cod");
+    setAdvanceAmount(store?.advanceAmount ? String(store.advanceAmount) : "100");
+    setPaymentLink(store?.paymentLink || "");
+    setPaymentReturnToken(store?.paymentReturnToken || "");
+    setCopiedPaymentReturnUrl(false);
     setHeroHeading(store?.heroTitle || store?.heroHeading || "");
     setHeroSubtitle(store?.heroSubtitle || "");
     setHeroEyebrowText(store?.heroEyebrowText || "");
@@ -4096,13 +4654,13 @@ function StoreTab({
 
       let uploadedHero: { url: string; key: string } | null = null;
       if (heroFile) {
-        setAppearanceProgress("Optimizing hero image…");
+        setAppearanceProgress("Optimizing hero image...");
         const optimizedHeroFile = await compressHeroImage(heroFile);
-        setAppearanceProgress("Uploading hero image…");
+        setAppearanceProgress("Uploading hero image...");
         uploadedHero = await uploadOptimizedHeroImage(optimizedHeroFile);
       }
 
-      setAppearanceProgress("Saving storefront…");
+      setAppearanceProgress("Saving storefront...");
       const updatedFields = await updateStoreCustomization(store.storeId, {
         heroTitle: heroHeading,
         heroSubtitle,
@@ -4157,16 +4715,7 @@ function StoreTab({
       }
 
       setWhatsappPhone(normalizedWhatsappPhone.localNumber);
-      const fixedAmount = Math.round(Number(confirmationFixedAmount) || 0);
-      const percent = Math.round(Number(confirmationPercent) || 0);
-
-      if (confirmationAdvanceType === "fixed" && fixedAmount < 20) {
-        throw new Error("Fixed confirmation amount must be at least ₹20.");
-      }
-
-      if (confirmationAdvanceType === "percentage" && percent <= 0) {
-        throw new Error("Confirmation percentage must be greater than 0.");
-      }
+      const normalizedAdvanceAmount = Math.round(Number(advanceAmount) || 0);
 
       let uploadedLogo: { url: string; key: string } | null = null;
       if (logoFile) {
@@ -4174,34 +4723,47 @@ function StoreTab({
       }
 
       setSaveProgress("Saving storefront...");
-      const updatedFields = await updateStoreCustomization(store.storeId, {
-        storeName,
-        bio,
-        whatsappPhone: normalizedWhatsappPhone.localNumber,
-        phone: normalizedWhatsappPhone.localNumber,
-        instagramProfile,
-        ownerName,
-        supportEmail,
-        supportPhone,
-        returnsPolicyType,
-        returnsPolicyNotes,
-        sellerConfirmationAdvanceType: confirmationAdvanceType,
-        sellerConfirmationAdvanceFixedAmount: fixedAmount,
-        sellerConfirmationAdvancePercent: percent,
-        logoUrl: uploadedLogo?.url,
-      });
-
-      if (
-        updatedFields.sellerConfirmationAdvanceType !== confirmationAdvanceType ||
-        (confirmationAdvanceType === "fixed" &&
-          Number(updatedFields.sellerConfirmationAdvanceFixedAmount) !== fixedAmount) ||
-        (confirmationAdvanceType === "percentage" &&
-          Number(updatedFields.sellerConfirmationAdvancePercent) !== percent)
-      ) {
-        throw new Error("Store saved, but confirmation advance did not persist. Please try again.");
+      let updatedFields: Store;
+      try {
+        updatedFields = await updateStoreCustomization(store.storeId, {
+          storeName,
+          bio,
+          whatsappPhone: normalizedWhatsappPhone.localNumber,
+          phone: normalizedWhatsappPhone.localNumber,
+          instagramProfile,
+          ownerName,
+          supportEmail,
+          supportPhone,
+          returnsPolicyType,
+          returnsPolicyNotes,
+          logoUrl: uploadedLogo?.url,
+        });
+      } catch (customizationError) {
+        console.error("Store customization fields update failed:", customizationError);
+        throw customizationError;
       }
 
-      onStoreUpdated(updatedFields);
+      setSaveProgress("Saving payment settings...");
+      let updatedPaymentSettings: StorePaymentSettings;
+      try {
+        updatedPaymentSettings = await updateStorePaymentSettings(store.storeId, {
+          paymentMode,
+          advanceAmount: normalizedAdvanceAmount,
+          paymentLink,
+        });
+      } catch (paymentSettingsError) {
+        console.error("Store payment settings update failed:", paymentSettingsError);
+        throw paymentSettingsError;
+      }
+
+      setPaymentMode(updatedPaymentSettings.paymentMode);
+      setAdvanceAmount(String(updatedPaymentSettings.advanceAmount));
+      setPaymentLink(updatedPaymentSettings.paymentLink);
+      setPaymentReturnToken(updatedPaymentSettings.paymentReturnToken);
+      onStoreUpdated({
+        ...updatedFields,
+        ...updatedPaymentSettings,
+      });
       setLogoFile(null);
       setLogoFileName("");
       setSaved(true);
@@ -4514,13 +5076,20 @@ function StoreTab({
               onChange={setInstagramProfile}
               placeholder="https://instagram.com/yourstore or @yourstore"
             />
-            <SellerConfirmationAdvancePanel
-              fixedAmount={confirmationFixedAmount}
-              onFixedAmountChange={setConfirmationFixedAmount}
-              onPercentChange={setConfirmationPercent}
-              onTypeChange={setConfirmationAdvanceType}
-              percent={confirmationPercent}
-              type={confirmationAdvanceType}
+            <StorePaymentSettingsPanel
+              advanceAmount={advanceAmount}
+              copiedReturnUrl={copiedPaymentReturnUrl}
+              onAdvanceAmountChange={setAdvanceAmount}
+              onCopyReturnUrl={async () => {
+                if (!paymentReturnUrl) return;
+                await copyText(paymentReturnUrl);
+                setCopiedPaymentReturnUrl(true);
+              }}
+              onPaymentLinkChange={setPaymentLink}
+              onPaymentModeChange={setPaymentMode}
+              paymentLink={paymentLink}
+              paymentMode={paymentMode}
+              returnUrl={paymentReturnUrl}
             />
             <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
               <div className="flex flex-col gap-1">
@@ -4572,7 +5141,7 @@ function StoreTab({
                 <textarea
                   value={returnsPolicyNotes}
                   onChange={(event) => setReturnsPolicyNotes(event.target.value)}
-                  placeholder="Optional note buyers should know before booking"
+                  placeholder="Optional note buyers should know before ordering"
                   rows={3}
                   className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-950"
                 />
@@ -4581,17 +5150,11 @@ function StoreTab({
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <InfoRow label="Store link name" value={storeSlug || "Not set"} />
               <InfoRow label="Public link" value={storeLink || "Not set"} />
-              <InfoRow label="Booking fee" value={formatINR(store?.bookingAdvanceAmount || 20)} />
               <InfoRow
-                label="Confirmation advance"
-                value={
-                  confirmationAdvanceType === "fixed"
-                    ? `Fixed ${formatINR(Number(confirmationFixedAmount) || 20)}`
-                    : confirmationAdvanceType === "percentage"
-                      ? `${Number(confirmationPercent) || 0}% of product price`
-                      : "Only ₹20 PayPerTap booking"
-                }
+                label="Order mode"
+                value={paymentMode === "partial_advance" ? "Partial advance" : "Cash on Delivery"}
               />
+              <InfoRow label="Payment provider" value="Razorpay" />
               <InfoRow label="Theme" value={storefrontThemeRegistry[selectedThemeId].name} />
             </div>
             <p className="text-xs leading-5 text-gray-500">
@@ -4601,7 +5164,7 @@ function StoreTab({
         </div>
 
         <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
-          Buyers pay ₹20 booking via PayPerTap. If you set an extra confirmation advance, the buyer pays that extra amount directly to you on WhatsApp/UPI/COD.
+          These settings control how buyers pay you after placing an order. Customer payments go directly to your seller payment flow.
         </div>
         {saveProgress ? (
           <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
@@ -4727,115 +5290,6 @@ function Theme1HeroPreviewCard({
   );
 }
 
-function SellerConfirmationAdvancePanel({
-  fixedAmount,
-  onFixedAmountChange,
-  onPercentChange,
-  onTypeChange,
-  percent,
-  type,
-}: {
-  fixedAmount: string;
-  onFixedAmountChange: (value: string) => void;
-  onPercentChange: (value: string) => void;
-  onTypeChange: (value: SellerConfirmationAdvanceType) => void;
-  percent: string;
-  type: SellerConfirmationAdvanceType;
-}) {
-  const fixedValue = Number(fixedAmount) || 0;
-  const percentValue = Number(percent) || 0;
-  const showHighWarning =
-    (type === "fixed" && fixedValue >= 1000) ||
-    (type === "percentage" && percentValue > 50);
-
-  return (
-    <section className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-      <h3 className="text-sm font-semibold text-gray-950">
-        How much advance do you usually collect before confirming an order?
-      </h3>
-      <div className="mt-4 grid gap-3">
-        <DashboardAdvanceOption
-          checked={type === "paypertap_only"}
-          label="Only ₹20 PayPerTap booking"
-          description="Buyer pays ₹20 to reserve the product. You collect the rest directly on WhatsApp."
-          onChange={() => onTypeChange("paypertap_only")}
-        />
-        <DashboardAdvanceOption
-          checked={type === "fixed"}
-          label="Fixed confirmation amount"
-          description="Example: ₹100, ₹150, ₹200 total advance before final confirmation."
-          onChange={() => onTypeChange("fixed")}
-        />
-        {type === "fixed" ? (
-          <Field
-            label="Total confirmation advance"
-            type="number"
-            min="20"
-            inputMode="numeric"
-            value={fixedAmount}
-            onChange={(value) => onFixedAmountChange(sanitizeNonNegativeNumberInput(value))}
-            placeholder="150"
-          />
-        ) : null}
-        <DashboardAdvanceOption
-          checked={type === "percentage"}
-          label="Percentage of product price"
-          description="Example: 10%, 20%, 30% of product price as total advance."
-          onChange={() => onTypeChange("percentage")}
-        />
-        {type === "percentage" ? (
-          <Field
-            label="Total confirmation advance percentage"
-            type="number"
-            min="1"
-            inputMode="numeric"
-            value={percent}
-            onChange={(value) => onPercentChange(sanitizeNonNegativeNumberInput(value))}
-            placeholder="10"
-          />
-        ) : null}
-      </div>
-      <p className="mt-4 text-xs leading-5 text-gray-500">
-        Higher advance can improve buyer commitment, but it may also reduce bookings. We recommend keeping it reasonable for faster confirmations.
-      </p>
-      {showHighWarning ? (
-        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-5 text-amber-800">
-          High advance may reduce buyer conversions.
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
-function DashboardAdvanceOption({
-  checked,
-  description,
-  label,
-  onChange,
-}: {
-  checked: boolean;
-  description: string;
-  label: string;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer gap-3 rounded-xl border border-gray-200 bg-white p-3">
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="mt-1 h-4 w-4 shrink-0 accent-gray-950"
-      />
-      <span>
-        <strong className="block text-sm text-gray-950">{label}</strong>
-        <span className="mt-1 block text-xs leading-5 text-gray-500">
-          {description}
-        </span>
-      </span>
-    </label>
-  );
-}
-
 function StorefrontStyleSummary({
   currentThemeId,
 }: {
@@ -4868,7 +5322,7 @@ function QuickReplies() {
     {
       label: "/payment",
       text: [
-        "Thanks for your booking.",
+        "Thanks for your order.",
         "",
         "Please pay the remaining amount here:",
         "UPI ID: {your UPI ID}",
@@ -4934,19 +5388,163 @@ function QuickReplyCard({ label, text }: { label: string; text: string }) {
   );
 }
 
+function getPaymentReturnUrl(token: string): string {
+  const trimmedToken = token.trim();
+
+  if (!trimmedToken) return "";
+
+  return `${window.location.origin}/payment-return/${trimmedToken}`;
+}
+
+function StorePaymentSettingsPanel({
+  advanceAmount,
+  copiedReturnUrl,
+  onAdvanceAmountChange,
+  onCopyReturnUrl,
+  onPaymentLinkChange,
+  onPaymentModeChange,
+  paymentLink,
+  paymentMode,
+  returnUrl,
+}: {
+  advanceAmount: string;
+  copiedReturnUrl: boolean;
+  onAdvanceAmountChange: (value: string) => void;
+  onCopyReturnUrl: () => void;
+  onPaymentLinkChange: (value: string) => void;
+  onPaymentModeChange: (value: StorePaymentMode) => void;
+  paymentLink: string;
+  paymentMode: StorePaymentMode;
+  returnUrl: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-semibold text-gray-950">Payment Settings</h3>
+        <p className="text-xs leading-5 text-gray-500">
+          One payment configuration applies to every product in this store.
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <div>
+          <p className="text-sm font-medium text-gray-800">Order Mode</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <DashboardRadioOption
+              checked={paymentMode === "cod"}
+              label="Cash on Delivery"
+              description="No online payment link is needed for this mode."
+              onChange={() => onPaymentModeChange("cod")}
+            />
+            <DashboardRadioOption
+              checked={paymentMode === "partial_advance"}
+              label="Partial advance"
+              description="Use one Razorpay payment link for every product."
+              onChange={() => onPaymentModeChange("partial_advance")}
+            />
+          </div>
+        </div>
+
+        {paymentMode === "partial_advance" ? (
+          <>
+            <Field
+              label="Advance amount"
+              value={advanceAmount}
+              onChange={(value) => onAdvanceAmountChange(sanitizeNonNegativeNumberInput(value))}
+              placeholder="99"
+              type="number"
+              min="1"
+              inputMode="numeric"
+              required
+            />
+            <InfoRow label="Payment provider" value="Razorpay" />
+            <Field
+              label="Payment link"
+              value={paymentLink}
+              onChange={onPaymentLinkChange}
+              placeholder="https://rzp.io/..."
+              type="url"
+              required
+              helper="This payment link will automatically be used for every product in your store."
+            />
+            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-950">Your return URL</p>
+                  <p className="mt-2 break-all rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-700">
+                    {returnUrl || "Generating return URL..."}
+                  </p>
+                </div>
+                <PptButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!returnUrl}
+                  success={copiedReturnUrl}
+                  onClick={onCopyReturnUrl}
+                >
+                  {copiedReturnUrl ? "Copied" : "Copy"}
+                </PptButton>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-gray-500">
+                Paste this return URL into your Razorpay payment page settings.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-gray-500">
+                Configure this once in Razorpay. Customers will automatically return to
+                PayPerTap after completing payment.
+              </p>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function DashboardRadioOption({
+  checked,
+  description,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  description: string;
+  label: string;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer gap-3 rounded-xl border border-gray-200 bg-white p-3">
+      <input
+        type="radio"
+        checked={checked}
+        onChange={onChange}
+        className="mt-1 h-4 w-4 shrink-0 accent-gray-950"
+      />
+      <span>
+        <strong className="block text-sm text-gray-950">{label}</strong>
+        <span className="mt-1 block text-xs leading-5 text-gray-500">
+          {description}
+        </span>
+      </span>
+    </label>
+  );
+}
+
 function PaymentsTab() {
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-6">
-      <p className="text-sm font-medium text-gray-500">Booking model</p>
+      <p className="text-sm font-medium text-gray-500">Order model</p>
       <h2 className="mt-2 text-xl font-semibold tracking-tight">
-        Fixed ₹20 PayPerTap booking fee
+        Seller wallet flow
       </h2>
       <p className="mt-3 text-sm leading-6 text-gray-600">
-        PayPerTap collects ₹20 from the buyer to reserve the item. You collect
-        any extra confirmation advance and the remaining product amount directly on WhatsApp/UPI/COD. You get a managed dashboard with buyer bookings, product details, and follow-up context in one place.
+        Buyers place orders without paying PayPerTap. Depending on your store settings,
+        buyers either choose Cash on Delivery or continue to your Razorpay payment link for
+        a partial advance.
       </p>
       <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-        Seller confirmation advance settings live in Store settings. They never change the ₹20 PayPerTap online payment amount.
+        PayPerTap charges your seller wallet when a buyer successfully creates an order.
+        Your store automatically pauses if the wallet cannot cover new orders.
       </div>
     </section>
   );

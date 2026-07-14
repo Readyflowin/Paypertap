@@ -4,7 +4,7 @@ import clsx from "clsx";
 
 import { Card } from "./Card";
 
-type EmptyStateTone = "neutral" | "product" | "booking" | "customer" | "store";
+type EmptyStateTone = "neutral" | "product" | "Order" | "customer" | "store";
 
 export type EmptyStateProps = {
   title: string;
@@ -19,7 +19,7 @@ export type EmptyStateProps = {
 const toneIcon: Record<EmptyStateTone, ReactNode> = {
   neutral: null,
   product: <Package size={22} aria-hidden="true" />,
-  booking: <CalendarCheck size={22} aria-hidden="true" />,
+  Order: <CalendarCheck size={22} aria-hidden="true" />,
   customer: <Users size={22} aria-hidden="true" />,
   store: <Store size={22} aria-hidden="true" />,
 };

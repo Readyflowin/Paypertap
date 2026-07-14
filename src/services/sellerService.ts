@@ -3,27 +3,16 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
 import { normalizeIndianMobileInput } from "../lib/phone";
-import {
-  DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
-  type SellerConfirmationAdvanceType,
-} from "../lib/confirmationAdvance";
-import type { Seller, Store, StoreSlugReservation } from "../types/firestore";
-import {
-  sendAdminSellerOnboardingEmail,
-  sendSellerWelcomeEmail,
-  sendStoreCreatedEmail,
-} from "./emailEventService";
+import type { Seller, Store } from "../types/firestore";
 import {
   createSellerProduct,
   type ProductSaveProgress,
 } from "./productService";
-import { normalizeInstagramProfile } from "./storeService";
 
 type PrepareSellerResult = {
   sellerId: string;
@@ -36,15 +25,20 @@ type StoreOnboardingInput = {
   storeName: string;
   instagramProfile?: string;
   logoUrl?: string;
-  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType;
-  sellerConfirmationAdvanceFixedAmount?: number | null;
-  sellerConfirmationAdvancePercent?: number | null;
+};
+
+type StoreOnboardingApiResponse = {
+  success?: boolean;
+  storeId?: string;
+  nextRoute?: string;
+  error?: string;
 };
 
 type StoreOnboardingDebugInfo = {
   operation:
     | "load-seller"
     | "create-minimal-seller"
+    | "initialize-wallet"
     | "check-slug-reservation"
     | "create-slug-reservation"
     | "check-store"
@@ -75,18 +69,6 @@ type ProductOnboardingInput = {
   product?: FirstProductInput;
 };
 
-const BOOKING_ADVANCE_AMOUNT = 20;
-
-const DEFAULT_COLORS = {
-  primaryColor: "#111111",
-  secondaryColor: "#F6F1E8",
-  accentColor: "#7A2E2E",
-};
-
-const DEFAULT_THEME_ID = "theme1";
-
-const SLUG_TAKEN_MESSAGE = "This store link is already taken.";
-
 class StoreOnboardingWriteError extends Error {
   debugInfo: StoreOnboardingDebugInfo;
 
@@ -101,19 +83,6 @@ export function getStoreOnboardingDebugInfo(
   error: unknown
 ): StoreOnboardingDebugInfo | null {
   return error instanceof StoreOnboardingWriteError ? error.debugInfo : null;
-}
-
-function getFirebaseErrorCode(error: unknown) {
-  if (typeof error !== "object" || error === null || !("code" in error)) {
-    return "";
-  }
-
-  const { code } = error as { code?: unknown };
-  return typeof code === "string" ? code : "";
-}
-
-function isPermissionDenied(error: unknown) {
-  return getFirebaseErrorCode(error) === "permission-denied";
 }
 
 function createStoreOnboardingWriteError(
@@ -158,13 +127,11 @@ async function getStore(storeId: string): Promise<Store | null> {
   return storeSnap.data() as Store;
 }
 
-async function ensureMinimalSeller(user: User): Promise<Seller> {
+async function loadSellerForAuth(user: User): Promise<Seller | null> {
   const uid = user.uid;
-  const sellerRef = doc(db, "sellers", uid);
-  let seller: Seller | null;
 
   try {
-    seller = await getSeller(uid);
+    return await getSeller(uid);
   } catch (error) {
     throw createStoreOnboardingWriteError(error, {
       operation: "load-seller",
@@ -176,44 +143,6 @@ async function ensureMinimalSeller(user: User): Promise<Seller> {
       updatingSeller: false,
     });
   }
-
-  if (seller) {
-    return seller;
-  }
-
-  const minimalSeller: Seller = {
-    sellerId: uid,
-    authUid: uid,
-    name: user.displayName || "",
-    email: user.email || "",
-    phone: "",
-    storeId: "",
-    status: "active",
-    razorpayLinked: false,
-    profileImageUrl: user.photoURL || "",
-    onboardingStatus: "auth_completed",
-    onboardingStep: "store",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  try {
-    await setDoc(sellerRef, minimalSeller);
-  } catch (error) {
-    throw createStoreOnboardingWriteError(error, {
-      operation: "create-minimal-seller",
-      attemptedStoreSlug: "",
-      storeId: "",
-      payloadKeys: Object.keys(minimalSeller),
-      creatingSlug: false,
-      creatingStore: false,
-      updatingSeller: false,
-    });
-  }
-
-  void sendSellerWelcomeEmail({ seller: minimalSeller });
-
-  return minimalSeller;
 }
 
 function toPositiveInt(value: number, fieldName: string) {
@@ -226,97 +155,13 @@ function toPositiveInt(value: number, fieldName: string) {
   return amount;
 }
 
-async function reserveStoreSlug(slug: string, uid: string): Promise<string> {
-  const slugRef = doc(db, "storeSlugs", slug);
-  let slugSnap;
-
-  try {
-    slugSnap = await getDoc(slugRef);
-  } catch (error) {
-    throw createStoreOnboardingWriteError(error, {
-      operation: "check-slug-reservation",
-      attemptedStoreSlug: slug,
-      storeId: slug,
-      payloadKeys: [],
-      creatingSlug: false,
-      creatingStore: false,
-      updatingSeller: false,
-    });
-  }
-
-  if (slugSnap.exists()) {
-    const reservation = slugSnap.data() as StoreSlugReservation;
-
-    if (reservation.sellerId === uid) {
-      return slug;
-    }
-
-    throw new Error(SLUG_TAKEN_MESSAGE);
-  }
-
-  const slugPayload = {
-    slug,
-    storeId: slug,
-    sellerId: uid,
-    createdAt: serverTimestamp(),
-  };
-
-  try {
-    await setDoc(slugRef, slugPayload);
-  } catch (error) {
-    const latestSlugSnap = await getDoc(slugRef);
-
-    if (latestSlugSnap.exists()) {
-      const reservation = latestSlugSnap.data() as StoreSlugReservation;
-
-      if (reservation.sellerId === uid) {
-        return slug;
-      }
-
-      throw new Error(SLUG_TAKEN_MESSAGE);
-    }
-
-    if (isPermissionDenied(error)) {
-      throw createStoreOnboardingWriteError(error, {
-        operation: "create-slug-reservation",
-        attemptedStoreSlug: slug,
-        storeId: slug,
-        payloadKeys: Object.keys(slugPayload),
-        creatingSlug: true,
-        creatingStore: false,
-        updatingSeller: false,
-      });
-    }
-
-    console.error("Slug reservation failed:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Could not reserve your store link.");
-  }
-
-  return slug;
-}
-
-export async function createUniqueStoreSlug(
-  baseName: string,
-  uid: string
-): Promise<string> {
-  const baseSlug = slugifyStoreName(baseName);
-
-  if (!baseSlug) {
-    throw new Error("Store name must include at least one letter or number.");
-  }
-
-  return reserveStoreSlug(baseSlug, uid);
-}
-
 export async function prepareSellerAfterAuth(
   user: User
 ): Promise<PrepareSellerResult> {
   const uid = user.uid;
-  const seller = await ensureMinimalSeller(user);
+  const seller = await loadSellerForAuth(user);
 
-  if (!seller.storeId) {
+  if (!seller?.storeId) {
     return {
       sellerId: uid,
       storeId: "",
@@ -370,154 +215,56 @@ export async function completeStoreOnboarding(
     );
   }
 
-  if (
-    input.sellerConfirmationAdvanceType === "fixed" &&
-    Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0) < 20
-  ) {
-    throw new Error("Fixed confirmation amount must be at least ₹20.");
-  }
-
-  if (
-    input.sellerConfirmationAdvanceType === "percentage" &&
-    Math.round(Number(input.sellerConfirmationAdvancePercent) || 0) <= 0
-  ) {
-    throw new Error("Confirmation percentage must be greater than 0.");
-  }
-
-  const uid = user.uid;
-  const sellerRef = doc(db, "sellers", uid);
-  const seller = await ensureMinimalSeller(user);
-  const existingStoreId = seller.storeId?.trim() || "";
-  const storeId = existingStoreId || slugifyStoreName(storeName);
+  const storeId = slugifyStoreName(storeName);
 
   if (!storeId) {
     throw new Error("Store name must include at least one letter or number.");
   }
 
-  await reserveStoreSlug(storeId, uid);
-
-  const storeRef = doc(db, "stores", storeId);
   const instagramProfile = input.instagramProfile?.trim() || "";
-  const instagram = normalizeInstagramProfile(instagramProfile);
   const inputLogoUrl = input.logoUrl?.trim() || "";
   const safeLogoUrl = getDurableImageUrl(inputLogoUrl);
-  const bio = "Fresh drops, limited pieces.";
 
   if (inputLogoUrl && !safeLogoUrl) {
     throw new Error("Please re-upload the store logo before saving.");
   }
 
-  const storePayload = {
-    storeId,
-    sellerId: uid,
-    storeSlug: storeId,
-    storeName,
-    storeDescription: bio,
-    description: bio,
-    bio,
-    logoUrl: safeLogoUrl,
-    storeLogoUrl: safeLogoUrl,
-    heroTitle: "",
-    heroSubtitle: "",
-    heroImageUrl: "",
-    themeId: DEFAULT_THEME_ID,
-    primaryColor: DEFAULT_COLORS.primaryColor,
-    secondaryColor: DEFAULT_COLORS.secondaryColor,
-    accentColor: DEFAULT_COLORS.accentColor,
-    bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
-    sellerConfirmationAdvanceType:
-      input.sellerConfirmationAdvanceType || DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
-    sellerConfirmationAdvanceFixedAmount:
-      input.sellerConfirmationAdvanceType === "fixed"
-        ? Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0)
-        : null,
-    sellerConfirmationAdvancePercent:
-      input.sellerConfirmationAdvanceType === "percentage"
-        ? Math.round(Number(input.sellerConfirmationAdvancePercent) || 0)
-        : null,
-    phone,
-    whatsappPhone: phone,
-    instagramProfile,
-    instagramUrl: instagram.instagramUrl,
-    isPublished: true,
-    updatedAt: serverTimestamp(),
-  };
-
   try {
-    await setDoc(storeRef, storePayload, { merge: true });
+    const idToken = await user.getIdToken();
+    const response = await fetch("/api/store-onboarding", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone,
+        storeName,
+        instagramProfile,
+        logoUrl: safeLogoUrl,
+      }),
+    });
+    const data = (await response.json().catch(() => ({}))) as StoreOnboardingApiResponse;
+
+    if (!response.ok || !data.success || !data.storeId || !data.nextRoute) {
+      throw new Error(data.error || "Could not save your store.");
+    }
+
+    return {
+      storeId: data.storeId,
+      nextRoute: data.nextRoute,
+    };
   } catch (error) {
     throw createStoreOnboardingWriteError(error, {
       operation: "save-store",
       attemptedStoreSlug: storeId,
       storeId,
-      payloadKeys: Object.keys(storePayload),
+      payloadKeys: ["phone", "storeName", "instagramProfile", "logoUrl"],
       creatingSlug: false,
-      creatingStore: !existingStoreId,
+      creatingStore: false,
       updatingSeller: false,
     });
   }
-
-  const sellerOnboardingPayload = {
-    name: seller.name || user.displayName || storeName,
-    phone,
-    storeId,
-    status: seller.status || "active",
-    razorpayLinked: seller.razorpayLinked ?? false,
-    profileImageUrl: seller.profileImageUrl || user.photoURL || "",
-    onboardingStatus: "store_completed",
-    onboardingStep: "product",
-    updatedAt: serverTimestamp(),
-  };
-
-  try {
-    await updateDoc(sellerRef, sellerOnboardingPayload);
-  } catch (error) {
-    throw createStoreOnboardingWriteError(error, {
-      operation: "update-seller-onboarding",
-      attemptedStoreSlug: storeId,
-      storeId,
-      payloadKeys: Object.keys(sellerOnboardingPayload),
-      creatingSlug: false,
-      creatingStore: false,
-      updatingSeller: true,
-    });
-  }
-
-  if (!existingStoreId) {
-    const sellerForEmail: Seller = {
-      ...seller,
-      sellerId: uid,
-      authUid: uid,
-      name: seller.name || user.displayName || storeName,
-      email: seller.email || user.email || "",
-      phone,
-      storeId,
-    };
-    const storeForEmail: Store = {
-      ...storePayload,
-    };
-
-    void sendStoreCreatedEmail({
-      seller: sellerForEmail,
-      store: storeForEmail,
-    }).then(async (sent) => {
-      if (!sent) return;
-
-      try {
-        await updateDoc(storeRef, {
-          updatedAt: serverTimestamp(),
-        });
-      } catch (error) {
-        console.warn("Could not touch store after created email was sent:", error);
-      }
-    });
-    void sendAdminSellerOnboardingEmail({ storeId });
-  }
-
-  return {
-    storeId,
-    nextRoute: "/onboarding/product",
-  };
 }
 
 export async function completeProductOnboarding(
@@ -525,7 +272,7 @@ export async function completeProductOnboarding(
   input: ProductOnboardingInput
 ): Promise<{ nextRoute: string }> {
   const uid = user.uid;
-  const seller = await ensureMinimalSeller(user);
+  const seller = await loadSellerForAuth(user);
 
   if (!seller?.storeId) {
     throw new Error("Please complete your store setup first.");
@@ -550,8 +297,8 @@ export async function completeProductOnboarding(
       throw new Error("Product title is required.");
     }
 
-    if (!Number.isInteger(price) || price <= BOOKING_ADVANCE_AMOUNT) {
-      throw new Error("Product price must be greater than ₹20.");
+    if (!Number.isInteger(price) || price <= 0) {
+      throw new Error("Product price must be greater than 0.");
     }
 
     await createSellerProduct(user, seller.storeId, {

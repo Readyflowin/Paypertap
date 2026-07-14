@@ -32,7 +32,7 @@ export function organizationSchema(): JsonLdObject {
       name: "Aditya",
     },
     description:
-      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a fixed ₹20 verified booking flow.",
+      "PayPerTap helps Indian Instagram and WhatsApp sellers create storefronts with a seller wallet verified order flow.",
   };
 }
 
@@ -54,7 +54,7 @@ export function webApplicationSchema(): JsonLdObject {
     applicationCategory: "ECommerceApplication",
     operatingSystem: "Web",
     description:
-      "PayPerTap is a verified booking storefront for Indian Instagram and WhatsApp sellers.",
+      "PayPerTap is a verified order storefront for Indian Instagram and WhatsApp sellers.",
   };
 }
 
@@ -65,7 +65,7 @@ export function personSchema(): JsonLdObject {
     name: "Aditya",
     jobTitle: "Founder",
     description:
-      "Aditya is the founder of PayPerTap, a verified booking storefront for Indian Instagram and WhatsApp sellers.",
+      "Aditya is the founder of PayPerTap, a verified order storefront for Indian Instagram and WhatsApp sellers.",
     worksFor: {
       "@type": "Organization",
       name: SITE_NAME,

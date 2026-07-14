@@ -1,30 +1,17 @@
-import { BOOKING_ADVANCE_AMOUNT } from "../lib/money";
-import {
-  calculateConfirmationAdvance,
-  type SellerConfirmationAdvanceType,
-} from "../lib/confirmationAdvance";
-import {
-  buildWhatsAppUrl,
-  normalizeIndianMobileInput,
-} from "../lib/phone";
+import { buildWhatsAppUrl, normalizeIndianMobileInput } from "../lib/phone";
 import { getVariantDetailsText } from "../lib/productVariants";
 import type { CheckoutSession, DerivedCustomerLead, Product, Store } from "../types/firestore";
 
-type BuyerBookingInput = {
+type BuyerOrderInput = {
   storeSlug: string;
   storeName?: string;
-  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType | string;
-  sellerConfirmationAdvanceFixedAmount?: number | null;
-  sellerConfirmationAdvancePercent?: number | null;
   productId: string;
   productTitle: string;
   productPrice: number;
-  bookingAdvanceAmount: number;
-  sellerCollectAmount: number;
-  confirmationAdvanceType?: SellerConfirmationAdvanceType | string;
-  totalConfirmationAdvance?: number;
-  sellerConfirmationAmountPending?: number;
-  finalBalanceAfterConfirmation?: number;
+  advanceAmount?: number;
+  paymentAmount?: number;
+  sellerAmountDue?: number;
+  paymentMode?: "cod" | "partial_advance";
   buyerName: string;
   buyerPhone: string;
   buyerAddress: string;
@@ -38,8 +25,10 @@ type BuyerBookingInput = {
 type SellerMessageInput = {
   buyerName: string;
   productTitle: string;
-  sellerCollectAmount: number;
-  bookingAdvanceAmount?: number;
+  sellerAmountDue?: number;
+  advanceAmount?: number;
+  paymentAmount?: number;
+  paymentMode?: "cod" | "partial_advance";
   sellerUpiId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
@@ -78,56 +67,36 @@ export function getStoreWhatsAppPhone(store?: Store | null): string | null {
   return normalized.ok ? normalized.localNumber || null : null;
 }
 
-export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
+export function buildBuyerOrderMessage(input: BuyerOrderInput): string {
   const productUrl = `${getOrigin()}/${input.storeSlug}/product/${input.productId}`;
   const variantDetails = getVariantDetailsText(input);
   const storeName = input.storeName?.trim() || "this store";
-  const confirmationAdvance = calculateConfirmationAdvance({
-    productPrice: input.productPrice,
-    sellerConfirmationAdvanceType: input.sellerConfirmationAdvanceType,
-    sellerConfirmationAdvanceFixedAmount: input.sellerConfirmationAdvanceFixedAmount,
-    sellerConfirmationAdvancePercent: input.sellerConfirmationAdvancePercent,
-    bookingPaid: input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
-  });
-  const hasConfirmationSnapshot =
-    typeof input.sellerConfirmationAmountPending === "number" &&
-    typeof input.finalBalanceAfterConfirmation === "number" &&
-    typeof input.totalConfirmationAdvance === "number";
-  const paymentBreakdown = hasConfirmationSnapshot
-    ? {
-        ...confirmationAdvance,
-        sellerConfirmationAdvanceType:
-          input.confirmationAdvanceType || confirmationAdvance.sellerConfirmationAdvanceType,
-        paypertapBookingPaid: input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
-        totalConfirmationAdvance:
-          input.totalConfirmationAdvance || input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT,
-        sellerConfirmationAmountPending: input.sellerConfirmationAmountPending || 0,
-        finalBalanceAfterConfirmation: input.finalBalanceAfterConfirmation || 0,
-      }
-    : confirmationAdvance;
-  const paymentLines =
-    paymentBreakdown.sellerConfirmationAmountPending > 0
-      ? [
-          `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
-          `Seller confirmation amount pending: ₹${paymentBreakdown.sellerConfirmationAmountPending}`,
-          `Remaining at COD after confirmation: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
-        ]
-      : [
-          `Paid on PayPerTap: ₹${paymentBreakdown.paypertapBookingPaid}`,
-          `Remaining amount to seller: ₹${paymentBreakdown.finalBalanceAfterConfirmation}`,
-        ];
-  const closingLine =
-    paymentBreakdown.sellerConfirmationAmountPending > 0
-      ? "Please share your UPI/payment details so I can complete the confirmation amount and confirm delivery."
-      : "Please confirm delivery and the remaining payment details.";
+  const isPartialAdvance = input.paymentMode === "partial_advance";
+  const paymentAmount = Math.max(
+    0,
+    Math.round(Number(input.paymentAmount ?? input.advanceAmount) || 0)
+  );
+  const sellerAmountDue = Math.max(0, Math.round(Number(input.sellerAmountDue) || 0));
+  const paymentLines = isPartialAdvance
+    ? [
+        `Advance to seller: Rs ${paymentAmount}`,
+        `Remaining amount with seller: Rs ${sellerAmountDue}`,
+      ]
+    : [
+        "Payment mode: Cash on Delivery",
+        `Amount to collect: Rs ${input.productPrice}`,
+      ];
+  const closingLine = isPartialAdvance
+    ? "Please confirm payment receipt and delivery details."
+    : "Please confirm availability, delivery, and payment details.";
 
   return [
-    `Hi, I booked this product on ${storeName}`,
+    `Hi, I placed an order on ${storeName}`,
     "",
     `Product: ${input.productTitle}`,
     ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     `Product link: ${productUrl}`,
-    `Price: ₹${input.productPrice}`,
+    `Price: Rs ${input.productPrice}`,
     "",
     ...paymentLines,
     "",
@@ -142,7 +111,7 @@ export function buildBuyerBookingMessage(input: BuyerBookingInput): string {
   ].join("\n");
 }
 
-export function buildBuyerBookingWhatsAppUrl(
+export function buildBuyerOrderWhatsAppUrl(
   store: Store | null,
   message: string
 ): string | null {
@@ -153,20 +122,23 @@ export function buildSellerPaymentCollectionMessage(
   input: SellerMessageInput
 ): string {
   const variantDetails = getVariantDetailsText(input);
+  const isPartialAdvance = input.paymentMode === "partial_advance";
   const base = [
-    `Hi ${input.buyerName}, thanks for booking ${input.productTitle} from our PayPerTap store.`,
+    `Hi ${input.buyerName}, thanks for ordering ${input.productTitle} from our store.`,
     ...(variantDetails ? [`Variant: ${variantDetails}`] : []),
     "",
-    `Your ₹${input.bookingAdvanceAmount || BOOKING_ADVANCE_AMOUNT} booking via PayPerTap is recorded.`,
-    `Remaining amount: ₹${input.sellerCollectAmount}.`,
-    "Please confirm payment/delivery details here.",
+    isPartialAdvance
+      ? `Advance amount: Rs ${input.paymentAmount || input.advanceAmount || 0}.`
+      : "Payment mode: Cash on Delivery.",
+    `Amount due with seller: Rs ${input.sellerAmountDue || 0}.`,
+    "Please confirm payment and delivery details here.",
     "",
   ];
 
   if (input.sellerUpiId?.trim()) {
     return [
       ...base,
-      "Please pay the remaining amount here:",
+      "Please pay here:",
       `UPI ID: ${input.sellerUpiId.trim()}`,
       "",
       "After payment, please share the screenshot here so we can confirm your delivery.",
@@ -175,7 +147,7 @@ export function buildSellerPaymentCollectionMessage(
 
   return [
     ...base,
-    "Please complete the remaining payment as discussed. After payment, share the screenshot here so we can confirm your delivery.",
+    "Please complete payment as discussed. After payment, share the screenshot here so we can confirm your delivery.",
   ].join("\n");
 }
 
@@ -192,7 +164,7 @@ export function buildDeliveryDetailsMessage(input: SellerMessageInput): string {
     "City:",
     "Pincode:",
     "",
-    "Once remaining payment is confirmed, we will process your order.",
+    "Once payment is confirmed, we will process your order.",
   ].join("\n");
 }
 
@@ -209,7 +181,7 @@ export function buildOrderConfirmedMessage(input: SellerMessageInput): string {
   ].join("\n");
 }
 
-export function buildBookingWhatsAppUrl(phone: string, message: string): string {
+export function buildOrderWhatsAppUrl(phone: string, message: string): string {
   return buildWhatsAppUrl(phone, message) || "#";
 }
 
@@ -223,8 +195,8 @@ export function buildNewDropRetargetingMessage(input: RetargetingInput): string 
       `Hi ${input.buyerName}, we just added a new item you may like:`,
       "",
       input.product.title,
-      `₹${input.product.price}`,
-      `Book here: ${productUrl}`,
+      `Rs ${input.product.price}`,
+      `Order here: ${productUrl}`,
       "",
       "Limited quantity available.",
     ].join("\n");
@@ -240,7 +212,6 @@ export function buildRetargetingMessage(
   customer: DerivedCustomerLead,
   storeLink: string
 ): string {
-  // TODO: Product picker for retargeting will be added in next dashboard refinement.
   return buildNewDropRetargetingMessage({
     buyerName: customer.buyerName,
     storeLink,
@@ -248,7 +219,7 @@ export function buildRetargetingMessage(
 }
 
 export function buildRetargetingWhatsAppUrl(phone: string, message: string): string {
-  return buildBookingWhatsAppUrl(phone, message);
+  return buildOrderWhatsAppUrl(phone, message);
 }
 
 export function getSellerUpiId(store?: Store | null): string {
@@ -262,8 +233,10 @@ export function checkoutToSellerMessageInput(
   return {
     buyerName: checkoutSession.buyerName,
     productTitle: checkoutSession.productTitle,
-    sellerCollectAmount: checkoutSession.sellerCollectAmount,
-    bookingAdvanceAmount: checkoutSession.bookingAdvanceAmount,
+    sellerAmountDue: checkoutSession.sellerAmountDue,
+    advanceAmount: checkoutSession.advanceAmount,
+    paymentAmount: checkoutSession.paymentAmount,
+    paymentMode: checkoutSession.paymentMode,
     selectedVariantLabel: checkoutSession.selectedVariantLabel,
     selectedVariantOptions: checkoutSession.selectedVariantOptions,
     sellerUpiId: getStoreUpiId(store),

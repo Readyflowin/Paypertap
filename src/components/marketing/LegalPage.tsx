@@ -52,8 +52,8 @@ export function LegalPage({
               Where can I read more or get help?
             </h2>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              Review common booking questions or contact PayPerTap when a storefront
-              or booking-flow question needs support.
+              Review common order questions or contact PayPerTap when a storefront
+              or Order-flow question needs support.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link to="/faq" className="ppt-secondary-link">FAQ</Link>

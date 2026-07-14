@@ -100,7 +100,25 @@
       ]
     },
     {
-      "source": "/:storeSlug/booking-success/:checkoutId",
+      "source": "/:storeSlug/order-success/:checkoutId",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/payment-return/:token",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/wallet/recharge-return/:token",
       "headers": [
         {
           "key": "X-Robots-Tag",
@@ -147,8 +165,8 @@
       "destination": "/refund-cancellation/index.html"
     },
     {
-      "source": "/features/verified-booking",
-      "destination": "/features/verified-booking/index.html"
+      "source": "/features/verified-order",
+      "destination": "/features/verified-order/index.html"
     },
     {
       "source": "/features/link-in-bio-storefront",

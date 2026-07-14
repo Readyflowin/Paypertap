@@ -49,13 +49,13 @@ const capabilities: Capability[] = [
     ),
   },
   {
-    title: "Booking intent",
-    copy: "The buyer commits with a fixed ₹20 booking.",
-    path: "/features/verified-booking",
+    title: "Order intent",
+    copy: "The buyer commits with an order.",
+    path: "/features/verified-order",
     visual: (
-      <div className="ppt-capability-booking-ui" aria-hidden="true">
-        <span>Booking via PayPerTap</span>
-        <strong>₹20</strong>
+      <div className="ppt-capability-Order-ui" aria-hidden="true">
+        <span>order via PayPerTap</span>
+        <strong>seller wallet</strong>
         <em>Reserved</em>
       </div>
     ),
@@ -70,17 +70,17 @@ const capabilities: Capability[] = [
           <WhatsAppIcon size={16} />
           <strong>Message ready</strong>
         </div>
-        <span>Product, price, booking, buyer details.</span>
+        <span>Product, price, Order, buyer details.</span>
       </div>
     ),
   },
   {
     title: "Seller dashboard",
-    copy: "Products, bookings, leads, and themes.",
+    copy: "Products, Orders, leads, and themes.",
     path: "/how-it-works",
     visual: (
       <div className="ppt-capability-dashboard-ui" aria-hidden="true">
-        {["Products", "Bookings", "Customers"].map((item, index) => (
+        {["Products", "Orders", "Customers"].map((item, index) => (
           <span className={index === 1 ? "is-active" : ""} key={item}>
             {item}
           </span>

@@ -4,7 +4,7 @@ import { PayPerTapLoader } from "../loaders";
 
 export function PptTapLoader({
   title = "Preparing WhatsApp...",
-  description = "Used for booking success, redirects and seller actions.",
+  description = "Used for Order success, redirects and seller actions.",
   className,
 }: {
   title?: string;

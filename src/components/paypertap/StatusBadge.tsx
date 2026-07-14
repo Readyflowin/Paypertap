@@ -2,7 +2,7 @@ import clsx from "clsx";
 
 import { Badge, type BadgeProps } from "@/components/ui";
 
-type StatusType = "product" | "booking" | "store" | "payment" | "generic";
+type StatusType = "product" | "order" | "store" | "payment" | "generic";
 
 export type StatusBadgeProps = {
   type?: StatusType;
@@ -25,14 +25,15 @@ const productStatuses: Record<string, StatusMeta> = {
   draft: { label: "Draft", variant: "warning" },
 };
 
-const bookingStatuses: Record<string, StatusMeta> = {
-  booking_paid: { label: "₹20 paid", variant: "success" },
-  payment_pending: { label: "Payment pending", variant: "warning" },
-  whatsapp_opened: { label: "WhatsApp opened", variant: "info" },
-  sold: { label: "Sold", variant: "success" },
+const orderStatuses: Record<string, StatusMeta> = {
+  pending_payment: { label: "Pending payment", variant: "warning" },
+  awaiting_payment: { label: "Pending payment", variant: "warning" },
+  payment_returned: { label: "Payment returned", variant: "warning" },
+  pending_confirmation: { label: "Pending confirmation", variant: "info" },
+  confirmed: { label: "Confirmed", variant: "info" },
+  processing: { label: "Processing", variant: "success" },
+  completed: { label: "Completed", variant: "success" },
   cancelled: { label: "Cancelled", variant: "danger" },
-  cancelled_buyer_no_response: { label: "Buyer no response", variant: "warning" },
-  cancelled_seller_unavailable: { label: "Unavailable", variant: "danger" },
 };
 
 const storeStatuses: Record<string, StatusMeta> = {
@@ -51,7 +52,7 @@ const paymentStatuses: Record<string, StatusMeta> = {
 
 const statusMaps: Record<StatusType, Record<string, StatusMeta>> = {
   product: productStatuses,
-  booking: bookingStatuses,
+  order: orderStatuses,
   store: storeStatuses,
   payment: paymentStatuses,
   generic: {},

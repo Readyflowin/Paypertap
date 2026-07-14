@@ -51,7 +51,7 @@ export type ComparisonPageContent = {
 };
 
 export type FeatureSlug =
-  | "verified-booking"
+  | "verified-order"
   | "link-in-bio-storefront"
   | "whatsapp-handoff"
   | "order-organization"

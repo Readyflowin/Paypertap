@@ -11,7 +11,7 @@ type TopCreateStoreCTAProps = {
 };
 
 export function TopCreateStoreCTA({
-  title = "Ready to create your booking store?",
+  title = "Ready to create your Order store?",
   secondaryLabel = "See how it works",
   secondaryTo = "/how-it-works",
 }: TopCreateStoreCTAProps) {

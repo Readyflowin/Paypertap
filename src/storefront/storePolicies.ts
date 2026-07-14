@@ -14,7 +14,7 @@ export type StoreContactInfo = {
   instagramUrl: string;
 };
 
-export type StorePolicyType = "privacy" | "returns" | "booking";
+export type StorePolicyType = "privacy" | "returns" | "Order";
 
 export type StorePolicyContent = {
   type: StorePolicyType;
@@ -112,18 +112,18 @@ export function generateReturnsPolicy(store: Store): string {
     exchange_only:
       "Exchange may be available as per seller confirmation. Please contact the seller on WhatsApp with your order details.",
     no_returns:
-      "Returns depend on the seller's store policy. Please check product details before booking.",
+      "Returns depend on the seller's store policy. Please check product details before Order.",
   }[getReturnsPolicyType(store)];
 
   return notes ? `${baseCopy} ${notes}` : baseCopy;
 }
 
 export function generatePrivacyPolicy(): string {
-  return "Buyer contact and order details are used to process the booking and connect with the seller. Payment and booking information is used only for order and support purposes. PayPerTap does not sell buyer data to advertisers. Seller may contact the buyer on WhatsApp to complete the order.";
+  return "Buyer contact and order details are used to process the order and connect with the seller. Payment and order information is used only for order and support purposes. PayPerTap does not sell buyer data to advertisers. Seller may contact the buyer on WhatsApp to complete the order.";
 }
 
-export function getPayPerTapBookingExplanation(): string {
-  return "Book an item with ₹20 on PayPerTap. Your item is held after successful booking, and you can continue on WhatsApp to confirm delivery and the remaining payment with the seller.";
+export function getPayPerTapOrderExplanation(): string {
+  return "Place an order on PayPerTap without paying PayPerTap. The seller receives the order details and confirms payment, delivery, and fulfilment directly with you.";
 }
 
 export function getStorePolicyLinks(store: Store) {
@@ -132,7 +132,7 @@ export function getStorePolicyLinks(store: Store) {
   return [
     { type: "privacy" as const, label: "Privacy Policy" },
     { type: "returns" as const, label: `${returnsLabel} / Returns Policy` },
-    { type: "booking" as const, label: "PayPerTap Booking Terms" },
+    { type: "Order" as const, label: "Order Terms" },
   ];
 }
 
@@ -141,7 +141,7 @@ export function getStoreFooterSubheading(store: Store) {
     toText(store.heroSubtitle) ||
     toText(store.tagline) ||
     toText(store.bio) ||
-    "Fresh finds, easy booking, and seller confirmation on WhatsApp."
+    "Fresh finds, easy ordering, and seller confirmation on WhatsApp."
   );
 }
 
@@ -181,14 +181,14 @@ export function getStorePolicyContent(
     };
   }
 
-  if (type === "booking") {
+  if (type === "Order") {
     return {
       type,
-      label: "PayPerTap Booking Terms",
-      title: "PayPerTap Booking Terms",
+      label: "Order Terms",
+      title: "Order Terms",
       body: [
-        getPayPerTapBookingExplanation(),
-        "Pay the remaining amount directly to the seller on WhatsApp, UPI, or COD.",
+        getPayPerTapOrderExplanation(),
+        "Pay the seller directly through Cash on Delivery or the seller's configured payment link.",
       ],
     };
   }

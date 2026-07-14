@@ -1,8 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-let hasLoadedLocalEnv = false;
-
 function parseEnvValue(value: string) {
   let trimmed = value.trim();
 
@@ -83,22 +81,30 @@ type LoadLocalEnvOptions = {
 };
 
 export function loadLocalEnv({ override = false }: LoadLocalEnvOptions = {}) {
-  if (hasLoadedLocalEnv) {
-    return;
+  const envValues: Record<string, string> = {};
+  const envFiles = [".env", ".env.production.local", ".env.local"];
+
+  for (const envFile of envFiles) {
+    const envPath = path.join(process.cwd(), envFile);
+
+    if (!existsSync(envPath)) {
+      continue;
+    }
+
+    const assignments = readEnvAssignments(readFileSync(envPath, "utf8"));
+
+    for (const { key, rawValue } of assignments) {
+      envValues[key] = parseEnvValue(rawValue);
+    }
   }
 
-  hasLoadedLocalEnv = true;
-  const envPath = path.join(process.cwd(), ".env.local");
+  for (const [key, value] of Object.entries(envValues)) {
+    if (!value && process.env[key]) {
+      continue;
+    }
 
-  if (!existsSync(envPath)) {
-    return;
-  }
-
-  const assignments = readEnvAssignments(readFileSync(envPath, "utf8"));
-
-  for (const { key, rawValue } of assignments) {
     if (override || !process.env[key]) {
-      process.env[key] = parseEnvValue(rawValue);
+      process.env[key] = value;
     }
   }
 }

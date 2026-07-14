@@ -13,7 +13,7 @@ export function SharePageButton({ label = "Share PayPerTap" }: SharePageButtonPr
 
     const shareData = {
       title: document.title || "PayPerTap",
-      text: "PayPerTap helps sellers create verified booking storefronts.",
+      text: "PayPerTap helps sellers create verified order storefronts.",
       url: window.location.href,
     };
 

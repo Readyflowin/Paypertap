@@ -1,4 +1,4 @@
-﻿import { ArrowRight, IndianRupee, MessageCircle, ReceiptText, ShieldCheck } from "lucide-react";
+import { ArrowRight, IndianRupee, MessageCircle, ReceiptText, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
@@ -14,23 +14,23 @@ import { Seo } from "../../seo/Seo";
 import { marketingFaqs } from "../faq/faqContent";
 
 const responsibilityRows = [
-  ["Payment", "Fixed ₹20 platform verified-booking fee", "Product price or remaining amount"],
-  ["Record", "Booking record and buyer details", "Final payment method and confirmation"],
+  ["Payment", "seller wallet per-order charge", "Product price or remaining amount"],
+  ["Record", "order record and buyer details", "Final payment method and confirmation"],
   ["Conversation", "WhatsApp handoff context", "Direct buyer conversation and delivery confirmation"],
-  ["After purchase", "Support for booking-flow issues", "Returns and exchanges according to seller policy"],
+  ["After purchase", "Support for Order-flow issues", "Returns and exchanges according to seller policy"],
 ];
 
 const pricingFaqs = marketingFaqs.filter((item) =>
   [
-    "How does the ₹20 booking work?",
-    "Does the seller receive the ₹20?",
+    "How does the order work?",
+    "Does PayPerTap process buyer payments?",
     "Who collects the remaining product amount?",
     "Is PayPerTap a payment gateway?",
     "Does PayPerTap provide seller payouts?",
-    "Do sellers need payout KYC in Phase 1?",
+    "Do sellers need payout KYC in current model?",
     "Can sellers use UPI, Google Pay, PhonePe, or COD?",
-    "Can sellers change the booking amount in Phase 1?",
-    "Can buyers cancel a booking?",
+    "Can sellers change the order amount in current model?",
+    "Can buyers cancel an order?",
   ].includes(item.question),
 );
 
@@ -39,17 +39,17 @@ export function PricingPage() {
     <MarketingLayout>
       <Seo
         canonicalPath="/pricing"
-        title="PayPerTap Pricing | ₹20 Booking for Instagram & WhatsApp Sellers"
-        description="PayPerTap pricing is simple: buyers pay a fixed ₹20 booking fee, sellers collect the remaining amount directly, and no seller payout setup is needed."
+        title="PayPerTap Pricing | order for Instagram & WhatsApp Sellers"
+        description="PayPerTap pricing is simple: sellers pay a per-order wallet charge, sellers collect the remaining amount directly, and no seller payout setup is needed."
         jsonLd={[
           breadcrumbListSchema([{ name: "Home", path: "/" }, { name: "Pricing", path: "/pricing" }]),
         ]}
       />
       <SectionHeader
         eyebrow="Pricing"
-        h1="Simple pricing for verified bookings."
+        h1="Simple pricing for verified orders."
         path="/pricing"
-        subtitle="PayPerTap uses a booking-first model. Buyers pay a fixed ₹20 booking via PayPerTap to reserve a product, and PayPerTap keeps it as the platform verified-booking fee in Phase 1. The seller does not receive the ₹20 and collects the remaining amount directly."
+        subtitle="PayPerTap uses an order-first model. buyers place orders through PayPerTap to reserve a product, and PayPerTap charges the seller wallet for it as the platform per-order charge in current model. The seller does not receive a PayPerTap payout and collects the remaining amount directly."
       />
       <PageTrustMeta path="/pricing" />
       <TopCreateStoreCTA />
@@ -60,17 +60,17 @@ export function PricingPage() {
               <IndianRupee size={24} aria-hidden="true" />
             </div>
             <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-neutral-500">
-              Buyer booking
+              Buyer Order
             </p>
             <p className="mt-3 text-6xl font-extrabold tracking-[-0.06em] text-neutral-950 sm:text-7xl">
-              ₹20
+              seller wallet
             </p>
             <h2 className="mt-5 text-2xl font-extrabold tracking-[-0.04em] text-neutral-950">
-              Who pays the ₹20 booking?
+              Who pays the order?
             </h2>
             <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
-              The buyer pays the fixed PayPerTap platform verified-booking fee to
-              reserve the item. The seller does not receive this ₹20 in Phase 1.
+              PayPerTap charges the seller wallet after a successful order. Customer payments
+              still go directly to the seller.
             </p>
             <Link
               to="/auth"
@@ -106,8 +106,8 @@ export function PricingPage() {
                   Is payout setup required?
                 </h2>
                 <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-                  No seller payout setup is needed in Phase 1 because PayPerTap does
-                  not pay the ₹20 to sellers or settle their remaining payment.
+                  No seller payout setup is needed in the current model, because PayPerTap does
+                  not pay the seller wallet to sellers or settle their remaining payment.
                 </p>
               </MarketingCard>
               <MarketingCard>
@@ -116,7 +116,7 @@ export function PricingPage() {
                   What is recorded?
                 </h2>
                 <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-                  PayPerTap records booking and buyer context before the seller
+                  PayPerTap records Order and buyer context before the seller
                   continues payment and delivery confirmation directly.
                 </p>
               </MarketingCard>
@@ -128,14 +128,14 @@ export function PricingPage() {
       <MarketingSection
         className="ppt-core-page-section"
         title="What does PayPerTap handle, and what does the seller handle?"
-        intro="The booking layer is intentionally limited, so sellers can keep their existing WhatsApp workflow while buyers understand where each payment goes."
+        intro="The order layer is intentionally limited, so sellers can keep their existing WhatsApp workflow while buyers understand where each payment goes."
       >
         <div className="ppt-core-comparison overflow-hidden rounded-[24px] border backdrop-blur-xl">
           <table className="w-full text-left">
             <thead className="ppt-core-comparison-head text-xs font-bold uppercase tracking-[0.12em]">
               <tr>
                 <th className="p-4">Part of order</th>
-                <th className="p-4">PayPerTap handles</th>
+                <th className="p-4">PayPerTap records</th>
                 <th className="p-4">Seller handles</th>
               </tr>
             </thead>
@@ -155,13 +155,13 @@ export function PricingPage() {
       <MarketingSection
         className="ppt-core-page-section"
         title="Is PayPerTap a full payment gateway?"
-        intro="No. Phase 1 is built around one fixed verified-booking fee and a direct seller-buyer completion flow."
+        intro="No. current model is built around one fixed per-order charge and a direct seller-buyer completion flow."
       >
         <div className="grid gap-4 md:grid-cols-2">
           <MarketingCard>
             <h3 className="text-xl font-bold text-neutral-950">No seller payout or split payment</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              PayPerTap keeps the fixed ₹20 fee. It does not remit that fee to the
+              PayPerTap charges the seller wallet for the wallet charge. It does not remit that fee to the
               seller, split a larger payment, or configure a custom seller advance.
               Final product payment remains the seller&apos;s direct process.
             </p>
@@ -178,7 +178,7 @@ export function PricingPage() {
                 Shopify Starter plan
               </a>{" "}
               as a way to sell through social media or messaging apps using product
-              links. PayPerTap remains a booking-first storefront, not a full replacement.
+              links. PayPerTap remains an order-first storefront, not a full replacement.
             </p>
           </MarketingCard>
         </div>
@@ -192,20 +192,20 @@ export function PricingPage() {
       <MarketingSection
         className="ppt-core-page-section"
         title="Pricing FAQ"
-        intro="The booking model is intentionally clear: PayPerTap handles the ₹20 booking fee, not full seller payments."
+        intro="The order model is intentionally clear: PayPerTap records the order fee, not full seller payments."
       >
         <FAQBlock items={pricingFaqs} />
       </MarketingSection>
       <MarketingSection
         className="ppt-core-page-section"
-        title="How should a seller explain the ₹20 booking?"
-        intro="Clear wording at the link-sharing stage helps buyers understand that booking and final product payment are separate."
+        title="How should a seller explain the order?"
+        intro="Clear wording at the link-sharing stage helps buyers understand that Order and final product payment are separate."
       >
         <div className="grid gap-4 md:grid-cols-2">
           <MarketingCard>
             <h3 className="text-xl font-bold text-neutral-950">Before a buyer books</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              A seller can describe PayPerTap as a fixed ₹20 verified-booking step
+              A seller can describe PayPerTap as a seller wallet verified-order step
               that reserves the selected item. The buyer should also be able to see
               the product price and understand that the balance will be agreed and
               paid directly to the seller after WhatsApp handoff.
@@ -214,7 +214,7 @@ export function PricingPage() {
           <MarketingCard>
             <h3 className="text-xl font-bold text-neutral-950">After a buyer books</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              The seller receives booking context for follow-up, not a PayPerTap
+              The seller receives order context for follow-up, not a PayPerTap
               payout. The seller confirms delivery and remaining payment with the
               buyer, and communicates their own return, exchange, cancellation, and
               COD or UPI terms before completing the order.

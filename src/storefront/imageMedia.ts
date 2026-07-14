@@ -53,7 +53,7 @@ export function getProductImageUrls(
     )
     .filter(Boolean);
 
-  return [...new Set(urls)].slice(0, 3);
+  return [...new Set(urls)].slice(0, 5);
 }
 
 export function getProductGridImageUrl(product: StorefrontProduct) {

@@ -1,4 +1,4 @@
-﻿import { Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { MarketingCard } from "../components/marketing/MarketingCard";
 import { MarketingSection } from "../components/marketing/MarketingSection";
@@ -7,29 +7,29 @@ import { WhatsAppIcon } from "./HeroBadge";
 const products = [
   {
     alt: "Denim jacket product thumbnail",
-    booking: "₹20 booked",
+    Order: "order placed",
     image:
       "https://images.unsplash.com/photo-1543076447-215ad9ba6923?auto=format&fit=crop&w=220&q=80",
     name: "Vintage denim jacket",
-    remaining: "₹1,479 remaining",
+    remaining: "Rs 1,479 remaining",
     status: "Reserved",
   },
   {
     alt: "Linen outfit product thumbnail",
-    booking: "₹20 booked",
+    Order: "order placed",
     image:
       "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=220&q=80",
     name: "Linen co-ord set",
-    remaining: "₹879 remaining",
+    remaining: "Rs 879 remaining",
     status: "Contacted",
   },
   {
     alt: "Handmade tote product thumbnail",
-    booking: "₹20 booked",
+    Order: "order placed",
     image:
       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=220&q=80",
     name: "Handmade bag",
-    remaining: "₹629 remaining",
+    remaining: "Rs 629 remaining",
     status: "Sold",
   },
 ];
@@ -45,7 +45,7 @@ export function HomeDashboardPreview() {
     <MarketingSection
       eyebrow="Seller dashboard"
       title="A calmer place to manage the work behind the store."
-      intro="Products, bookings, leads, follow-ups, collections, and themes stay in one operating surface."
+      intro="Products, Orders, leads, follow-ups, collections, and themes stay in one operating surface."
     >
       <MarketingCard className="ppt-home-dashboard-panel">
         <div className="ppt-home-dashboard-window">
@@ -61,7 +61,7 @@ export function HomeDashboardPreview() {
           <div className="ppt-home-dashboard-app">
             <aside className="ppt-home-dashboard-sidebar" aria-label="Dashboard navigation preview">
               <span className="ppt-faux-strong">PayPerTap</span>
-              {["Products", "Bookings", "Customers", "Collections", "Themes"].map((item, index) => (
+              {["Products", "Orders", "Customers", "Collections", "Themes"].map((item, index) => (
                 <span className={index === 1 ? "is-active" : ""} key={item}>
                   {item}
                 </span>
@@ -71,7 +71,7 @@ export function HomeDashboardPreview() {
             <div className="ppt-home-dashboard-main">
               <div className="ppt-home-dashboard-topline">
                 <div>
-                  <span>Bookings</span>
+                  <span>Orders</span>
                   <span className="ppt-faux-strong">Reserved buyer details</span>
                 </div>
                 <button type="button">
@@ -85,7 +85,7 @@ export function HomeDashboardPreview() {
                   <Search size={15} aria-hidden="true" />
                   <span>Search products or buyers</span>
                 </div>
-                <span className="ppt-faux-strong">₹20 booking via PayPerTap</span>
+                <span className="ppt-faux-strong">order via PayPerTap</span>
               </div>
 
               <div className="ppt-home-dashboard-summary" aria-label="Dashboard capability summary">
@@ -94,7 +94,7 @@ export function HomeDashboardPreview() {
                   <span className="ppt-faux-strong">Catalog ready</span>
                 </div>
                 <div>
-                  <span>Bookings</span>
+                  <span>Orders</span>
                   <span className="ppt-faux-strong">Intent filtered</span>
                 </div>
                 <div>
@@ -104,7 +104,7 @@ export function HomeDashboardPreview() {
               </div>
 
               <div className="ppt-home-dashboard-content">
-                <div className="ppt-home-dashboard-table" aria-label="Booking rows preview">
+                <div className="ppt-home-dashboard-table" aria-label="Order rows preview">
                   {products.map((product) => (
                     <div className="ppt-home-dashboard-row" key={product.name}>
                       <img
@@ -117,7 +117,7 @@ export function HomeDashboardPreview() {
                       />
                       <div>
                         <span className="ppt-faux-strong">{product.name}</span>
-                        <span>{product.booking} · {product.remaining}</span>
+                        <span>{product.Order} - {product.remaining}</span>
                       </div>
                       <em>{product.status}</em>
                     </div>
@@ -129,7 +129,7 @@ export function HomeDashboardPreview() {
                   {leads.map(([name, product, city]) => (
                     <div key={`${name}-${product}`}>
                       <span className="ppt-faux-strong">{name}</span>
-                      <span>{product} · {city}</span>
+                      <span>{product} - {city}</span>
                     </div>
                   ))}
                 </div>

@@ -15,7 +15,7 @@ export const storefrontThemeRegistry: Record<
   theme1: {
     id: "theme1",
     name: "Editorial Thrift",
-    description: "Premium streetwear storefront for limited drops, one-off pieces, and WhatsApp-confirmed bookings.",
+    description: "Premium streetwear storefront for limited drops, one-off pieces, and WhatsApp-confirmed Orders.",
     previewLabel: "Editorial Thrift",
     component: Theme1,
   },

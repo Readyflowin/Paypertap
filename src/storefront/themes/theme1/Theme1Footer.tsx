@@ -1,11 +1,12 @@
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Store as StoreIcon } from "lucide-react";
+import { ArrowRight, Store as StoreIcon } from "lucide-react";
 
+import { PptBrandIcon } from "@/components/ui";
 import { getDisplayImageUrl } from "@/lib/imageUrls";
 import {
   getStoreContactInfo,
   getStoreFooterCollectionNames,
-  getStoreFooterSubheading,
   getStorePolicyLinks,
 } from "../../storePolicies";
 import type { StorefrontThemeProps } from "../types";
@@ -25,14 +26,19 @@ function getInitials(name: string) {
     .join("");
 }
 
+function isValidFooterEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
+}
+
 export function Theme1EditorialFooter({
   collections: managedCollections,
-  isPreviewMobile = false,
+  reserveStickySpace = false,
   store,
   storeSlug = "",
 }: {
   collections?: StorefrontThemeProps["collections"];
   isPreviewMobile?: boolean;
+  reserveStickySpace?: boolean;
   store: Theme1FooterStore;
   storeSlug?: string;
 }) {
@@ -46,17 +52,83 @@ export function Theme1EditorialFooter({
   const logoUrl = getDisplayImageUrl(store.logoUrl || store.storeLogoUrl);
   const logoText =
     store.logoText || getInitials(contact.displayName || store.name || "Store");
-  const aboutText = getStoreFooterSubheading(liveStore);
+  const [email, setEmail] = useState("");
+  const [signupStatus, setSignupStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [signupMessage, setSignupMessage] = useState("");
+
+  function handleEmailSignup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!isValidFooterEmail(email)) {
+      setSignupStatus("error");
+      setSignupMessage("Enter a valid email address.");
+      return;
+    }
+
+    setEmail("");
+    setSignupStatus("saved");
+    setSignupMessage("Thanks for joining.");
+  }
 
   return (
-    <footer id="footer" className="mt-8 bg-[#111111] px-3 py-10 text-[#F6F1E8] sm:px-4">
-      <div
-        className={`mx-auto grid max-w-7xl gap-8 ${
-          isPreviewMobile ? "" : "md:grid-cols-[1.2fr_0.8fr_0.8fr]"
-        }`}
-      >
-        <div className="min-w-0">
-          <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-[#F6F1E8] text-sm font-semibold text-[#111111]">
+    <footer
+      id="footer"
+      className={`mt-6 border-t border-[#e8e3db] bg-[#fbfaf7] px-5 pt-7 text-[#2b2926] sm:px-6 ${
+        reserveStickySpace
+          ? "pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pb-8"
+          : "pb-8"
+      }`}
+    >
+      <div className="mx-auto max-w-md">
+        <h2
+          className="text-2xl font-medium leading-tight tracking-[-0.02em] text-[#2b2926]"
+          style={{ fontFamily: "Georgia, ui-serif, serif" }}
+        >
+          Join our email list
+        </h2>
+        <p className="mt-2 max-w-xs text-sm leading-6 text-[#6f6b64]">
+          Get exclusive deals and early access to new products.
+        </p>
+
+        <form onSubmit={handleEmailSignup} className="mt-5">
+          <label className="flex min-h-14 items-center rounded-full border border-[#e5ded4] bg-white px-5 shadow-sm focus-within:border-[#2b2926]">
+            <span className="sr-only">Email address</span>
+            <input
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (signupStatus !== "idle") {
+                  setSignupStatus("idle");
+                  setSignupMessage("");
+                }
+              }}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="Email address"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[#2b2926] outline-none placeholder:text-[#8d867d]"
+            />
+            <button
+              type="submit"
+              aria-label="Join email list"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#2b2926] transition hover:bg-[#f5f1ea]"
+            >
+              <ArrowRight size={20} aria-hidden="true" />
+            </button>
+          </label>
+          {signupMessage ? (
+            <p
+              className={`mt-2 text-xs font-medium ${
+                signupStatus === "error" ? "text-red-600" : "text-[#4b4a45]"
+              }`}
+            >
+              {signupMessage}
+            </p>
+          ) : null}
+        </form>
+
+        <div className="mt-9 text-center">
+          <div className="mx-auto mb-4 grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-[#e5ded4] bg-white text-xs font-semibold text-[#2b2926]">
             {logoUrl ? (
               <img
                 src={logoUrl}
@@ -66,99 +138,45 @@ export function Theme1EditorialFooter({
                 className="h-full w-full object-cover"
               />
             ) : (
-              logoText || <StoreIcon size={18} aria-hidden="true" />
+              logoText || <StoreIcon size={16} aria-hidden="true" />
             )}
           </div>
-          <h2
-            className="mt-4 break-words text-3xl font-semibold leading-tight"
-            style={{ fontFamily: "Georgia, ui-serif, serif" }}
-          >
-            {contact.displayName}
-          </h2>
-          <p className="mt-3 max-w-md break-words text-sm leading-6 text-[#F6F1E8]/60">
-            {aboutText}
+          <p className="text-xs text-[#8d867d]">
+            Â© 2026 {contact.displayName}
           </p>
-          <p className="mt-5 text-xs font-medium text-[#F6F1E8]/36">
-            Powered by PayPerTap.
-          </p>
-        </div>
 
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#EFE3C8]/70">
-            Links
-          </p>
-          <div className="mt-3 grid gap-1 text-sm text-[#F6F1E8]/70">
-            {contact.instagramUrl ? (
-              <a
-                href={contact.instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-h-10 max-w-full items-center break-words !text-[#DDD4C7] hover:!text-[#EFE3C8]"
-              >
-                {contact.instagramLabel || "Instagram"}
-              </a>
-            ) : (
-              <a href="#footer" className="inline-flex min-h-10 items-center !text-[#DDD4C7] hover:!text-[#EFE3C8]">
-                Instagram
-              </a>
-            )}
-            <a href="#booking" className="inline-flex min-h-10 items-center !text-[#DDD4C7] hover:!text-[#EFE3C8]">
-              WhatsApp
-            </a>
-            <a href="#faq" className="inline-flex min-h-10 items-center !text-[#DDD4C7] hover:!text-[#EFE3C8]">
-              Policies / FAQ
-            </a>
-            {contact.supportEmail ? (
-              contact.supportEmailHref ? (
-                <a
-                  href={contact.supportEmailHref}
-                  className="inline-flex min-h-10 max-w-full items-center break-words !text-[#DDD4C7] hover:!text-[#EFE3C8]"
-                >
-                  {contact.supportEmail}
-                </a>
-              ) : (
-                <span className="inline-flex min-h-10 max-w-full items-center break-words text-[#DDD4C7]">
-                  {contact.supportEmail}
-                </span>
-              )
-            ) : null}
-          </div>
           {policyLinks.length ? (
-            <nav className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-[#F6F1E8]/40">
-              {policyLinks.map((policy) => (
-                <Link
-                  key={policy.type}
-                  to={`/${storeSlug}/policies/${policy.type}`}
-                  className="hover:!text-[#EFE3C8]"
-                >
-                  {policy.label}
-                </Link>
+            <nav className="mt-5 text-xs text-[#4b4a45]">
+              <Link
+                to={`/${storeSlug}/policies/Order`}
+                className="hover:!text-[#111111]"
+              >
+                Terms and Policies
+              </Link>
+            </nav>
+          ) : null}
+
+          {contact.instagramUrl ? (
+            <a
+              href={contact.instagramUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Instagram"
+              className="mx-auto mt-6 grid h-9 w-9 place-items-center rounded-full !text-[#4b4a45] hover:!text-[#111111]"
+            >
+              <PptBrandIcon type="instagram" size={20} />
+            </a>
+          ) : null}
+
+          {collectionNames.length ? (
+            <nav className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9b948b]">
+              {collectionNames.slice(0, 3).map((collection) => (
+                <a key={collection} href="#products" className="hover:!text-[#111111]">
+                  {collection}
+                </a>
               ))}
             </nav>
           ) : null}
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#EFE3C8]/70">
-            Collections
-          </p>
-          <div className="mt-3 grid gap-1 text-sm text-[#F6F1E8]/70">
-            {collectionNames.length ? (
-              collectionNames.slice(0, 4).map((collection) => (
-                <a
-                  key={collection}
-                  href="#products"
-                  className="inline-flex min-h-10 max-w-full items-center break-words !text-[#DDD4C7] hover:!text-[#EFE3C8]"
-                >
-                  {collection}
-                </a>
-              ))
-            ) : (
-              <a href="#products" className="inline-flex min-h-10 items-center !text-[#DDD4C7] hover:!text-[#EFE3C8]">
-                All products
-              </a>
-            )}
-          </div>
         </div>
       </div>
     </footer>

@@ -12,7 +12,7 @@ const appRoutes = [
   "/test-store",
   "/test-store/product/test-product",
   "/test-store/checkout/test-product",
-  "/test-store/booking-success/test-checkout",
+  "/test-store/order-success/test-checkout",
 ];
 
 test.use({ channel: "chrome" });
@@ -53,7 +53,7 @@ test("production integration test page is not exposed", async ({ page }) => {
   expect(bodyText).not.toContain("PayPerTap Integration Test");
 });
 
-const apiRoutes = ["/api/send-event-email", "/api/upload-image"];
+const apiRoutes = ["/api/upload-image"];
 
 for (const route of apiRoutes) {
   test(`GET is handled by API route: ${route}`, async ({ request }) => {

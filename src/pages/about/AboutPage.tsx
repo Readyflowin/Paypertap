@@ -1,4 +1,4 @@
-﻿import { ArrowRight, Link2, MessageCircle, ShieldCheck, Store } from "lucide-react";
+import { ArrowRight, Link2, MessageCircle, ShieldCheck, Store } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { CTASection } from "../../components/marketing/CTASection";
@@ -23,8 +23,8 @@ const aboutFaqs = marketingFaqs.filter((item) =>
   [
     "What is PayPerTap?",
     "Who is PayPerTap for?",
-    "How does the ₹20 booking work?",
-    "Does the seller receive the ₹20?",
+    "How does the order work?",
+    "Does PayPerTap process buyer payments?",
     "Is PayPerTap made for Instagram sellers?",
     "Is PayPerTap useful for WhatsApp sellers?",
     "Is PayPerTap useful for thrift sellers?",
@@ -39,15 +39,15 @@ export function AboutPage() {
     <MarketingLayout>
       <Seo
         canonicalPath="/about"
-        title="About PayPerTap | Verified Booking Storefront for Social Sellers"
-        description="PayPerTap is an India-first verified booking storefront for Instagram and WhatsApp sellers who want product links, ₹20 booking, and WhatsApp handoff."
+        title="About PayPerTap | Verified order Storefront for Social Sellers"
+        description="PayPerTap is an India-first verified order storefront for Instagram and WhatsApp sellers who want product links, order, and WhatsApp handoff."
         jsonLd={[breadcrumbListSchema([{ name: "Home", path: "/" }, { name: "About", path: "/about" }])]}
       />
       <SectionHeader
         eyebrow="About"
         h1="Built for India's Instagram and WhatsApp sellers."
         path="/about"
-        subtitle="PayPerTap is built for small sellers who already find buyers through Instagram, WhatsApp, and social DMs. Instead of forcing a full ecommerce setup, PayPerTap adds a simple booking layer that captures buyer intent before the conversation moves back to WhatsApp."
+        subtitle="PayPerTap is built for small sellers who already find buyers through Instagram, WhatsApp, and social DMs. Instead of forcing a full ecommerce setup, PayPerTap adds a simple order layer that captures buyer intent before the conversation moves back to WhatsApp."
       />
       <PageTrustMeta path="/about" />
       <MarketingSection className="ppt-core-page-section">
@@ -60,9 +60,9 @@ export function AboutPage() {
               What is PayPerTap?
             </h2>
             <p className="ppt-home-copy mt-4 text-sm leading-7 text-neutral-600">
-              PayPerTap is a verified booking storefront for Indian Instagram and
+              PayPerTap is a verified order storefront for Indian Instagram and
               WhatsApp sellers. It gives sellers a clean product link and gives buyers
-              a simple ₹20 booking step before the conversation continues.
+              a simple order step before the conversation continues.
             </p>
           </MarketingCard>
           <div className="grid gap-4">
@@ -73,7 +73,7 @@ export function AboutPage() {
               </h2>
               <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
                 Sellers can spend time repeating product details and discussing holds
-                in scattered DMs. A booking-first storefront captures a clear buyer
+                in scattered DMs. An order-first storefront captures a clear buyer
                 action and product context before follow-up begins.
               </p>
             </MarketingCard>
@@ -109,7 +109,7 @@ export function AboutPage() {
       <MarketingSection
         className="ppt-core-page-section"
         title="Why does a lightweight commerce layer matter?"
-        intro="Social discovery can stay social while booking information becomes easier to follow."
+        intro="Social discovery can stay social while Order information becomes easier to follow."
       >
         <div className="grid gap-4 md:grid-cols-2">
           <MarketingCard>
@@ -131,8 +131,8 @@ export function AboutPage() {
           <MarketingCard>
             <h3 className="text-xl font-bold text-neutral-950">What is PayPerTap not trying to be?</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              In Phase 1, PayPerTap is not a full payment gateway. The buyer pays a
-              fixed ₹20 platform verified-booking fee; the seller receives no payout
+              In the current model, PayPerTap is not a full payment gateway. The seller wallet covers a
+              fixed wallet platform per-order charge; the seller receives no PayPerTap payout
               from that fee and collects the remaining product amount directly.
             </p>
           </MarketingCard>
@@ -167,28 +167,28 @@ export function AboutPage() {
       </MarketingSection>
       <MarketingSection
         className="ppt-core-page-section"
-        title="Questions about the booking-first model"
+        title="Questions about the order-first model"
         intro="The short version: PayPerTap adds reservation context and hands completion back to the seller."
       >
         <FAQBlock items={aboutFaqs} />
       </MarketingSection>
       <MarketingSection
         className="ppt-core-page-section"
-        title="Why does Phase 1 stay focused?"
+        title="Why does current model stay focused?"
         intro="PayPerTap is deliberately narrow about payments so the storefront promise remains easy to understand."
       >
         <div className="grid gap-4 md:grid-cols-3">
           <MarketingCard>
-            <h3 className="text-lg font-bold text-neutral-950">One booking fee</h3>
+            <h3 className="text-lg font-bold text-neutral-950">One seller wallet charge</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              Every buyer booking uses the fixed ₹20 PayPerTap platform fee. It is
+              Every buyer order uses the PayPerTap per-order charge. It is
               not configured by each seller and is not remitted as a seller advance.
             </p>
           </MarketingCard>
           <MarketingCard>
             <h3 className="text-lg font-bold text-neutral-950">One direct handoff</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              The buyer continues to WhatsApp with product and booking context ready,
+              The buyer continues to WhatsApp with product and order context ready,
               keeping the seller&apos;s existing conversation at the centre of fulfilment.
             </p>
           </MarketingCard>

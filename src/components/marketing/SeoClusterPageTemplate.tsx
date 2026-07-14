@@ -52,17 +52,17 @@ const useCaseImages: Record<string, { alt: string; src: string }> = {
 };
 
 function FeatureVisual({ path }: { path: string }) {
-  if (path === "/features/verified-booking") {
+  if (path === "/features/verified-order") {
     return (
       <div className="ppt-seo-visual-card ppt-seo-receipt-card">
         <div className="ppt-core-icon-tile">
           <ReceiptText size={22} aria-hidden="true" />
         </div>
-        <p className="ppt-seo-visual-label">Booking receipt</p>
-        <h2>₹20 booking received</h2>
+        <p className="ppt-seo-visual-label">Order receipt</p>
+        <h2>order received</h2>
         <div className="ppt-seo-receipt-rows">
-          <span>Booking via PayPerTap</span>
-          <strong>Platform verified-booking fee</strong>
+          <span>order via PayPerTap</span>
+          <strong>Platform per-order charge</strong>
           <span>Remaining amount</span>
           <strong>Paid directly to seller</strong>
           <span>Status</span>
@@ -100,7 +100,7 @@ function FeatureVisual({ path }: { path: string }) {
         <h2>WhatsApp message ready</h2>
         <div className="ppt-seo-message-bubble">
           <p>Product: Handmade tote</p>
-          <p>Booking paid: ₹20 via PayPerTap</p>
+          <p>order submitted: order via PayPerTap</p>
           <p>Remaining amount: paid directly to seller</p>
           <p>Buyer details: included for confirmation</p>
         </div>
@@ -111,7 +111,7 @@ function FeatureVisual({ path }: { path: string }) {
   if (path === "/features/order-organization") {
     return (
       <div className="ppt-seo-visual-card">
-        <p className="ppt-seo-visual-label">Booking list</p>
+        <p className="ppt-seo-visual-label">Order list</p>
         {["Reserved", "Contacted", "Sold"].map((status) => (
           <div className="ppt-seo-order-row" key={status}>
             <PackageCheck size={18} aria-hidden="true" />
@@ -137,7 +137,7 @@ function FeatureVisual({ path }: { path: string }) {
           <span>Intent</span>
           <strong>Booked before WhatsApp handoff</strong>
           <span>Privacy</span>
-          <strong>Used for booking workflow</strong>
+          <strong>Used for order workflow</strong>
         </div>
       </div>
     );
@@ -169,7 +169,7 @@ function UseCaseVisual({ path }: { path: string }) {
           <Store size={18} aria-hidden="true" />
         </div>
         <div>
-          <strong>Verified booking storefront</strong>
+          <strong>Verified order storefront</strong>
           <span>Built around product links and WhatsApp handoff.</span>
         </div>
       </div>
@@ -377,14 +377,14 @@ export function SeoClusterPageTemplate({
         <MarketingSection
           className="ppt-core-page-section"
           title="What does PayPerTap handle, and what does the seller handle?"
-          intro="The Phase 1 boundary is intentionally explicit: PayPerTap handles booking context, while the seller completes the product transaction directly."
+          intro="The platform boundary is intentionally explicit: PayPerTap records order context, while the seller completes the product transaction directly."
         >
           <div className="ppt-seo-comparison-table overflow-x-auto rounded-[24px] border backdrop-blur-xl">
             <table className="w-full min-w-[660px] text-left">
               <thead className="ppt-seo-comparison-head text-xs font-bold uppercase tracking-[0.12em]">
                 <tr>
                   <th className="p-4">Stage</th>
-                  <th className="p-4">PayPerTap handles</th>
+                  <th className="p-4">PayPerTap records</th>
                   <th className="p-4">Seller handles</th>
                 </tr>
               </thead>
@@ -412,16 +412,16 @@ export function SeoClusterPageTemplate({
             <h3 className="text-lg font-bold text-neutral-950">Before sharing the link</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
               Confirm that the page, product, or use case fits a physical-product
-              seller who wants booking before WhatsApp. Product photos, price,
+              seller who wants order before WhatsApp. Product photos, price,
               availability, and seller policy should be accurate before buyers book.
             </p>
           </MarketingCard>
           <MarketingCard>
-            <h3 className="text-lg font-bold text-neutral-950">During the ₹20 booking</h3>
+            <h3 className="text-lg font-bold text-neutral-950">During the order</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              The buyer pays PayPerTap&apos;s fixed platform verified-booking fee.
+              The seller wallet covers PayPerTap&apos;s fixed platform per-order charge.
               The fee is not a seller payout, custom advance, split payment, or full
-              product payment. It creates booking and reservation context.
+              product payment. It creates Order and reservation context.
             </p>
           </MarketingCard>
           <MarketingCard>
@@ -437,7 +437,7 @@ export function SeoClusterPageTemplate({
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
               If the seller needs a full payment gateway, seller settlement,
               shipping operations, advanced inventory infrastructure, or broad form
-              collection, PayPerTap&apos;s booking-first Phase 1 scope is too narrow.
+              collection, PayPerTap&apos;s order-first current scope is too narrow.
             </p>
           </MarketingCard>
         </div>
@@ -446,21 +446,21 @@ export function SeoClusterPageTemplate({
       <MarketingSection
         className="ppt-core-page-section"
         title="What mistakes should sellers avoid?"
-        intro="Clear buyer expectations make the booking flow easier to understand."
+        intro="Clear buyer expectations make the order flow easier to understand."
       >
         <div className="grid gap-4 md:grid-cols-3">
           <MarketingCard>
-            <h3 className="text-lg font-bold text-neutral-950">Do not call ₹20 a seller advance</h3>
+            <h3 className="text-lg font-bold text-neutral-950">Do not call seller wallet a seller advance</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              In Phase 1, the fixed ₹20 belongs to PayPerTap as the platform
-              verified-booking fee. Sellers should explain that the remaining product
+              In the current model, the seller wallet belongs to PayPerTap as the platform
+              per-order charge. Sellers should explain that the remaining product
               amount is still collected directly by them after handoff.
             </p>
           </MarketingCard>
           <MarketingCard>
             <h3 className="text-lg font-bold text-neutral-950">Do not skip product policy clarity</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              Booking context helps organize a buyer conversation, but it does not
+              order context helps organize a buyer conversation, but it does not
               replace seller policies. Delivery timing, cancellation, return,
               exchange, COD, and pickup expectations should be stated clearly.
             </p>
@@ -468,7 +468,7 @@ export function SeoClusterPageTemplate({
           <MarketingCard>
             <h3 className="text-lg font-bold text-neutral-950">Do not promise automatic completion</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              A booking is a useful intent signal and reservation record, not a
+              An order is a useful intent signal and reservation record, not a
               guaranteed final sale. The seller still confirms remaining payment,
               product condition, fulfilment, and any buyer questions directly.
             </p>
@@ -478,9 +478,9 @@ export function SeoClusterPageTemplate({
           <h3 className="text-xl font-bold text-neutral-950">Keep the buyer's next step explicit</h3>
           <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
             The strongest PayPerTap pages make the next step obvious: review the
-            product, place the fixed booking, continue to WhatsApp, and finish the
+            product, place the order, continue to WhatsApp, and finish the
             remaining product transaction directly with the seller. Clear wording
-            prevents buyers from mistaking the booking fee for full checkout.
+            prevents buyers from mistaking the seller wallet charge for full checkout.
           </p>
         </MarketingCard>
       </MarketingSection>

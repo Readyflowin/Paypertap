@@ -21,13 +21,13 @@ export function StepList() {
     },
     {
       icon: <IndianRupee size={18} aria-hidden="true" />,
-      title: "Buyer books with ₹20",
-      copy: "The buyer pays the fixed PayPerTap booking fee to reserve the item.",
+      title: "Buyer places an order",
+      copy: "The seller wallet covers the fixed PayPerTap seller wallet charge to reserve the item.",
     },
     {
       icon: <PackageCheck size={18} aria-hidden="true" />,
       title: "Product is reserved",
-      copy: "The booking supplies a reserved item and buyer record for follow-up.",
+      copy: "The Order supplies a reserved item and buyer record for follow-up.",
     },
     {
       icon: <MessageCircle size={18} aria-hidden="true" />,

@@ -42,6 +42,5 @@ export { PptField, type PptFieldProps } from "./PptField";
 export { PptIconButton, type PptIconButtonProps } from "./PptIconButton";
 export { PptTapLoader, PptSkeletonProductGrid } from "./PptLoader";
 export { PptNotice, type PptNoticeProps } from "./PptNotice";
-export { PptPriceBreakdown, type PptPriceBreakdownProps } from "./PptPriceBreakdown";
 export { PptSelectField, type PptSelectFieldProps } from "./PptSelectField";
 export { PptStatCard, type PptStatCardProps } from "./PptStatCard";

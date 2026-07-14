@@ -1,38 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  CreditCard,
-  ShieldCheck,
-  ShoppingBag,
-  Star,
-  Timer,
-} from "lucide-react";
 
-import upiLogo from "@/assets/payment/upi-logo.svg";
-import { PptBrandIcon } from "@/components/ui";
-import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
 import type { StorefrontProduct, StorefrontThemeProps } from "../types";
 import { Theme1ProductCard, getTheme1ProductCardKey } from "./Theme1ProductCard";
 import { ALL_COLLECTIONS } from "../../collectionFilters";
-import {
-  adaptTheme1Store,
-  getTheme1Collections,
-} from "./theme1Utils";
-import { getStorefrontConfirmationPolicyText } from "../../StorefrontPaymentBreakdown";
+import { getTheme1Collections } from "./theme1Utils";
 
-const LIVE_FAQS = [
-  {
-    question: "Does booking place the order?",
-    answer: `Booking reserves the item for ${formatINR(BOOKING_ADVANCE_AMOUNT)}. The seller confirms remaining payment and delivery details with you on WhatsApp.`,
-  },
-  {
-    question: "Why are pieces limited?",
-    answer: "Most thrift and drop items are one-off or low stock, so availability can change quickly.",
-  },
-  {
-    question: "Where does checkout happen?",
-    answer: "PayPerTap handles the reservation payment. After booking, your details go to the seller for confirmation.",
-  },
-];
+function getPaymentTrustLabel(store: StorefrontThemeProps["store"]) {
+  return store.paymentMode === "partial_advance" ? "Seller advance available" : "COD available";
+}
+
+function getPaymentTrustIcon(store: StorefrontThemeProps["store"]) {
+  return store.paymentMode === "partial_advance"
+    ? "/icons/trust/secure-lock.svg"
+    : "/icons/trust/rupee.svg";
+}
 
 export function Theme1Sections({
   collections: managedCollections = [],
@@ -59,52 +40,44 @@ export function Theme1Sections({
   store: StorefrontThemeProps["store"];
   totalProductCount: number;
 }) {
-  const [visibleProductCount, setVisibleProductCount] = useState(4);
+  const [visibleProductCount, setVisibleProductCount] = useState(8);
   const visibleProducts = useMemo(
     () => products.slice(0, visibleProductCount),
     [products, visibleProductCount]
   );
+  const featuredProducts = products.slice(0, 4);
   const canLoadMoreProducts = visibleProductCount < products.length;
-  const displayStore = adaptTheme1Store({
-    collections: managedCollections,
-    products,
-    store,
-  });
   const collectionOptions = [
     ALL_COLLECTIONS,
     ...getTheme1Collections(products, managedCollections),
   ];
   const trustItems = [
-    { icon: ShieldCheck, label: "Verified booking" },
-    { icon: Timer, label: "Limited stock" },
-    { brand: "whatsapp" as const, label: "WhatsApp confirmation" },
-    { icon: Star, label: "Seller confirmation" },
-    { icon: CreditCard, label: "Secure checkout" },
-    { logo: upiLogo, logoAlt: "UPI", label: "UPI accepted" },
-  ];
-  const bookingSteps = [
     {
-      title: "Choose your piece",
-      copy: "Pick your size/color if available.",
+      label: "Verified seller",
+      icon: "/icons/trust/verified-user.svg",
     },
     {
-      title: `Reserve for ${formatINR(BOOKING_ADVANCE_AMOUNT)}`,
-      copy: "Pay PayPerTap to hold the item.",
+      label: "WhatsApp updates",
+      icon: "/icons/trust/whatsapp.svg",
     },
     {
-      title: "Confirm on WhatsApp",
-      copy: getStorefrontConfirmationPolicyText(store),
+      label: getPaymentTrustLabel(store),
+      icon: getPaymentTrustIcon(store),
+    },
+    {
+      label: "Secure ordering",
+      icon: "/icons/trust/secure-lock.svg",
     },
   ];
 
   useEffect(() => {
-    setVisibleProductCount(4);
+    setVisibleProductCount(8);
   }, [products, selectedCollection]);
 
   return (
     <>
       {collectionOptions.length ? (
-        <section className="mx-auto max-w-7xl px-2 py-3 sm:px-4" aria-label="Collections">
+        <section className="mx-auto max-w-7xl px-4 pt-4" aria-label="Collections">
           <div className="flex snap-x gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {collectionOptions.map((collection) => {
               const isSelected = collection === selectedCollection;
@@ -114,10 +87,10 @@ export function Theme1Sections({
                   key={collection}
                   type="button"
                   onClick={() => onCollectionChange(collection)}
-                  className={`inline-flex min-h-11 max-w-[190px] shrink-0 snap-start items-center truncate rounded-full border px-4 text-sm font-semibold ${
+                  className={`inline-flex min-h-10 shrink-0 snap-start items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.08em] transition ${
                     isSelected
-                      ? "border-[#111111] bg-[#111111] text-[#F6F1E8]"
-                      : "border-[#DDD4C7] bg-[#F4EFE6] text-[#111111] hover:border-[#7A2E2E] hover:bg-[#EFE3C8] hover:text-[#7A2E2E]"
+                      ? "bg-[#111111] text-white"
+                      : "bg-[#f2f0ec] text-[#2f2b27] hover:bg-[#e8e3db]"
                   }`}
                 >
                   {collection}
@@ -128,57 +101,80 @@ export function Theme1Sections({
         </section>
       ) : null}
 
-      <section id="products" className="mx-auto max-w-7xl px-2 py-7 sm:px-4">
-        <div
-          className={`mb-5 grid gap-3 ${
-            isPreviewMobile ? "" : "sm:grid-cols-[1fr_auto] sm:items-end"
-          }`}
-        >
+      <section className="mx-auto max-w-7xl px-4 py-4" aria-label="Store trust">
+        <div className="grid grid-cols-4 overflow-hidden rounded-2xl border border-[#ece7df] bg-[#fbfaf7] shadow-[0_10px_30px_rgba(17,17,17,0.04)]">
+          {trustItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex min-w-0 flex-col items-center justify-center gap-1.5 border-r border-[#ece7df] px-1.5 py-3 text-center last:border-r-0 sm:flex-row sm:gap-2 sm:px-4"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white shadow-[inset_0_0_0_1px_rgba(17,17,17,0.08)]">
+                <img
+                  src={item.icon}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 object-contain"
+                />
+              </span>
+              <span className="min-w-0 text-[10px] font-semibold leading-tight text-[#3d3934] sm:text-xs">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="products" className="mx-auto max-w-7xl px-4 py-3">
+        <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7A2E2E]">
-              New drop
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d867d]">
+              Featured
             </p>
             <h2
-              className={`mt-2 max-w-2xl text-4xl font-semibold leading-tight text-[#111111] ${
-                isPreviewMobile ? "" : "sm:text-5xl"
+              className={`mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#111111] ${
+                isPreviewMobile ? "" : "sm:text-3xl"
               }`}
               style={{ fontFamily: "Georgia, ui-serif, serif" }}
             >
-              Rare finds, ready to reserve
+              Shop the drop
             </h2>
           </div>
-          <p className="max-w-sm text-sm leading-6 text-[#6F6A60]">
-            Every piece is one-off or low stock. Tap a card to open the product page.
-          </p>
+          {totalProductCount > 0 ? (
+            <p className="shrink-0 text-xs font-medium text-[#8d867d]">
+              {totalProductCount} item{totalProductCount === 1 ? "" : "s"}
+            </p>
+          ) : null}
         </div>
 
         {totalProductCount === 0 ? (
-          <section className="border border-[#DDD4C7] bg-[#F9F5ED] p-8 text-center shadow-[0_12px_32px_rgba(25,20,15,0.05)]">
+          <section className="rounded-[28px] border border-[#ece7df] bg-[#fbfaf7] px-6 py-10 text-center">
             <h2
-              className="text-3xl font-semibold leading-tight text-[#111111]"
+              className="text-2xl font-semibold leading-tight text-[#111111]"
               style={{ fontFamily: "Georgia, ui-serif, serif" }}
             >
-              No pieces live right now.
+              No products live right now.
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[#6F6A60]">
-              Check back for the next drop.
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-[#6f6b64]">
+              This store is preparing its next drop. Check back soon.
             </p>
           </section>
         ) : products.length === 0 ? (
-          <section className="border border-[#DDD4C7] bg-[#F9F5ED] p-8 text-center shadow-[0_12px_32px_rgba(25,20,15,0.05)]">
+          <section className="rounded-[28px] border border-[#ece7df] bg-[#fbfaf7] px-6 py-10 text-center">
             <h2 className="text-xl font-semibold text-[#111111]">No products found</h2>
-            <p className="mt-2 text-sm leading-6 text-[#6F6A60]">
-              Try another collection from this drop.
+            <p className="mt-2 text-sm leading-6 text-[#6f6b64]">
+              Try another collection.
             </p>
           </section>
         ) : (
           <>
             <div
-              className={`grid grid-cols-2 gap-2.5 ${
-                isPreviewMobile ? "" : "md:grid-cols-3 md:gap-3 lg:grid-cols-4"
+              className={`grid grid-cols-2 gap-x-3 gap-y-6 ${
+                isPreviewMobile ? "" : "md:grid-cols-3 lg:grid-cols-4"
               }`}
             >
-              {visibleProducts.map((product) => {
+              {featuredProducts.map((product) => {
                 const fallbackIndex = getProductFallbackIndex(product);
 
                 return (
@@ -193,148 +189,61 @@ export function Theme1Sections({
                 );
               })}
             </div>
+
             {products.length > 4 ? (
-              <div className="mt-5 flex flex-col items-center gap-3 text-center">
-                <p className="text-xs font-semibold text-[#6F6A60]">
-                  Showing {Math.min(visibleProductCount, products.length)} of {products.length} one-off pieces
-                </p>
-                {canLoadMoreProducts ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVisibleProductCount((current) =>
-                        Math.min(current + 4, products.length)
-                      )
-                    }
-                    className={`inline-flex min-h-12 items-center justify-center gap-2 border border-[#DDD4C7] bg-[#F9F5ED] px-6 text-sm font-bold text-[#111111] shadow-[0_14px_34px_rgba(25,20,15,0.1)] transition hover:-translate-y-0.5 hover:border-[#7A2E2E] hover:bg-[#111111] hover:text-[#F6F1E8] active:translate-y-0 ${
-                      isPreviewMobile ? "w-full" : "w-fit"
-                    }`}
+              <div className="mt-9">
+                <div className="mb-4 flex items-end justify-between gap-4">
+                  <h2
+                    className="text-2xl font-semibold tracking-[-0.03em] text-[#111111]"
+                    style={{ fontFamily: "Georgia, ui-serif, serif" }}
                   >
-                    <span>Load more pieces</span>
-                    <span aria-hidden="true">-&gt;</span>
-                  </button>
-                ) : (
-                  <p className="text-xs font-semibold text-[#8f8679]">End of this drop</p>
-                )}
+                    New arrivals
+                  </h2>
+                  <a href="#products-all" className="text-xs font-semibold uppercase tracking-[0.12em] !text-[#111111]">
+                    View all
+                  </a>
+                </div>
+                <div
+                  id="products-all"
+                  className={`grid grid-cols-2 gap-x-3 gap-y-6 ${
+                    isPreviewMobile ? "" : "md:grid-cols-3 lg:grid-cols-4"
+                  }`}
+                >
+                  {visibleProducts.map((product) => {
+                    const fallbackIndex = getProductFallbackIndex(product);
+
+                    return (
+                      <Theme1ProductCard
+                        key={`all-${getTheme1ProductCardKey(product)}`}
+                        fallbackIndex={fallbackIndex}
+                        isSaved={isProductSaved(product, fallbackIndex)}
+                        product={product}
+                        onSelect={onProductSelect}
+                        onToggleSaved={onToggleProductSaved}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {canLoadMoreProducts ? (
+              <div className="mt-7 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleProductCount((current) =>
+                      Math.min(current + 8, products.length)
+                    )
+                  }
+                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#111111] px-7 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(17,17,17,0.18)]"
+                >
+                  View all products
+                </button>
               </div>
             ) : null}
           </>
         )}
-      </section>
-
-      <section
-        id="booking"
-        className={`mx-auto grid max-w-7xl gap-4 px-3 py-8 sm:px-4 ${
-          isPreviewMobile ? "" : "lg:grid-cols-[0.78fr_1.22fr]"
-        }`}
-      >
-        <div className="bg-[#111111] p-5 text-[#F6F1E8] sm:p-7">
-          <ShoppingBag size={24} aria-hidden="true" />
-          <h2
-            className="mt-5 text-4xl font-semibold leading-tight sm:text-5xl"
-            style={{ fontFamily: "Georgia, ui-serif, serif" }}
-          >
-            How booking works
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-[#F6F1E8]/70">
-            The {formatINR(BOOKING_ADVANCE_AMOUNT)} reserve flow sits here, after the buyer has seen the drop and picked a piece.
-          </p>
-        </div>
-        <div className={`grid gap-3 ${isPreviewMobile ? "" : "md:grid-cols-3"}`}>
-          {bookingSteps.map((step, index) => (
-            <article key={step.title} className="border border-[#DDD4C7] bg-[#F9F5ED] p-5">
-              <span className="text-sm font-semibold text-[#7A2E2E]">0{index + 1}</span>
-              <h3 className="mt-4 text-lg font-semibold text-[#111111]">{step.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-[#6F6A60]">{step.copy}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-3 py-6 sm:px-4" aria-label="Store trust">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7A2E2E]">
-              Buyer confidence
-            </p>
-            <h2
-              className="mt-2 text-3xl font-semibold leading-tight text-[#111111]"
-              style={{ fontFamily: "Georgia, ui-serif, serif" }}
-            >
-              Reserve with the seller, not a random DM.
-            </h2>
-          </div>
-        </div>
-        <div className={`grid grid-cols-2 gap-2 ${isPreviewMobile ? "" : "md:grid-cols-3 lg:grid-cols-6"}`}>
-          {trustItems.map((item) => (
-            <div key={item.label} className="min-w-0 border border-[#DDD4C7] bg-[#F4EFE6] p-4">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#EFE3C8] text-[#5F6448]">
-                {"brand" in item ? (
-                  <span className="text-[#25D366]">
-                    <PptBrandIcon type={item.brand} size={19} />
-                  </span>
-                ) : "logo" in item ? (
-                  <img
-                    src={item.logo}
-                    alt={item.logoAlt}
-                    loading="lazy"
-                    decoding="async"
-                    className="max-h-4 max-w-7 object-contain"
-                  />
-                ) : (
-                  <item.icon size={18} aria-hidden="true" />
-                )}
-              </span>
-              <p className="mt-3 text-sm font-semibold leading-5 text-[#111111]">{item.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section
-        className={`mx-auto grid max-w-7xl gap-4 px-3 py-8 sm:px-4 ${
-          isPreviewMobile ? "" : "lg:grid-cols-[1.1fr_0.9fr]"
-        }`}
-      >
-        <div className="border border-[#DDD4C7] bg-[#F9F5ED] p-5 sm:p-7">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7A2E2E]">
-            Store story
-          </p>
-          <h2
-            className="mt-4 text-4xl font-semibold leading-tight text-[#111111]"
-            style={{ fontFamily: "Georgia, ui-serif, serif" }}
-          >
-            Archive-first pieces, photographed for serious buyers.
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-[#6F6A60]">{displayStore.story}</p>
-        </div>
-        <div className={`grid gap-3 ${isPreviewMobile ? "" : "sm:grid-cols-2 lg:grid-cols-1"}`}>
-          {displayStore.trustBadges.slice(0, 6).map((badge) => (
-            <div key={badge} className="border border-[#DDD4C7] bg-[#F6F1E8] p-5">
-              <ShieldCheck size={21} aria-hidden="true" className="text-[#5F6448]" />
-              <p className="mt-4 text-base font-semibold text-[#111111]">{badge}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="faq" className="mx-auto max-w-7xl px-3 py-8 sm:px-4">
-        <h2
-          className="text-3xl font-semibold leading-tight text-[#111111]"
-          style={{ fontFamily: "Georgia, ui-serif, serif" }}
-        >
-          FAQ
-        </h2>
-        <div className={`mt-4 grid gap-3 ${isPreviewMobile ? "" : "md:grid-cols-3"}`}>
-          {LIVE_FAQS.map((faq) => (
-            <details key={faq.question} className="border border-[#DDD4C7] bg-[#F9F5ED] p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-[#111111]">
-                {faq.question}
-              </summary>
-              <p className="mt-3 text-sm leading-6 text-[#6F6A60]">{faq.answer}</p>
-            </details>
-          ))}
-        </div>
       </section>
     </>
   );

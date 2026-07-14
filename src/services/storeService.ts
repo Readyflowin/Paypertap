@@ -5,15 +5,31 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
 import { getDurableImageUrl } from "../lib/imageUrls";
 import { normalizeIndianMobileInput } from "../lib/phone";
-import {
-  DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE,
-  isSellerConfirmationAdvanceType,
-  type SellerConfirmationAdvanceType,
-} from "../lib/confirmationAdvance";
 import type { Store, StoreSlugReservation } from "../types/firestore";
+
+export type StorePaymentMode = "cod" | "partial_advance";
+export type StorePaymentProvider = "razorpay";
+
+export type StorePaymentSettings = {
+  paymentMode: StorePaymentMode;
+  advanceAmount: number;
+  paymentProvider: StorePaymentProvider;
+  paymentLink: string;
+  paymentReturnToken: string;
+};
+
+export type StorePaymentSettingsInput = {
+  paymentMode: StorePaymentMode;
+  advanceAmount?: number;
+  paymentLink?: string;
+};
+
+const DEFAULT_PAYMENT_MODE: StorePaymentMode = "cod";
+const DEFAULT_PAYMENT_PROVIDER: StorePaymentProvider = "razorpay";
+const DEFAULT_ADVANCE_AMOUNT = 100;
 
 export type StoreCustomizationInput = {
   storeName?: string;
@@ -40,10 +56,135 @@ export type StoreCustomizationInput = {
   themeStyle?: string;
   primaryColor?: string;
   accentColor?: string;
-  sellerConfirmationAdvanceType?: SellerConfirmationAdvanceType;
-  sellerConfirmationAdvanceFixedAmount?: number | null;
-  sellerConfirmationAdvancePercent?: number | null;
 };
+
+function normalizePaymentMode(value: unknown): StorePaymentMode {
+  return value === "partial_advance" ? "partial_advance" : "cod";
+}
+
+function normalizeAdvanceAmount(value: unknown): number {
+  const amount = Math.round(Number(value) || DEFAULT_ADVANCE_AMOUNT);
+
+  return Math.max(1, amount);
+}
+
+function isRazorpayPaymentLink(value: string): boolean {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+
+  return (
+    url.protocol === "https:" &&
+    (hostname === "rzp.io" ||
+      hostname === "razorpay.com" ||
+      hostname.endsWith(".razorpay.com"))
+  );
+}
+
+async function ensureStorePaymentReturnToken(storeId: string): Promise<string> {
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error("Please sign in before saving payment settings.");
+  }
+
+  const response = await fetch("/api/store-payment-token", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ storeId }),
+  });
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    paymentReturnToken?: string;
+    error?: string;
+  };
+
+  if (!response.ok || !data.success || !data.paymentReturnToken) {
+    throw new Error(data.error || "Could not prepare payment return link.");
+  }
+
+  return data.paymentReturnToken;
+}
+
+function normalizeStorePaymentSettings(store: Store): StorePaymentSettings {
+  return {
+    paymentMode: normalizePaymentMode(store.paymentMode),
+    advanceAmount: normalizeAdvanceAmount(store.advanceAmount),
+    paymentProvider: DEFAULT_PAYMENT_PROVIDER,
+    paymentLink: store.paymentLink?.trim() || "",
+    paymentReturnToken: store.paymentReturnToken?.trim() || "",
+  };
+}
+
+export async function getStorePaymentSettings(
+  storeId: string
+): Promise<StorePaymentSettings> {
+  const storeRef = doc(db, "stores", storeId);
+  const storeSnap = await getDoc(storeRef);
+
+  if (!storeSnap.exists()) {
+    throw new Error("Store not found.");
+  }
+
+  const store = storeSnap.data() as Store;
+  return normalizeStorePaymentSettings(store);
+}
+
+export async function updateStorePaymentSettings(
+  storeId: string,
+  input: StorePaymentSettingsInput
+): Promise<StorePaymentSettings> {
+  const currentSettings = await getStorePaymentSettings(storeId);
+  const paymentMode = normalizePaymentMode(input.paymentMode);
+  const advanceAmount =
+    paymentMode === "partial_advance"
+      ? normalizeAdvanceAmount(input.advanceAmount)
+      : currentSettings.advanceAmount || DEFAULT_ADVANCE_AMOUNT;
+  const paymentLink = input.paymentLink?.trim() || "";
+
+  if (paymentMode === "partial_advance") {
+    if (!Number.isInteger(advanceAmount) || advanceAmount < 1) {
+      throw new Error("Advance amount must be a positive whole number.");
+    }
+
+    if (!paymentLink) {
+      throw new Error("Payment link is required for partial advance orders.");
+    }
+
+    if (!isRazorpayPaymentLink(paymentLink)) {
+      throw new Error("Please enter a valid Razorpay payment link.");
+    }
+  }
+
+  const paymentReturnToken =
+    currentSettings.paymentReturnToken || (await ensureStorePaymentReturnToken(storeId));
+  const updatePayload = {
+    paymentMode,
+    advanceAmount,
+    paymentProvider: DEFAULT_PAYMENT_PROVIDER,
+    paymentLink: paymentMode === "partial_advance" ? paymentLink : "",
+    updatedAt: serverTimestamp(),
+  };
+
+  await updateDoc(doc(db, "stores", storeId), updatePayload);
+
+  return {
+    paymentMode: updatePayload.paymentMode,
+    advanceAmount: updatePayload.advanceAmount,
+    paymentProvider: updatePayload.paymentProvider,
+    paymentLink: updatePayload.paymentLink,
+    paymentReturnToken,
+  };
+}
 
 export function normalizeInstagramProfile(value?: string): {
   instagramUrl: string;
@@ -209,39 +350,6 @@ export async function updateStoreCustomization(
   }
   if (input.primaryColor !== undefined) payload.primaryColor = input.primaryColor;
   if (input.accentColor !== undefined) payload.accentColor = input.accentColor;
-  if (input.sellerConfirmationAdvanceType !== undefined) {
-    if (!isSellerConfirmationAdvanceType(input.sellerConfirmationAdvanceType)) {
-      throw new Error("Please choose a valid confirmation advance option.");
-    }
-
-    payload.sellerConfirmationAdvanceType = input.sellerConfirmationAdvanceType;
-    payload.sellerConfirmationAdvanceFixedAmount =
-      input.sellerConfirmationAdvanceType === "fixed"
-        ? Math.round(Number(input.sellerConfirmationAdvanceFixedAmount) || 0)
-        : null;
-    payload.sellerConfirmationAdvancePercent =
-      input.sellerConfirmationAdvanceType === "percentage"
-        ? Math.round(Number(input.sellerConfirmationAdvancePercent) || 0)
-        : null;
-
-    if (
-      input.sellerConfirmationAdvanceType === "fixed" &&
-      Number(payload.sellerConfirmationAdvanceFixedAmount) < 20
-    ) {
-      throw new Error("Fixed confirmation amount must be at least ₹20.");
-    }
-
-    if (
-      input.sellerConfirmationAdvanceType === "percentage" &&
-      Number(payload.sellerConfirmationAdvancePercent) <= 0
-    ) {
-      throw new Error("Confirmation percentage must be greater than 0.");
-    }
-  } else if (input.sellerConfirmationAdvanceFixedAmount !== undefined) {
-    payload.sellerConfirmationAdvanceType = DEFAULT_SELLER_CONFIRMATION_ADVANCE_TYPE;
-    payload.sellerConfirmationAdvanceFixedAmount = null;
-    payload.sellerConfirmationAdvancePercent = null;
-  }
   if (input.instagramProfile !== undefined) {
     payload.instagramProfile = input.instagramProfile.trim();
     payload.instagramUrl = instagram.instagramUrl;

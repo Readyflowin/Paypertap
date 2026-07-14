@@ -1,4 +1,4 @@
-﻿import { type ComparisonPageContent } from "../../seo-pages/seoPageTypes";
+import { type ComparisonPageContent } from "../../seo-pages/seoPageTypes";
 import { ArrowRight, CheckCircle2, Columns3, IndianRupee, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -54,14 +54,14 @@ function PageHero({
           <div className="ppt-core-icon-tile">
             <Columns3 size={22} aria-hidden="true" />
           </div>
-          <h2>Booking-first storefront comparison</h2>
+          <h2>order-first storefront comparison</h2>
           <div className="ppt-comparison-visual-row">
             <span>Other tool</span>
             <strong>May fit links, catalogs, forms, or full ecommerce.</strong>
           </div>
           <div className="ppt-comparison-visual-row is-paypertap">
             <span>PayPerTap</span>
-            <strong>Built for ₹20 booking and WhatsApp handoff.</strong>
+            <strong>Built for order and WhatsApp handoff.</strong>
           </div>
         </div>
       </div>
@@ -184,7 +184,7 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
         <div className="ppt-seo-step-grid grid gap-4 md:grid-cols-4">
           {[
             "Seller shares a store or product link.",
-            "Buyer books with the fixed ₹20 fee.",
+            "Buyer books with the wallet charge.",
             "Buyer continues to WhatsApp with context.",
             "Seller collects the remaining amount directly.",
           ].map((step, index) => (
@@ -221,17 +221,17 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
             </p>
           </MarketingCard>
           <MarketingCard>
-            <h3 className="text-lg font-bold text-neutral-950">Choose PayPerTap for booking-first selling</h3>
+            <h3 className="text-lg font-bold text-neutral-950">Choose PayPerTap for order-first selling</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
               PayPerTap fits when the seller needs product pages, buyer details,
-              a fixed ₹20 booking, reserved product context, and a WhatsApp handoff
+              an order, reserved product context, and a WhatsApp handoff
               before collecting the remaining amount directly from the buyer.
             </p>
           </MarketingCard>
           <MarketingCard>
-            <h3 className="text-lg font-bold text-neutral-950">Check the Phase 1 payment boundary</h3>
+            <h3 className="text-lg font-bold text-neutral-950">Check the current model payment boundary</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              PayPerTap keeps the ₹20 platform verified-booking fee. It does not
+              PayPerTap charges the seller wallet for the order platform per-order charge. It does not
               provide seller payout, split payments, custom seller advances, or full
               checkout settlement. Sellers handle remaining payment and fulfilment.
             </p>
@@ -244,7 +244,7 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
             across several destinations, a link tool can be enough. If it is general
             data collection, a form can be enough. If it is fuller ecommerce
             infrastructure, a commerce platform may fit. If the problem is product
-            booking before WhatsApp, PayPerTap is the focused option to evaluate.
+            order before WhatsApp, PayPerTap is the focused option to evaluate.
           </p>
           <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
             Also check how much process the seller is ready to own. PayPerTap leaves
@@ -278,13 +278,13 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
               PayPerTap does not process the full product price, settle seller funds,
               manage shipping, or provide ecommerce infrastructure. The comparison is
-              about booking before WhatsApp, not full-stack commerce.
+              about order before WhatsApp, not full-stack commerce.
             </p>
           </MarketingCard>
           <MarketingCard>
             <h3 className="text-lg font-bold text-neutral-950">No guaranteed outcome claim</h3>
             <p className="ppt-home-copy mt-3 text-sm leading-7 text-neutral-600">
-              A fixed booking can organize buyer intent, but it does not guarantee
+              An order can organize buyer intent, but it does not guarantee
               final payment, delivery acceptance, repeat purchase, or sales growth.
               Sellers still need clear product and fulfilment communication.
             </p>
@@ -296,7 +296,7 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
             A good comparison starts with a concrete selling moment: a buyer asks
             about one item, the seller needs to show product details, the buyer may
             need to reserve the item, and the remaining amount must be confirmed
-            somewhere. PayPerTap should be evaluated for that booking-before-chat
+            somewhere. PayPerTap should be evaluated for that Order-before-chat
             scenario, while the other tool should be evaluated for the job it was
             designed to handle.
           </p>
@@ -313,7 +313,7 @@ export function ComparisonPageTemplate({ page }: { page: ComparisonPageContent }
         <MarketingCard className="ppt-seo-example-card">
           <p className="text-lg leading-8 text-neutral-700">
             {deepContent?.example ??
-              "If a buyer asks about one product from Instagram or WhatsApp, PayPerTap lets the seller share a product link first. The buyer sees details, books with ₹20, and then continues to WhatsApp for direct confirmation."}
+              "If a buyer asks about one product from Instagram or WhatsApp, PayPerTap lets the seller share a product link first. The buyer sees details, places an order, and then continues to WhatsApp for direct confirmation."}
           </p>
         </MarketingCard>
       </MarketingSection>

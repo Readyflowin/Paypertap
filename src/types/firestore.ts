@@ -44,10 +44,13 @@ export type Store = {
   };
   fontStyle: string;
   isPublished: boolean;
-  bookingAdvanceAmount?: number;
-  sellerConfirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
-  sellerConfirmationAdvanceFixedAmount?: number | null;
-  sellerConfirmationAdvancePercent?: number | null;
+  acceptingOrders?: boolean;
+  pauseReason?: "wallet_empty" | string | null;
+  paymentMode?: "cod" | "partial_advance";
+  advanceAmount?: number;
+  paymentProvider?: "razorpay";
+  paymentLink?: string;
+  paymentReturnToken?: string;
   phone?: string;
   whatsappPhone?: string;
   whatsappNumber?: string;
@@ -69,6 +72,8 @@ export type Store = {
   selectedThemeId?: string;
   emailEvents?: {
     storeCreatedSentAt?: unknown;
+    lowWalletSentAt?: unknown;
+    walletEmptySentAt?: unknown;
   };
   adminOnboardingEmailSentAt?: unknown;
   createdAt?: unknown;
@@ -156,8 +161,6 @@ export type Product = {
   title: string;
   description: string;
   price: number;
-  bookingAdvanceAmount: number;
-  sellerCollectAmount: number;
   category: string;
   categoryName?: string;
   collectionId?: string;
@@ -165,6 +168,9 @@ export type Product = {
   images?: ProductImage[];
   imageUrl?: string;
   thumbnailUrl?: string;
+  sizeChartImage?: string;
+  sizeChartImageUrl?: string;
+  sizeChartImageKey?: string;
   status: ProductStatus;
   isFeatured: boolean;
   sortOrder: number;
@@ -175,8 +181,6 @@ export type Product = {
   variantOptions?: ProductVariantOption[];
   variants?: ProductVariant[];
   defaultVariantId?: string;
-  advanceAmount?: number;
-  remainingAmount?: number;
   emailEvents?: {
     productAddedSentAt?: unknown;
   };
@@ -197,35 +201,50 @@ export type StoreCollection = {
 };
 
 export type CheckoutSessionStatus =
-  | "started"
-  | "details_submitted"
-  | "payment_pending"
-  | "payment_created"
-  | "booking_paid"
-  | "payment_failed"
-  | "whatsapp_opened"
-  | "contacted"
-  | "remaining_paid"
+  | "pending_payment"
+  | "pending_confirmation"
+  | "awaiting_payment"
+  | "payment_returned"
   | "confirmed"
-  | "sold"
-  | "abandoned"
-  | "expired"
+  | "processing"
+  | "completed"
   | "cancelled"
   | "released";
 
 export type CheckoutSession = {
   checkoutId: string;
+  orderId?: string;
   sellerId: string;
   storeId: string;
   productId: string;
   productTitle: string;
   productPrice: number;
-  bookingAdvanceAmount: number;
-  sellerCollectAmount: number;
-  confirmationAdvanceType?: "paypertap_only" | "fixed" | "percentage";
-  totalConfirmationAdvance?: number;
-  sellerConfirmationAmountPending?: number;
-  finalBalanceAfterConfirmation?: number;
+  advanceAmount?: number;
+  paymentAmount?: number;
+  sellerAmountDue?: number;
+  paymentMode?: "cod" | "partial_advance";
+  paymentProvider?: "razorpay";
+  paymentLink?: string;
+  paymentReturnUrl?: string;
+  paymentReturnedAt?: unknown;
+  paymentReturnDetected?: boolean;
+  paymentReturnMethod?: "razorpay_redirect";
+  sellerPaymentConfirmedAt?: unknown;
+  sellerConfirmationAt?: unknown;
+  sellerAcceptedAt?: unknown;
+  processingAt?: unknown;
+  completedAt?: unknown;
+  walletStatusSnapshot?: {
+    balance: number;
+    freeOrdersRemaining: number;
+    status: "active" | "low_balance" | "empty" | "paused";
+    hasFunds: boolean;
+  };
+  walletCharge?: number;
+  walletTransactionId?: string;
+  walletType?: "free_order" | "order_charge";
+  walletBalanceAfter?: number;
+  freeOrdersRemainingAfter?: number;
   buyerName: string;
   buyerEmail?: string;
   buyerPhone: string;
@@ -245,12 +264,11 @@ export type CheckoutSession = {
   selectedVariantId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
   emailEvents?: {
-    sellerBookingSentAt?: unknown;
-    buyerBookingSentAt?: unknown;
+    sellerOrdersentAt?: unknown;
+    buyerOrdersentAt?: unknown;
   };
+  sellerNotes?: string;
   cancelledAt?: unknown;
   releasedAt?: unknown;
   soldAt?: unknown;
@@ -263,11 +281,11 @@ export type DerivedCustomerLead = {
   buyerPhone: string;
   buyerCity: string;
   buyerPincode: string;
-  totalBookings: number;
+  totalOrders: number;
   lastProductTitle: string;
   lastProductId: string;
   lastVariantLabel?: string;
   lastVariantOptions?: Record<string, string>;
-  lastBookingStatus: CheckoutSessionStatus;
+  lastOrderstatus: CheckoutSessionStatus;
   lastCreatedAt?: unknown;
 };

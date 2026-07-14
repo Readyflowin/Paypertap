@@ -321,7 +321,7 @@ export function getVariantSummary(product: Partial<Product> | null | undefined):
   const colorOption = options.find((option) => option.name.toLocaleLowerCase() === "color");
 
   if (sizeOption && colorOption) {
-    return `${sizeOption.values.length} sizes · ${colorOption.values.length} colors`;
+    return `${sizeOption.values.length} sizes - ${colorOption.values.length} colors`;
   }
 
   if (sizeOption) return `${sizeOption.values.length} sizes`;
@@ -343,5 +343,5 @@ export function getVariantDetailsText(
     .filter(([, value]) => Boolean(value))
     .map(([name, value]) => `${name}: ${value}`);
 
-  return parts.length ? parts.join(" · ") : input.selectedVariantLabel || "";
+  return parts.length ? parts.join(" - ") : input.selectedVariantLabel || "";
 }

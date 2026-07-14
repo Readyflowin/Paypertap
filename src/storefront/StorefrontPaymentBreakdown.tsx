@@ -1,10 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 
-import {
-  calculateConfirmationAdvance,
-  type ConfirmationAdvanceBreakdown,
-} from "@/lib/confirmationAdvance";
-import { BOOKING_ADVANCE_AMOUNT, formatINR } from "@/lib/money";
+import { formatINR } from "@/lib/money";
 import type { Store } from "@/types/firestore";
 
 type StorefrontPaymentBreakdownClasses = {
@@ -20,71 +16,72 @@ type StorefrontPaymentBreakdownClasses = {
   note: string;
 };
 
+type StorePaymentFields = Pick<Store, "paymentMode" | "advanceAmount">;
+
 type StorefrontPaymentBreakdownProps = {
   classes: StorefrontPaymentBreakdownClasses;
   productPrice: number;
-  store?: Pick<
-    Store,
-    | "sellerConfirmationAdvanceType"
-    | "sellerConfirmationAdvanceFixedAmount"
-    | "sellerConfirmationAdvancePercent"
-  > | null;
+  store?: StorePaymentFields | null;
 };
 
-export function getStoreConfirmationAdvanceBreakdown({
+export type StorefrontOrderPaymentBreakdown = {
+  paymentMode: "cod" | "partial_advance";
+  advanceAmount: number;
+  sellerAmountDue: number;
+};
+
+function getSafeAmount(value: unknown): number {
+  const amount = Math.round(Number(value) || 0);
+
+  return Number.isFinite(amount) ? Math.max(0, amount) : 0;
+}
+
+export function getStoreOrderPaymentBreakdown({
   productPrice,
   store,
-}: Pick<StorefrontPaymentBreakdownProps, "productPrice" | "store">): ConfirmationAdvanceBreakdown {
-  return calculateConfirmationAdvance({
-    productPrice,
-    sellerConfirmationAdvanceType: store?.sellerConfirmationAdvanceType,
-    sellerConfirmationAdvanceFixedAmount: store?.sellerConfirmationAdvanceFixedAmount,
-    sellerConfirmationAdvancePercent: store?.sellerConfirmationAdvancePercent,
-  });
+}: Pick<
+  StorefrontPaymentBreakdownProps,
+  "productPrice" | "store"
+>): StorefrontOrderPaymentBreakdown {
+  const safeProductPrice = getSafeAmount(productPrice);
+  const paymentMode = store?.paymentMode === "partial_advance" ? "partial_advance" : "cod";
+  const advanceAmount =
+    paymentMode === "partial_advance"
+      ? Math.min(getSafeAmount(store?.advanceAmount) || 100, safeProductPrice)
+      : 0;
+
+  return {
+    paymentMode,
+    advanceAmount,
+    sellerAmountDue: Math.max(safeProductPrice - advanceAmount, 0),
+  };
 }
 
 export function getStorefrontPaymentSubtext(
-  breakdown: Pick<
-    ConfirmationAdvanceBreakdown,
-    "paypertapBookingPaid" | "sellerConfirmationAmountPending"
-  >
+  breakdown: StorefrontOrderPaymentBreakdown
 ): string {
-  return breakdown.sellerConfirmationAmountPending > 0
-    ? `${formatINR(breakdown.paypertapBookingPaid)} now / ${formatINR(
-        breakdown.sellerConfirmationAmountPending
-      )} on WhatsApp`
-    : `${formatINR(breakdown.paypertapBookingPaid)} now / balance on WhatsApp`;
+  if (breakdown.paymentMode === "partial_advance") {
+    return `${formatINR(breakdown.advanceAmount)} seller advance / ${formatINR(
+      breakdown.sellerAmountDue
+    )} remaining`;
+  }
+
+  return `${formatINR(breakdown.sellerAmountDue)} Cash on Delivery`;
 }
 
 export function getStorefrontConfirmationPolicyText(
   store?: StorefrontPaymentBreakdownProps["store"]
 ): string {
-  const type = store?.sellerConfirmationAdvanceType || "paypertap_only";
+  const paymentMode = store?.paymentMode === "partial_advance" ? "partial_advance" : "cod";
+  const advanceAmount = getSafeAmount(store?.advanceAmount) || 100;
 
-  if (type === "fixed") {
-    const totalAdvance = Math.max(
-      BOOKING_ADVANCE_AMOUNT,
-      Math.round(Number(store?.sellerConfirmationAdvanceFixedAmount) || BOOKING_ADVANCE_AMOUNT)
-    );
-    const sellerPending = Math.max(totalAdvance - BOOKING_ADVANCE_AMOUNT, 0);
-
-    return sellerPending > 0
-      ? `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item, then pay ${formatINR(
-          sellerPending
-        )} on WhatsApp to confirm with the seller.`
-      : `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the Remaining at COD directly.`;
+  if (paymentMode === "partial_advance") {
+    return `Place the order, then pay ${formatINR(
+      advanceAmount
+    )} through the seller's Razorpay link. The seller confirms payment and delivery details directly.`;
   }
 
-  if (type === "percentage") {
-    const percent = Math.max(
-      1,
-      Math.round(Number(store?.sellerConfirmationAdvancePercent) || 0)
-    );
-
-    return `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. Product pages show the exact ${percent}% confirmation amount before booking.`;
-  }
-
-  return `Pay ${formatINR(BOOKING_ADVANCE_AMOUNT)} to reserve an item. The seller collects the Remaining at COD directly.`;
+  return "Place the order and pay the seller directly when the item is delivered or handed over.";
 }
 
 export function StorefrontPaymentBreakdown({
@@ -92,20 +89,16 @@ export function StorefrontPaymentBreakdown({
   productPrice,
   store,
 }: StorefrontPaymentBreakdownProps) {
-  const breakdown = getStoreConfirmationAdvanceBreakdown({ productPrice, store });
-  const hasSellerConfirmation = breakdown.sellerConfirmationAmountPending > 0;
-  const rows = hasSellerConfirmation
+  const breakdown = getStoreOrderPaymentBreakdown({ productPrice, store });
+  const isPartialAdvance = breakdown.paymentMode === "partial_advance";
+  const rows = isPartialAdvance
     ? [
-        { label: "Pay now", value: formatINR(breakdown.paypertapBookingPaid), featured: true },
-        {
-          label: "Confirm on WhatsApp",
-          value: formatINR(breakdown.sellerConfirmationAmountPending),
-        },
-        { label: "Remaining at COD", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
+        { label: "Advance to seller", value: formatINR(breakdown.advanceAmount), featured: true },
+        { label: "Remaining with seller", value: formatINR(breakdown.sellerAmountDue) },
       ]
     : [
-        { label: "Pay now", value: formatINR(breakdown.paypertapBookingPaid), featured: true },
-        { label: "Remaining at COD", value: formatINR(breakdown.finalBalanceAfterConfirmation) },
+        { label: "Payment mode", value: "Cash on Delivery", featured: true },
+        { label: "Amount to collect", value: formatINR(breakdown.sellerAmountDue) },
       ];
 
   return (
@@ -115,25 +108,21 @@ export function StorefrontPaymentBreakdown({
           <ShieldCheck size={17} aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <h2 className={classes.title}>Reserve this item</h2>
+          <h2 className={classes.title}>
+            {isPartialAdvance ? "Seller advance order" : "Cash on Delivery order"}
+          </h2>
           <p className={classes.text}>
-            {hasSellerConfirmation
-              ? `Pay ${formatINR(
-                  breakdown.paypertapBookingPaid
-                )} now to hold it. Then pay ${formatINR(
-                  breakdown.sellerConfirmationAmountPending
-                )} on WhatsApp to confirm with the seller.`
-              : `Pay ${formatINR(
-                  breakdown.paypertapBookingPaid
-                )} now to hold it. The seller will collect the remaining ${formatINR(
-                  breakdown.finalBalanceAfterConfirmation
-                )} directly.`}
+            {isPartialAdvance
+              ? `Place the order now, then pay ${formatINR(
+                  breakdown.advanceAmount
+                )} through the seller's Razorpay link.`
+              : "Place the order now. The seller will confirm availability, delivery, and payment details."}
           </p>
         </div>
       </div>
 
       <div className={classes.panel}>
-        <p className={classes.eyebrow}>Payment breakdown</p>
+        <p className={classes.eyebrow}>Order payment</p>
         <div className="grid gap-2">
           {rows.map((row) => (
             <div key={row.label} className="flex min-w-0 items-center justify-between gap-3">
@@ -146,7 +135,7 @@ export function StorefrontPaymentBreakdown({
         </div>
       </div>
 
-      <p className={classes.note}>Details are sent to the seller after booking.</p>
+      <p className={classes.note}>Your order details are sent to the seller after submission.</p>
     </section>
   );
 }

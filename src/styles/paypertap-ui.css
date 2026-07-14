@@ -1674,7 +1674,10 @@
         .ppt-dashboard-compact-stat,
         .ppt-dashboard-next-action,
         .ppt-dashboard-quick-card,
-        .ppt-dashboard-activity-card {
+        .ppt-dashboard-activity-card,
+        .ppt-dashboard-wallet-card,
+        .ppt-dashboard-wallet-help,
+        .ppt-dashboard-wallet-activity {
           border: 1px solid var(--pds-border);
           border-radius: 22px;
           background: rgba(255,255,255,.86);
@@ -1739,6 +1742,220 @@
           color: var(--pds-muted-light);
           font-size: 11px;
           font-weight: 380;
+        }
+
+        .ppt-dashboard-wallet-stack {
+          display: grid;
+          gap: 10px;
+        }
+
+        .ppt-dashboard-wallet-card {
+          padding: 16px;
+          background:
+            radial-gradient(circle at 88% 0%, rgba(91,53,245,.12), transparent 30%),
+            rgba(255,255,255,.9);
+        }
+
+        .ppt-dashboard-wallet-head,
+        .ppt-dashboard-wallet-activity-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .ppt-dashboard-wallet-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .ppt-dashboard-wallet-icon {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          flex: 0 0 auto;
+          border-radius: 14px;
+          color: var(--pds-primary);
+          background: var(--pds-primary-soft);
+        }
+
+        .ppt-dashboard-wallet-title h2,
+        .ppt-dashboard-wallet-help h2,
+        .ppt-dashboard-wallet-activity-head h2 {
+          margin: 8px 0 0;
+          color: var(--pds-text);
+          font-size: 20px;
+          line-height: 1.1;
+          font-weight: 500;
+          letter-spacing: -.03em;
+        }
+
+        .ppt-dashboard-wallet-summary {
+          display: grid;
+          grid-template-columns: minmax(210px, .72fr) minmax(0, 1.28fr);
+          gap: 12px;
+          align-items: stretch;
+          margin-top: 16px;
+        }
+
+        .ppt-dashboard-wallet-balance {
+          min-height: 136px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 16px;
+          border-radius: 18px;
+          color: white;
+          background: linear-gradient(135deg, #111217, #2e1a79 66%, #5b35f5);
+          box-shadow: 0 16px 34px rgba(46,26,121,.18);
+        }
+
+        .ppt-dashboard-wallet-balance span {
+          color: rgba(255,255,255,.72);
+          font-size: 12px;
+          font-weight: 430;
+        }
+
+        .ppt-dashboard-wallet-balance strong {
+          display: block;
+          font-size: 42px;
+          line-height: 1;
+          font-weight: 560;
+          letter-spacing: -.04em;
+        }
+
+        .ppt-dashboard-wallet-balance-value {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .ppt-dashboard-wallet-balance-add {
+          width: 42px;
+          height: 42px;
+          flex: 0 0 auto;
+          display: grid;
+          place-items: center;
+          border: 1px solid rgba(255,255,255,.24);
+          border-radius: 999px;
+          color: white;
+          background: rgba(255,255,255,.14);
+          box-shadow: 0 12px 24px rgba(17,18,23,.18);
+          transition:
+            transform .18s ease,
+            border-color .18s ease,
+            background .18s ease;
+        }
+
+        .ppt-dashboard-wallet-balance-add:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255,255,255,.54);
+          background: rgba(255,255,255,.22);
+        }
+
+        .ppt-dashboard-wallet-balance-add:focus-visible {
+          outline: 3px solid rgba(255,255,255,.54);
+          outline-offset: 3px;
+        }
+
+        .ppt-dashboard-wallet-metrics {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0,1fr));
+          gap: 8px;
+        }
+
+        .ppt-dashboard-wallet-help,
+        .ppt-dashboard-wallet-activity {
+          padding: 15px;
+        }
+
+        .ppt-dashboard-wallet-help {
+          background: rgba(248,250,252,.9);
+        }
+
+        .ppt-dashboard-wallet-help ul {
+          display: grid;
+          gap: 8px;
+          margin: 12px 0 0;
+          padding-left: 18px;
+          color: var(--pds-muted);
+          font-size: 13px;
+          line-height: 1.55;
+          font-weight: 360;
+        }
+
+        .ppt-dashboard-wallet-help li::marker {
+          color: var(--pds-primary);
+        }
+
+        .ppt-dashboard-wallet-help p {
+          margin: 12px 0 0;
+          color: var(--pds-muted-light);
+          font-size: 12px;
+          font-weight: 430;
+        }
+
+        .ppt-dashboard-wallet-table-wrap {
+          margin-top: 12px;
+          overflow-x: auto;
+          border: 1px solid var(--pds-border);
+          border-radius: 16px;
+          background: rgba(255,255,255,.78);
+        }
+
+        .ppt-dashboard-wallet-table {
+          width: 100%;
+          min-width: 760px;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+
+        .ppt-dashboard-wallet-table th,
+        .ppt-dashboard-wallet-table td {
+          padding: 11px 12px;
+          border-bottom: 1px solid var(--pds-border);
+          text-align: left;
+          vertical-align: top;
+          white-space: nowrap;
+        }
+
+        .ppt-dashboard-wallet-table th {
+          color: var(--pds-muted);
+          background: rgba(247,247,250,.86);
+          font-weight: 520;
+        }
+
+        .ppt-dashboard-wallet-table td {
+          color: var(--pds-text);
+          font-weight: 390;
+        }
+
+        .ppt-dashboard-wallet-table td:nth-child(6) {
+          min-width: 160px;
+          max-width: 260px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .ppt-dashboard-wallet-table tr:last-child td {
+          border-bottom: 0;
+        }
+
+        .ppt-dashboard-wallet-empty {
+          margin-top: 12px;
+          padding: 18px;
+          border: 1px dashed var(--pds-border-strong);
+          border-radius: 16px;
+          background: rgba(255,255,255,.72);
+          color: var(--pds-muted);
+          font-size: 13px;
+          line-height: 1.5;
+          font-weight: 390;
         }
 
         .ppt-dashboard-next-action {
@@ -2316,6 +2533,10 @@
             grid-template-columns: repeat(2, minmax(0,1fr));
           }
 
+          .ppt-dashboard-wallet-summary {
+            grid-template-columns: 1fr;
+          }
+
           .ppt-dashboard-next-actions .pds-button,
           .ppt-dashboard-quick-card .pds-button {
             width: auto;
@@ -2532,6 +2753,40 @@
             font-size: 22px;
           }
 
+          .ppt-dashboard-wallet-card,
+          .ppt-dashboard-wallet-help,
+          .ppt-dashboard-wallet-activity {
+            border-radius: 20px;
+          }
+
+          .ppt-dashboard-wallet-head {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .ppt-dashboard-wallet-title h2,
+          .ppt-dashboard-wallet-help h2,
+          .ppt-dashboard-wallet-activity-head h2 {
+            font-size: 18px;
+          }
+
+          .ppt-dashboard-wallet-balance {
+            min-height: 116px;
+          }
+
+          .ppt-dashboard-wallet-balance strong {
+            font-size: 34px;
+          }
+
+          .ppt-dashboard-wallet-balance-add {
+            width: 38px;
+            height: 38px;
+          }
+
+          .ppt-dashboard-wallet-metrics {
+            grid-template-columns: 1fr;
+          }
+
           .ppt-dashboard-next-action {
             align-items: stretch;
             flex-direction: column;
@@ -2616,5 +2871,436 @@
           .pds-skeleton-img {
             animation: none !important;
             transition: none !important;
+          }
+        }
+
+        .ppt-admin-workspace {
+          background: #f6f5f2;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-shell {
+          grid-template-columns: 248px minmax(0, 1fr);
+          gap: 16px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-sidebar,
+        .ppt-admin-workspace .ppt-dashboard-header,
+        .ppt-dashboard-home-hero,
+        .ppt-dashboard-snapshot-card,
+        .ppt-dashboard-workspace-head {
+          border: 1px solid rgba(18,18,18,.08);
+          background: rgba(255,255,255,.92);
+          box-shadow: 0 18px 45px rgba(15,23,42,.06);
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-sidebar {
+          gap: 18px;
+          padding: 16px;
+          border-radius: 24px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-mark {
+          background: #111111;
+          box-shadow: none;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-nav button {
+          position: relative;
+          min-height: 42px;
+          border-radius: 12px;
+          color: #676767;
+          font-size: 13px;
+          font-weight: 520;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-nav button:hover,
+        .ppt-admin-workspace .ppt-dashboard-mobile-nav button:hover {
+          background: #f2f1ee;
+          color: #111111;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-nav button.is-active,
+        .ppt-admin-workspace .ppt-dashboard-mobile-nav button.is-active {
+          background: #111111;
+          color: #ffffff;
+          box-shadow: none;
+        }
+
+        .ppt-dashboard-nav-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 20px;
+          height: 20px;
+          margin-left: auto;
+          padding: 0 6px;
+          border-radius: 999px;
+          background: #ef4444;
+          color: #ffffff;
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-header {
+          position: sticky;
+          top: 16px;
+          z-index: 20;
+          padding: 14px 16px;
+          border-radius: 22px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-header h1 {
+          margin-top: 5px;
+          font-size: clamp(24px, 2.3vw, 34px);
+          letter-spacing: -.03em;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-header p:not(.ppt-dashboard-eyebrow) {
+          max-width: 620px;
+          margin-top: 6px;
+          font-size: 13px;
+        }
+
+        .ppt-dashboard-commandbar {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          width: min(330px, 32vw);
+          min-height: 40px;
+          padding: 0 12px;
+          border: 1px solid rgba(18,18,18,.1);
+          border-radius: 12px;
+          background: #fafafa;
+          color: #767676;
+          font-size: 13px;
+          font-weight: 450;
+        }
+
+        .ppt-dashboard-commandbar span {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .ppt-dashboard-commandbar kbd {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 22px;
+          height: 22px;
+          border: 1px solid rgba(18,18,18,.12);
+          border-radius: 6px;
+          background: #ffffff;
+          color: #525252;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 650;
+        }
+
+        .ppt-dashboard-home-hero {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .ppt-dashboard-home-hero h2 {
+          margin: 10px 0 0;
+          color: #111111;
+          font-size: clamp(24px, 3vw, 38px);
+          line-height: 1.03;
+          font-weight: 720;
+          letter-spacing: -.035em;
+        }
+
+        .ppt-dashboard-home-hero p {
+          max-width: 660px;
+          margin: 8px 0 0;
+          color: #6f6f6f;
+          font-size: 14px;
+          line-height: 1.55;
+        }
+
+        .ppt-dashboard-home-actions,
+        .ppt-dashboard-workspace-actions {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .ppt-dashboard-home-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+          align-items: stretch;
+        }
+
+        .ppt-dashboard-snapshot-card {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          min-width: 0;
+          padding: 16px;
+          border-radius: 22px;
+        }
+
+        .ppt-dashboard-snapshot-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .ppt-dashboard-snapshot-head h3 {
+          margin: 7px 0 0;
+          color: #111111;
+          font-size: 18px;
+          line-height: 1.15;
+          font-weight: 700;
+        }
+
+        .ppt-dashboard-snapshot-head p,
+        .ppt-dashboard-snapshot-note {
+          margin: 5px 0 0;
+          color: #747474;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+
+        .ppt-dashboard-snapshot-metrics {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .ppt-dashboard-snapshot-metrics > div,
+        .ppt-dashboard-readiness > div {
+          min-width: 0;
+          padding: 11px;
+          border: 1px solid rgba(18,18,18,.08);
+          border-radius: 14px;
+          background: #fafafa;
+        }
+
+        .ppt-dashboard-snapshot-metrics span,
+        .ppt-dashboard-readiness span {
+          display: block;
+          color: #7a7a7a;
+          font-size: 11px;
+          font-weight: 650;
+          letter-spacing: .02em;
+          text-transform: uppercase;
+        }
+
+        .ppt-dashboard-snapshot-metrics strong,
+        .ppt-dashboard-readiness strong {
+          display: block;
+          margin-top: 5px;
+          overflow: hidden;
+          color: #111111;
+          font-size: 16px;
+          font-weight: 720;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .ppt-dashboard-readiness {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .ppt-dashboard-mini-list {
+          display: grid;
+          gap: 8px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .ppt-dashboard-mini-list li {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 10px;
+          align-items: center;
+          padding: 10px 0;
+          border-bottom: 1px solid rgba(18,18,18,.07);
+        }
+
+        .ppt-dashboard-mini-list li:last-child {
+          border-bottom: 0;
+        }
+
+        .ppt-dashboard-mini-list strong,
+        .ppt-dashboard-mini-list span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .ppt-dashboard-mini-list strong {
+          color: #161616;
+          font-size: 13px;
+          font-weight: 650;
+        }
+
+        .ppt-dashboard-mini-list span {
+          color: #777777;
+          font-size: 12px;
+        }
+
+        .ppt-dashboard-workspace {
+          display: grid;
+          gap: 16px;
+        }
+
+        .ppt-dashboard-workspace-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 16px;
+          border-radius: 22px;
+        }
+
+        .ppt-dashboard-workspace-head p,
+        .ppt-dashboard-workspace-head h2,
+        .ppt-dashboard-workspace-head span {
+          margin: 0;
+        }
+
+        .ppt-dashboard-workspace-head p {
+          color: #7a7a7a;
+          font-size: 11px;
+          font-weight: 750;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+
+        .ppt-dashboard-workspace-head h2 {
+          margin-top: 6px;
+          color: #111111;
+          font-size: clamp(26px, 3vw, 40px);
+          line-height: 1.02;
+          font-weight: 760;
+          letter-spacing: -.035em;
+        }
+
+        .ppt-dashboard-workspace-head span {
+          display: block;
+          max-width: 720px;
+          margin-top: 6px;
+          color: #707070;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
+        @media (max-width: 1180px) {
+          .ppt-admin-workspace .ppt-dashboard-shell {
+            grid-template-columns: 220px minmax(0, 1fr);
+          }
+
+          .ppt-dashboard-commandbar {
+            width: 260px;
+          }
+
+          .ppt-dashboard-home-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .ppt-admin-workspace {
+            padding: 10px 10px calc(112px + env(safe-area-inset-bottom));
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-shell {
+            display: block;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-sidebar {
+            display: none;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-header {
+            top: 0;
+            align-items: flex-start;
+            border-radius: 20px;
+          }
+
+          .ppt-dashboard-commandbar {
+            display: none;
+          }
+
+          .ppt-dashboard-home-hero,
+          .ppt-dashboard-workspace-head {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .ppt-dashboard-home-actions,
+          .ppt-dashboard-workspace-actions {
+            justify-content: stretch;
+          }
+
+          .ppt-dashboard-home-actions .pds-button,
+          .ppt-dashboard-workspace-actions .pds-button {
+            flex: 1 1 auto;
+          }
+
+          .ppt-dashboard-snapshot-metrics,
+          .ppt-dashboard-readiness {
+            grid-template-columns: 1fr;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-mobile-nav {
+            position: fixed;
+            right: 12px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            left: 12px;
+            z-index: 60;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+            margin: 0;
+            padding: 8px;
+            border: 1px solid rgba(18,18,18,.1);
+            border-radius: 24px;
+            background: rgba(255,255,255,.92);
+            box-shadow: 0 18px 45px rgba(15,23,42,.18);
+            backdrop-filter: blur(18px);
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-mobile-nav button {
+            position: relative;
+            min-height: 50px;
+            padding: 0 4px;
+            border: 0;
+            border-radius: 16px;
+            background: transparent;
+            color: #666666;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-mobile-nav button.is-active {
+            background: #111111;
+            color: #ffffff;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-nav-badge {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 4px;
+            font-size: 10px;
           }
         }

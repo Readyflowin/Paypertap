@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImageIcon, Menu, Search, X } from "lucide-react";
+import { Heart, ImageIcon, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
 import { formatINR } from "@/lib/money";
 import type { StorefrontProduct, StorefrontThemeProps } from "../types";
@@ -33,17 +33,14 @@ export function Theme1Header({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const displayStore = adaptTheme1Store({ collections, products, store });
   const desktopNavItems = [
-    { label: "New Drop", href: "#products" },
-    { label: "Rare Finds", href: "#products" },
-    { label: "How It Works", href: "#booking" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Shop", href: "#products" },
+    { label: "Collections", href: "#products" },
+    { label: "New arrivals", href: "#products-all" },
   ];
   const mobileNavItems = [
-    { label: "New Drop", href: "#products" },
-    { label: "Rare Finds", href: "#products" },
-    { label: "How Booking Works", href: "#booking" },
-    { label: "FAQ", href: "#faq" },
-    { label: "Instagram", href: "#footer" },
+    { label: "Shop", href: "#products" },
+    { label: "Collections", href: "#products" },
+    { label: "Email list", href: "#footer" },
   ];
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -138,12 +135,31 @@ export function Theme1Header({
     setSearchQuery("");
   };
 
+  const shareStore = async () => {
+    const shareUrl = window.location.href.split("#")[0];
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: displayStore.name,
+          text: getTheme1StoreDescription(store),
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard?.writeText(shareUrl);
+    } catch {
+      // Sharing is best-effort UI chrome; buyers can continue browsing.
+    }
+  };
+
   return (
     <>
-      <div className="border-b border-[#2d1b16] bg-[#111111] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#F6F1E8]">
+      <div className="border-b border-[#111111] bg-[#111111] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffffff]">
         {displayStore.announcement}
       </div>
-      <header className="sticky top-0 z-20 border-b border-[#DDD4C7] bg-[#F6F1E8]/95 px-3 py-3 backdrop-blur-xl sm:px-4">
+      <header className="sticky top-0 z-20 border-b border-[#ece7df] bg-[#fffdfa]/96 px-4 py-3 backdrop-blur-xl">
         <div
           className={`mx-auto max-w-7xl items-center gap-2 ${
             isPreviewMobile
@@ -156,7 +172,7 @@ export function Theme1Header({
             aria-label="Open menu"
             ref={menuButtonRef}
             onClick={() => setOpen(true)}
-            className={`h-10 w-10 place-items-center rounded-full border border-[#DDD4C7] bg-[#F4EFE6] text-[#111111] ${
+            className={`h-10 w-10 place-items-center rounded-full text-[#2b2926] ${
               isPreviewMobile ? "grid" : "grid md:hidden"
             }`}
           >
@@ -169,7 +185,7 @@ export function Theme1Header({
               isPreviewMobile ? "" : "md:justify-start"
             }`}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-sm font-semibold text-[#F6F1E8]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-xs font-semibold text-[#ffffff]">
               {displayStore.logoUrl ? (
                 <img
                   src={displayStore.logoUrl}
@@ -182,22 +198,22 @@ export function Theme1Header({
               )}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-base font-semibold text-[#111111] sm:text-lg">
+              <span className="block truncate text-sm font-semibold uppercase tracking-[0.02em] text-[#111111] sm:text-base">
                 {displayStore.name}
               </span>
-              <span className={`${isPreviewMobile ? "hidden" : "hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#6F6A60] sm:block"}`}>
-                Editorial thrift
+              <span className={`${isPreviewMobile ? "hidden" : "hidden max-w-[220px] truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#60646c] sm:block"}`}>
+                {store.tagline || store.bio || "Curated storefront"}
               </span>
             </span>
           </a>
 
           <nav
-            className={`items-center gap-6 text-sm font-semibold text-[#3a342d] ${
+            className={`items-center gap-7 text-sm font-medium text-[#2b2926] ${
               isPreviewMobile ? "hidden" : "hidden md:flex"
             }`}
           >
             {desktopNavItems.map((item) => (
-              <a key={item.label} href={item.href} className="!text-[#3a342d] hover:!text-[#7A2E2E]">
+              <a key={item.label} href={item.href} className="!text-[#2b2926] hover:!text-[#111111]">
                 {item.label}
               </a>
             ))}
@@ -209,18 +225,39 @@ export function Theme1Header({
               aria-label="Search this drop"
               ref={searchButtonRef}
               onClick={openSearch}
-              className="grid h-10 w-10 place-items-center rounded-full border border-[#DDD4C7] bg-[#F4EFE6] text-[#111111]"
+              className="grid h-10 w-10 place-items-center rounded-full text-[#2b2926]"
             >
               <Search size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Wishlist"
+              className="grid h-10 w-10 place-items-center rounded-full text-[#2b2926]"
+            >
+              <Heart size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Account"
+              className="grid h-10 w-10 place-items-center rounded-full text-[#2b2926]"
+            >
+              <User size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Orders"
+              className="grid h-10 w-10 place-items-center rounded-full text-[#2b2926]"
+            >
+              <ShoppingBag size={18} aria-hidden="true" />
             </button>
           </div>
 
           <button
             type="button"
-            aria-label="Search this drop"
+            aria-label="Search this store"
             ref={isPreviewMobile ? searchButtonRef : undefined}
             onClick={openSearch}
-            className={`h-10 w-10 place-items-center justify-self-end rounded-full border border-[#DDD4C7] bg-[#F4EFE6] text-[#111111] ${
+            className={`h-10 w-10 place-items-center justify-self-end rounded-full text-[#2b2926] ${
               isPreviewMobile ? "grid" : "grid md:hidden"
             }`}
           >
@@ -240,11 +277,11 @@ export function Theme1Header({
           <aside
             aria-label="Theme 1 mobile navigation"
             onClick={(event) => event.stopPropagation()}
-            className="h-full w-[min(92vw,360px)] bg-[#F6F1E8] px-5 py-4 shadow-2xl"
+            className="h-full w-[min(92vw,360px)] bg-[#ffffff] px-5 py-4 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-sm font-semibold text-[#F6F1E8]">
+                <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-sm font-semibold text-[#ffffff]">
                   {displayStore.logoUrl ? (
                     <img
                       src={displayStore.logoUrl}
@@ -264,7 +301,7 @@ export function Theme1Header({
                 aria-label="Close menu"
                 ref={closeButtonRef}
                 onClick={() => setOpen(false)}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#DDD4C7] bg-[#F4EFE6] text-[#111111]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#e5e7eb] bg-[#f7f7f8] text-[#111111]"
               >
                 <X size={18} aria-hidden="true" />
               </button>
@@ -275,13 +312,20 @@ export function Theme1Header({
                   key={item.label}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="flex min-h-11 items-center border-b border-[#DDD4C7] px-1 py-3 text-xl font-semibold !text-[#111111] hover:!text-[#7A2E2E]"
+                  className="flex min-h-11 items-center border-b border-[#e5e7eb] px-1 py-3 text-xl font-semibold !text-[#111111] hover:!text-[#6f6b64]"
                 >
                   {item.label}
                 </a>
               ))}
             </nav>
-            <p className="mt-10 max-w-xs text-sm leading-6 text-[#6F6A60]">
+            <button
+              type="button"
+              onClick={shareStore}
+              className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#111111] px-4 text-sm font-semibold text-white"
+            >
+              Share store
+            </button>
+            <p className="mt-10 max-w-xs text-sm leading-6 text-[#60646c]">
               {getTheme1StoreDescription(store)}
             </p>
           </aside>
@@ -299,39 +343,39 @@ export function Theme1Header({
             aria-modal="true"
             role="dialog"
             onClick={(event) => event.stopPropagation()}
-            className="mx-auto mt-14 max-h-[calc(100%-72px)] w-full max-w-lg overflow-y-auto border border-[#DDD4C7] bg-[#F6F1E8] p-4 shadow-[0_24px_70px_rgba(17,17,17,0.24)]"
+            className="mx-auto mt-14 max-h-[calc(100%-72px)] w-full max-w-lg overflow-y-auto border border-[#e5e7eb] bg-[#ffffff] p-4 shadow-[0_24px_70px_rgba(17,17,17,0.24)]"
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7A2E2E]">
-                  Search drop
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8d867d]">
+                  Search store
                 </p>
                 <h2
                   className="mt-1 text-2xl font-semibold leading-tight text-[#111111]"
                   style={{ fontFamily: "Georgia, ui-serif, serif" }}
                 >
-                  Find a piece
+                  Find a product
                 </h2>
               </div>
               <button
                 type="button"
                 aria-label="Close search"
                 onClick={() => setSearchOpen(false)}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#DDD4C7] bg-[#F4EFE6] text-[#111111]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#e5e7eb] bg-[#f7f7f8] text-[#111111]"
               >
                 <X size={18} aria-hidden="true" />
               </button>
             </div>
 
-            <label className="mt-4 flex min-h-12 items-center gap-2 border border-[#DDD4C7] bg-[#F9F5ED] px-3 focus-within:border-[#7A2E2E]">
-              <Search size={17} aria-hidden="true" className="shrink-0 text-[#6F6A60]" />
+            <label className="mt-4 flex min-h-12 items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#ffffff] px-4 focus-within:border-[#111111]">
+              <Search size={17} aria-hidden="true" className="shrink-0 text-[#60646c]" />
               <span className="sr-only">Search products</span>
               <input
                 ref={searchInputRef}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search jackets, denim, tees..."
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111111] outline-none placeholder:text-[#8f8679]"
+                placeholder="Search products, sizes, categories..."
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111111] outline-none placeholder:text-[#8b9099]"
               />
             </label>
 
@@ -345,7 +389,7 @@ export function Theme1Header({
                       key={displayProduct.id || getTheme1ProductTitle(product)}
                       type="button"
                       onClick={() => handleProductSelect(product)}
-                      className="grid min-h-[76px] grid-cols-[58px_1fr] gap-3 border border-[#DDD4C7] bg-[#F9F5ED] p-2 text-left transition hover:border-[#7A2E2E] hover:bg-[#F4EFE6]"
+                      className="grid min-h-[76px] grid-cols-[58px_1fr] gap-3 border border-[#e5e7eb] bg-[#ffffff] p-2 text-left transition hover:border-[#111111] hover:bg-[#f7f7f8]"
                     >
                       {displayProduct.imageUrl ? (
                         <img
@@ -356,7 +400,7 @@ export function Theme1Header({
                           className="aspect-[4/5] h-full w-full object-cover"
                         />
                       ) : (
-                        <span className="grid aspect-[4/5] h-full w-full place-items-center bg-[#EFE3C8] text-[#6F6A60]">
+                        <span className="grid aspect-[4/5] h-full w-full place-items-center bg-[#f1f2f4] text-[#60646c]">
                           <ImageIcon size={18} aria-hidden="true" />
                         </span>
                       )}
@@ -364,7 +408,7 @@ export function Theme1Header({
                         <span className="line-clamp-2 text-sm font-semibold leading-5 text-[#111111]">
                           {displayProduct.title}
                         </span>
-                        <span className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold text-[#6F6A60]">
+                        <span className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold text-[#60646c]">
                           <span>{formatINR(displayProduct.price)}</span>
                           <span className="max-w-full truncate">{displayProduct.collection}</span>
                         </span>
@@ -373,8 +417,8 @@ export function Theme1Header({
                   );
                 })
               ) : (
-                <p className="border border-[#DDD4C7] bg-[#F9F5ED] p-4 text-sm leading-6 text-[#6F6A60]">
-                  No pieces match that search. Try denim, jackets, tees, or accessories.
+                <p className="border border-[#e5e7eb] bg-[#ffffff] p-4 text-sm leading-6 text-[#60646c]">
+                  No products match that search. Try another name, size, or category.
                 </p>
               )}
             </div>

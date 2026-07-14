@@ -8,7 +8,7 @@ export function HomeFAQPreview() {
     <MarketingSection
       eyebrow="FAQ"
       title="Clear answers before sellers share the link."
-      intro="The most important booking questions are answered plainly: what PayPerTap does, what the ₹20 means, and who collects the remaining payment."
+      intro="The most important order questions are answered plainly: what PayPerTap does, what the seller wallet means, and who collects the remaining payment."
     >
       <FAQBlock items={marketingFaqs.slice(0, 6)} />
       <Link to="/compare" className="ppt-link-pill mt-5">

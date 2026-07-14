@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { COMPATIBILITY_COLLECTION_NAME } from "../lib/collections";
-import { BOOKING_ADVANCE_AMOUNT, getSellerCollectAmount } from "../lib/money";
 import { MAX_PRODUCT_IMAGE_COUNT } from "../lib/imageCompression";
 import {
   getDurableImageUrl,
@@ -28,7 +27,7 @@ import {
 } from "../lib/productVariants";
 import { getNextProductStatus } from "../lib/productAvailability";
 import type { Product, ProductImage, ProductStatus } from "../types/firestore";
-import { uploadProductImages } from "./uploadService";
+import { uploadProductImage, uploadProductImages } from "./uploadService";
 
 type CreateSellerProductInput = {
   title: string;
@@ -41,6 +40,7 @@ type CreateSellerProductInput = {
   inventoryQuantity?: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  sizeChartImageFile?: File | null;
   hasVariants?: boolean;
   variantOptions?: ProductVariantOption[];
   variants?: ProductVariant[];
@@ -75,6 +75,7 @@ export type UpdateSellerProductInput = {
   inventoryQuantity: number;
   imageFile?: File | null;
   imageFiles?: File[];
+  sizeChartImageFile?: File | null;
   hasVariants?: boolean;
   variantOptions?: ProductVariantOption[];
   variants?: ProductVariant[];
@@ -193,14 +194,6 @@ function normalizeProduct(productDoc: {
 }): Product {
   const data = productDoc.data();
   const price = Number(data.price || 0);
-  const bookingAdvanceAmount =
-    Number(data.bookingAdvanceAmount) ||
-    Number(data.advanceAmount) ||
-    BOOKING_ADVANCE_AMOUNT;
-  const sellerCollectAmount =
-    Number(data.sellerCollectAmount) ||
-    Number(data.remainingAmount) ||
-    getSellerCollectAmount(price);
   const images = getProductImageUrls({
     images: data.images,
     imageUrl: data.imageUrl,
@@ -214,8 +207,6 @@ function normalizeProduct(productDoc: {
     ...(data as Omit<Product, "id">),
     productId: String(data.productId || productDoc.id),
     price,
-    bookingAdvanceAmount,
-    sellerCollectAmount,
     images,
     imageUrl: firstImage?.url || getDurableImageUrl(data.imageUrl),
     thumbnailUrl:
@@ -380,10 +371,6 @@ export async function createSellerProduct(
   const productId = productRef.id;
   const price = toPositiveInt(input.price, "Price");
 
-  if (price <= BOOKING_ADVANCE_AMOUNT) {
-    throw new Error("Product price must be greater than ₹20.");
-  }
-
   const inventoryQuantity = toPositiveInt(
     input.inventoryQuantity ?? 1,
     "Inventory quantity"
@@ -403,6 +390,16 @@ export async function createSellerProduct(
     : [];
   const ruleSafeImages = toRuleSafeProductImages(images);
   const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
+  const sizeChartImage = input.sizeChartImageFile
+    ? await uploadProductImage(input.sizeChartImageFile, `${title} size chart`)
+    : null;
+  const sizeChartImageFields = sizeChartImage?.url
+    ? {
+        sizeChartImage: sizeChartImage.url,
+        sizeChartImageUrl: sizeChartImage.url,
+        sizeChartImageKey: sizeChartImage.key || "",
+      }
+    : {};
   const sortOrder = Date.now();
   const variantPayload = normalizeProductVariantPayload(input);
 
@@ -413,13 +410,12 @@ export async function createSellerProduct(
     title,
     description: input.description?.trim() || "",
     price,
-    bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
-    sellerCollectAmount: getSellerCollectAmount(price),
     category: input.category?.trim() || collectionName || COMPATIBILITY_COLLECTION_NAME,
     collectionId,
     collectionName,
     images: ruleSafeImages,
     ...primaryImageFields,
+    ...sizeChartImageFields,
     status: input.status || "open",
     isFeatured: false,
     sortOrder,
@@ -468,10 +464,6 @@ export async function updateSellerProduct(
 
   const price = toPositiveInt(input.price, "Price");
 
-  if (price <= BOOKING_ADVANCE_AMOUNT) {
-    throw new Error("Product price must be greater than ₹20.");
-  }
-
   const inventoryQuantity = toPositiveInt(
     input.inventoryQuantity,
     "Inventory quantity"
@@ -511,6 +503,16 @@ export async function updateSellerProduct(
 
   const ruleSafeImages = toRuleSafeProductImages(images);
   const primaryImageFields = getPrimaryImageFields(ruleSafeImages);
+  const sizeChartImage = input.sizeChartImageFile
+    ? await uploadProductImage(input.sizeChartImageFile, `${title} size chart`)
+    : null;
+  const sizeChartImageFields = sizeChartImage?.url
+    ? {
+        sizeChartImage: sizeChartImage.url,
+        sizeChartImageUrl: sizeChartImage.url,
+        sizeChartImageKey: sizeChartImage.key || "",
+      }
+    : {};
   const variantPayload = normalizeProductVariantPayload(input);
 
   const productRef = doc(db, "products", product.productId || product.id);
@@ -521,12 +523,11 @@ export async function updateSellerProduct(
     collectionId,
     collectionName,
     price,
-    bookingAdvanceAmount: BOOKING_ADVANCE_AMOUNT,
-    sellerCollectAmount: getSellerCollectAmount(price),
     inventoryQuantity,
     status: nextStatus,
     images: ruleSafeImages,
     ...primaryImageFields,
+    ...sizeChartImageFields,
     ...variantPayload,
     updatedAt: serverTimestamp(),
   };

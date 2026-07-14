@@ -9,7 +9,6 @@ import {
   getProductUnavailableLabel,
 } from "@/lib/productAvailability";
 
-import { PriceBreakdown } from "./PriceBreakdown";
 import { StatusBadge } from "./StatusBadge";
 
 type ProductCardMode = "public" | "dashboard" | "compact";
@@ -259,7 +258,9 @@ export function ProductCard({
         <div className="min-w-0 flex-1">
           <ProductTitle title={title} href={detailHref} onClick={onClick} className="text-sm" />
           <p className="mt-1 text-base font-black text-[var(--ppt-text)]">{formatINR(price)}</p>
-          <PriceBreakdown price={price} mode="compact" className="mt-2" />
+          <p className="mt-2 text-xs font-semibold text-[var(--ppt-text-muted)]">
+            Order through seller checkout
+          </p>
         </div>
       </Card>
     );
@@ -292,7 +293,7 @@ export function ProductCard({
         <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
           <p className="text-xl font-black text-[var(--ppt-text)]">{formatINR(price)}</p>
           <span className="rounded-full bg-[var(--ppt-primary-soft)] px-2.5 py-1 text-xs font-bold text-[var(--ppt-primary-dark)]">
-            Reserve with ₹20
+            Place order
           </span>
         </div>
 

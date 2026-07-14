@@ -1,6 +1,6 @@
 # PayPerTap Email Lifecycle Plan
 
-Implemented now: event-based transactional emails for seller welcome, store created, product added, and verified booking notifications.
+Implemented now: event-based transactional emails for seller welcome, store created, product added, and order notifications.
 
 Future lifecycle emails are not implemented yet:
 

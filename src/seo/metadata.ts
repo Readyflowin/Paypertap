@@ -104,24 +104,24 @@ const coreRouteMetadata: RouteMetadata[] = [
     path: "/",
     breadcrumbLabel: "Home",
     breadcrumbs: [{ label: "Home", path: "/" }],
-    title: "PayPerTap | Verified Booking Storefront",
+    title: "PayPerTap | Verified order Storefront",
     description:
-      "PayPerTap helps Indian Instagram and WhatsApp sellers create booking storefronts, verify buyer intent, and continue order confirmation on WhatsApp.",
+      "PayPerTap helps Indian Instagram and WhatsApp sellers create order storefronts, verify buyer intent, and continue order confirmation on WhatsApp.",
   }),
   metadata({
     path: "/pricing",
     breadcrumbLabel: "Pricing",
-    title: "PayPerTap Pricing | ₹20 Booking for Instagram & WhatsApp Sellers",
+    title: "PayPerTap Pricing | order for Instagram & WhatsApp Sellers",
     description:
-      "Simple PayPerTap pricing for Indian Instagram and WhatsApp sellers: buyers pay a fixed ₹20 booking, while sellers collect the remaining amount directly.",
+      "Simple PayPerTap pricing for Indian Instagram and WhatsApp sellers: sellers pay a per-order wallet charge, while sellers collect the remaining amount directly.",
     trust: sellerTrust(),
   }),
   metadata({
     path: "/how-it-works",
     breadcrumbLabel: "How It Works",
-    title: "How PayPerTap Works | ₹20 Product Booking to WhatsApp Handoff",
+    title: "How PayPerTap Works | seller wallet product order to WhatsApp Handoff",
     description:
-      "See how PayPerTap helps sellers share product links, collect a fixed ₹20 buyer booking, and continue confirmation directly on WhatsApp.",
+      "See how PayPerTap helps sellers share product links, collect a buyer order, and continue confirmation directly on WhatsApp.",
     trust: sellerTrust(),
   }),
   metadata({
@@ -129,7 +129,7 @@ const coreRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "About",
     title: "About PayPerTap | Built for Instagram & WhatsApp Sellers in India",
     description:
-      "Learn how PayPerTap helps Indian Instagram and WhatsApp sellers create verified booking storefronts with product links and WhatsApp handoff.",
+      "Learn how PayPerTap helps Indian Instagram and WhatsApp sellers create verified order storefronts with product links and WhatsApp handoff.",
     trust: sellerTrust(),
   }),
   metadata({
@@ -145,15 +145,15 @@ const coreRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "Contact",
     title: "Contact PayPerTap | Support for Instagram & WhatsApp Sellers",
     description:
-      "Contact PayPerTap for seller support, product questions, partnerships, press, and founder requests related to verified booking storefronts.",
+      "Contact PayPerTap for seller support, product questions, partnerships, press, and founder requests related to verified order storefronts.",
     trust: sellerTrust(),
   }),
   metadata({
     path: "/faq",
     breadcrumbLabel: "FAQ",
-    title: "PayPerTap FAQ | ₹20 Booking, WhatsApp Handoff & Seller Payments",
+    title: "PayPerTap FAQ | order, WhatsApp Handoff & Seller Payments",
     description:
-      "Clear answers about PayPerTap, fixed ₹20 verified booking, seller payments, WhatsApp handoff, KYC, cancellations, and platform limits.",
+      "Clear answers about PayPerTap, seller wallet verified order, seller payments, WhatsApp handoff, KYC, cancellations, and platform limits.",
     trust: editorialTrust(),
   }),
   metadata({
@@ -161,7 +161,7 @@ const coreRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "Privacy Policy",
     title: "Privacy Policy | PayPerTap",
     description:
-      "PayPerTap privacy policy for sellers and buyers using verified booking storefronts, fixed ₹20 booking, and WhatsApp handoff.",
+      "PayPerTap privacy policy for sellers and buyers using verified order storefronts, order, and WhatsApp handoff.",
     trust: editorialTrust(),
   }),
   metadata({
@@ -169,7 +169,7 @@ const coreRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "Terms of Service",
     title: "Terms of Service | PayPerTap",
     description:
-      "Terms for using PayPerTap verified booking storefronts, including the fixed ₹20 booking model and direct seller-buyer confirmation.",
+      "Terms for using PayPerTap verified order storefronts, including the order model and direct seller-buyer confirmation.",
     trust: editorialTrust(),
   }),
   metadata({
@@ -177,15 +177,15 @@ const coreRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "Refund & Cancellation Policy",
     title: "Refund & Cancellation Policy | PayPerTap",
     description:
-      "Refund and cancellation policy for PayPerTap verified booking flows, fixed ₹20 booking, and seller-managed remaining payments.",
+      "Refund and cancellation policy for PayPerTap verified order flows, order, and seller-managed remaining payments.",
     trust: editorialTrust(),
   }),
 ];
 
 const featureTitleOverrides: Partial<Record<FeatureSlug, string>> = {
-  "verified-booking": "Verified Booking for Instagram & WhatsApp Sellers | PayPerTap",
+  "verified-order": "Verified order for Instagram & WhatsApp Sellers | PayPerTap",
   "link-in-bio-storefront": "Link-in-Bio Storefront for Product Sellers | PayPerTap",
-  "whatsapp-handoff": "WhatsApp Handoff for Product Bookings | PayPerTap",
+  "whatsapp-handoff": "WhatsApp Handoff for product orders | PayPerTap",
 };
 
 const featureRouteMetadata = (Object.entries(featureContent) as Array<[FeatureSlug, (typeof featureContent)[FeatureSlug]]>).map(
@@ -195,7 +195,7 @@ const featureRouteMetadata = (Object.entries(featureContent) as Array<[FeatureSl
       breadcrumbLabel: page.h1,
       breadcrumbs: [
         { label: "Home", path: "/" },
-        { label: "Features", path: "/features/verified-booking" },
+        { label: "Features", path: "/features/verified-order" },
         { label: page.h1, path: page.path },
       ],
       title: featureTitleOverrides[slug] ?? withSiteNameSuffix(page.title),
@@ -205,8 +205,8 @@ const featureRouteMetadata = (Object.entries(featureContent) as Array<[FeatureSl
 );
 
 const useCaseTitleOverrides: Partial<Record<UseCaseSlug, string>> = {
-  "instagram-sellers": "PayPerTap for Instagram Sellers in India | ₹20 Product Booking",
-  "whatsapp-sellers": "PayPerTap for WhatsApp Sellers | Verified Product Booking",
+  "instagram-sellers": "PayPerTap for Instagram Sellers in India | seller wallet product order",
+  "whatsapp-sellers": "PayPerTap for WhatsApp Sellers | Verified product order",
 };
 
 const useCaseRouteMetadata = (Object.entries(useCaseContent) as Array<[UseCaseSlug, (typeof useCaseContent)[UseCaseSlug]]>).map(
@@ -228,13 +228,13 @@ const useCaseRouteMetadata = (Object.entries(useCaseContent) as Array<[UseCaseSl
 
 const comparisonTitleOverrides: Record<ComparisonSlug, string> = {
   "paypertap-vs-linktree":
-    "PayPerTap vs Linktree | Product Booking Storefront vs Link-in-Bio Tool",
+    "PayPerTap vs Linktree | product order Storefront vs Link-in-Bio Tool",
   "paypertap-vs-whatsapp-catalog":
-    "PayPerTap vs WhatsApp Catalog | Storefront Booking vs Catalog Listing",
+    "PayPerTap vs WhatsApp Catalog | Storefront Order vs Catalog Listing",
   "paypertap-vs-google-forms":
-    "PayPerTap vs Google Forms | Product Booking vs Form Collection",
+    "PayPerTap vs Google Forms | product order vs Form Collection",
   "paypertap-vs-shopify-starter":
-    "PayPerTap vs Shopify Starter | Booking-First Storefront for Social Sellers",
+    "PayPerTap vs Shopify Starter | Order-First Storefront for Social Sellers",
 };
 
 const comparisonRouteMetadata: RouteMetadata[] = [
@@ -243,7 +243,7 @@ const comparisonRouteMetadata: RouteMetadata[] = [
     breadcrumbLabel: "Compare",
     title: "Compare PayPerTap With Linktree, WhatsApp Catalog, Google Forms and Shopify Starter",
     description:
-      "Compare PayPerTap with popular selling tools and choose the right storefront, fixed ₹20 booking, and WhatsApp handoff flow for social sellers.",
+      "Compare PayPerTap with popular selling tools and choose the right storefront, order, and WhatsApp handoff flow for social sellers.",
     ogType: "article",
     trust: editorialTrust(),
   }),

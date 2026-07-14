@@ -41,7 +41,7 @@ export function HomeProblemSection() {
     <MarketingSection
       eyebrow="The category"
       title="What is PayPerTap?"
-      intro="PayPerTap adds a booking-first storefront before the seller continues their existing WhatsApp sales conversation."
+      intro="PayPerTap adds an order-first storefront before the seller continues their existing WhatsApp sales conversation."
     >
       <MarketingCard className="mb-5 p-6 sm:p-7">
         <p className="ppt-home-copy max-w-4xl text-sm leading-7 text-neutral-600 sm:text-base">
@@ -55,7 +55,7 @@ export function HomeProblemSection() {
           </a>{" "}
           is growing alongside mobile-first product discovery. PayPerTap is designed
           for Instagram and WhatsApp sellers within that context: a buyer sees a
-          product link, places a verified booking, and returns to the seller&apos;s
+          product link, places a verified order, and returns to the seller&apos;s
           direct conversation for the rest of the purchase.
         </p>
       </MarketingCard>
@@ -78,11 +78,11 @@ export function HomeProblemSection() {
               <span />
             </div>
             <div className="ppt-dm-bubble is-left">Available?</div>
-            <div className="ppt-dm-bubble is-right">Yes, size M. ₹1,499.</div>
+            <div className="ppt-dm-bubble is-right">Yes, size M. Rs 1,499.</div>
             <div className="ppt-dm-bubble is-left">COD possible?</div>
             <div className="ppt-dm-bubble is-left">Can you hold till evening?</div>
             <div className="ppt-dm-bubble is-right muted">Screenshot saved again...</div>
-            <div className="ppt-dm-note">No booking context. No clean list.</div>
+            <div className="ppt-dm-note">No order context. No clean list.</div>
           </div>
         </div>
       </div>

@@ -118,7 +118,7 @@ function WhatsAppLogo({ size = 18 }: { size?: number; color?: string }) {
   );
 }
 
-/* ─── Animated grid background ─── */
+/* - - - - Animated grid background - - - - */
 function GridCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -237,7 +237,7 @@ function GridCanvas() {
   );
 }
 
-/* ─── Stat card used on left panel ─── */
+/* - - - - Stat card used on left panel - - - - */
 function StatPill({
   icon: Icon,
   label,
@@ -341,7 +341,7 @@ function FlowCircle({
   );
 }
 
-/* ─── Trust flow strip ─── */
+/* - - - - Trust flow strip - - - - */
 function TrustFlowStrip() {
   return (
     <div className="trust-flow-strip" aria-label="PayPerTap seller workflow">
@@ -375,9 +375,10 @@ export default function AuthPage() {
 
   async function continueAfterAuth(
     userPromise: Promise<Awaited<ReturnType<typeof continueSellerWithEmail>>>,
+    initialStatus = "Checking your account...",
   ) {
     setError("");
-    setStatusText("Checking your account...");
+    setStatusText(initialStatus);
 
     const user = await withTimeout(
       userPromise,
@@ -385,7 +386,7 @@ export default function AuthPage() {
       "Sign-in took too long. Please try again.",
     );
 
-    setStatusText("Creating your store...");
+    setStatusText("Checking your account...");
 
     const result = await withTimeout(
       prepareSellerAfterAuth(user),
@@ -401,7 +402,10 @@ export default function AuthPage() {
 
     try {
       setLoading("email");
-      await continueAfterAuth(continueSellerWithEmail(email.trim(), password));
+      await continueAfterAuth(
+        continueSellerWithEmail(email.trim(), password),
+        "Signing in...",
+      );
     } catch (err) {
       console.error("Email auth failed:", err);
       setError(getFriendlyAuthError(err));
@@ -414,7 +418,10 @@ export default function AuthPage() {
   async function handleGoogleContinue() {
     try {
       setLoading("google");
-      await continueAfterAuth(continueSellerWithGoogle());
+      await continueAfterAuth(
+        continueSellerWithGoogle(),
+        "Opening Google sign-in...",
+      );
     } catch (err) {
       console.error("Google auth failed:", err);
       setError(getFriendlyAuthError(err));
@@ -462,7 +469,7 @@ export default function AuthPage() {
           background: #09080f;
         }
 
-        /* ── LEFT PANEL ── */
+        /* - - - LEFT PANEL - - - */
         .auth-left {
           position: relative;
           flex: 1;
@@ -620,7 +627,7 @@ export default function AuthPage() {
           color: rgba(255,255,255,0.72);
         }
 
-        /* ── RIGHT PANEL ── */
+        /* - - - RIGHT PANEL - - - */
         .auth-right {
           width: min(520px, 100%);
           display: flex;
@@ -706,6 +713,16 @@ export default function AuthPage() {
           cursor: not-allowed;
         }
 
+        .auth-btn-loading {
+          display: inline-flex;
+          min-width: 0;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
         .divider-row {
           display: flex;
           align-items: center;
@@ -785,7 +802,7 @@ export default function AuthPage() {
           animation: fadeSlideUp 0.5s 0.4s ease both;
         }
 
-        /* ── Float badge ── */
+        /* - - - Float badge - - - */
         .float-badge {
           position: absolute;
           top: 42px;
@@ -848,7 +865,7 @@ export default function AuthPage() {
       `}</style>
 
       <div className="auth-root">
-        {/* ════ LEFT PANEL ════ */}
+        {/* - - - - - LEFT PANEL - - - - - */}
         <div className="auth-left">
           <GridCanvas />
 
@@ -878,7 +895,7 @@ export default function AuthPage() {
 
             <p className="left-sub">
               PayPerTap gives social sellers a clean storefront, verified buyer interest
-              through a fixed booking step, and a WhatsApp-first flow that
+              through an order step, and a WhatsApp-first flow that
               fits into the way they already sell.
             </p>
 
@@ -919,7 +936,7 @@ export default function AuthPage() {
               <TrustFlowStrip />
 
               <div className="trust-bar-text">
-                <strong>Built for your existing workflow</strong> — share a store
+                <strong>Built for your existing workflow</strong> - - share a store
                 link, check buyer interest, then continue the conversation where
                 your customers already are.
               </div>
@@ -927,7 +944,7 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* ════ RIGHT PANEL ════ */}
+        {/* - - - - - RIGHT PANEL - - - - - */}
         <div className="auth-right">
           <div>
             <div className="form-eyebrow">
@@ -938,7 +955,7 @@ export default function AuthPage() {
             <h1 className="form-title">Create or continue your store</h1>
 
             <p className="form-subtitle">
-              Sign in to manage your storefront, products, bookings, and buyer
+              Sign in to manage your storefront, products, Orders, and buyer
               conversations.
             </p>
 
@@ -950,10 +967,10 @@ export default function AuthPage() {
               onClick={handleGoogleContinue}
             >
               {loading === "google" ? (
-                <>
+                <span className="auth-btn-loading">
                   <PayPerTapInlineLoader tone="brand" />
                   {statusText || "Checking your account..."}
-                </>
+                </span>
               ) : (
                 <>
                   <GoogleIcon />
@@ -1014,10 +1031,10 @@ export default function AuthPage() {
                 disabled={isLoading}
               >
                 {loading === "email" ? (
-                  <>
+                  <span className="auth-btn-loading">
                     <PayPerTapInlineLoader tone="light" />
                     {statusText || "Checking your account..."}
-                  </>
+                  </span>
                 ) : (
                   <>
                     Continue with Email

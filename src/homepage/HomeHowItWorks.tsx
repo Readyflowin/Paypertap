@@ -11,8 +11,8 @@ const mechanismSteps = [
   },
   {
     icon: <IndianRupee size={21} strokeWidth={2.1} />,
-    label: "₹20 booking",
-    copy: "Buyer pays ₹20 via PayPerTap to reserve the item.",
+    label: "order",
+    copy: "Buyer places an order; PayPerTap charges the seller wallet behind the scenes.",
   },
   {
     icon: <UserRoundCheck size={21} strokeWidth={2.1} />,
@@ -35,11 +35,11 @@ export function HomeHowItWorks() {
   return (
     <MarketingSection
       eyebrow="The mechanism"
-      title="How does the ₹20 booking work?"
-      intro="The fixed booking records buyer intent and product context, reserves the item in the PayPerTap flow, and hands the buyer back to WhatsApp."
+      title="How does the order work?"
+      intro="The order records buyer intent and product context, reserves the item in the PayPerTap flow, and hands the buyer back to WhatsApp."
     >
       <MarketingCard className="ppt-mechanism-panel">
-        <div className="ppt-mechanism-flow" aria-label="PayPerTap booking mechanism">
+        <div className="ppt-mechanism-flow" aria-label="PayPerTap Order mechanism">
           {mechanismSteps.map((step, index) => (
             <div className="ppt-mechanism-step-wrap" key={step.label}>
               <div className="ppt-mechanism-step">
@@ -55,7 +55,7 @@ export function HomeHowItWorks() {
         <div className="ppt-mechanism-note">
           <strong>Payment clarity:</strong>
           <span>
-            PayPerTap keeps the ₹20 as the platform verified-booking fee. The seller
+            PayPerTap charges the seller wallet through the platform per-order charge. The seller
             collects the remaining product amount directly on WhatsApp, UPI, COD, or
             their preferred process.
           </span>

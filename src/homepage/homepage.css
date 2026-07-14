@@ -446,7 +446,7 @@
 .ppt-store-topbar,
 .ppt-store-hero-card,
 .ppt-store-search,
-.ppt-store-booking-strip,
+.ppt-store-Order-strip,
 .ppt-store-whatsapp {
   border: 1px solid rgba(7, 7, 7, 0.08);
   background: rgba(255, 255, 255, 0.68);
@@ -602,7 +602,7 @@
   font-weight: 800;
 }
 
-.ppt-store-booking-strip {
+.ppt-store-Order-strip {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -610,23 +610,23 @@
   padding: 10px;
 }
 
-.ppt-store-booking-strip svg {
+.ppt-store-Order-strip svg {
   flex: 0 0 auto;
   color: var(--ppt-purple);
 }
 
-.ppt-store-booking-strip strong,
-.ppt-store-booking-strip span {
+.ppt-store-Order-strip strong,
+.ppt-store-Order-strip span {
   display: block;
   font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-.ppt-store-booking-strip strong {
+.ppt-store-Order-strip strong {
   color: var(--ppt-black);
   font-size: 12px;
 }
 
-.ppt-store-booking-strip span {
+.ppt-store-Order-strip span {
   margin-top: 1px;
   color: rgba(7, 7, 7, 0.48);
   font-size: 10.5px;
@@ -680,7 +680,7 @@
   -webkit-backdrop-filter: blur(18px);
 }
 
-.ppt-hero-float-card--booking {
+.ppt-hero-float-card--Order {
   top: 78px;
   left: 16px;
   transform: rotate(-2.5deg);
@@ -1488,8 +1488,8 @@
 .ppt-home-dashboard-topline button,
 .ppt-home-dashboard-tile p,
 .ppt-home-dashboard-tile span,
-.ppt-home-dashboard-booking strong,
-.ppt-home-dashboard-booking span {
+.ppt-home-dashboard-Order strong,
+.ppt-home-dashboard-Order span {
   font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -1557,7 +1557,7 @@
   line-height: 1.4;
 }
 
-.ppt-home-dashboard-booking {
+.ppt-home-dashboard-Order {
   display: flex;
   margin-top: auto;
   align-items: center;
@@ -1570,12 +1570,12 @@
   color: var(--ppt-cream);
 }
 
-.ppt-home-dashboard-booking strong {
+.ppt-home-dashboard-Order strong {
   display: block;
   font-size: 16px;
 }
 
-.ppt-home-dashboard-booking span {
+.ppt-home-dashboard-Order span {
   display: block;
   color: rgba(251, 248, 238, 0.64);
   font-size: 13px;
@@ -1583,7 +1583,7 @@
   line-height: 1.5;
 }
 
-.ppt-home-dashboard-booking > span {
+.ppt-home-dashboard-Order > span {
   flex: 0 0 auto;
   border-radius: 999px;
   background: rgba(29, 255, 138, 0.13);
@@ -1955,7 +1955,7 @@
   }
 
   .ppt-home-dashboard-topline,
-  .ppt-home-dashboard-booking,
+  .ppt-home-dashboard-Order,
   .ppt-pricing-bottom,
   .ppt-mechanism-note {
     align-items: flex-start;
@@ -2189,7 +2189,7 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.32));
 }
 
-.ppt-store-booking-strip {
+.ppt-store-Order-strip {
   padding: 9px;
 }
 
@@ -2222,7 +2222,7 @@
   font-size: 11px;
 }
 
-.ppt-hero-float-card--booking {
+.ppt-hero-float-card--Order {
   top: 96px;
   left: 4px;
 }
@@ -3039,14 +3039,14 @@
   object-fit: cover;
 }
 
-.ppt-capability-booking-ui,
+.ppt-capability-Order-ui,
 .ppt-capability-whatsapp-ui,
 .ppt-capability-dashboard-ui,
 .ppt-capability-payment-ui {
   height: 100%;
 }
 
-.ppt-capability-booking-ui {
+.ppt-capability-Order-ui {
   display: grid;
   align-content: center;
   gap: 7px;
@@ -3055,20 +3055,20 @@
   padding: 14px;
 }
 
-.ppt-capability-booking-ui span {
+.ppt-capability-Order-ui span {
   color: rgba(251, 248, 238, 0.64);
   font-size: 11px;
   font-weight: 800;
 }
 
-.ppt-capability-booking-ui strong {
+.ppt-capability-Order-ui strong {
   color: var(--ppt-green);
   font-size: 34px;
   font-weight: 900;
   line-height: 0.95;
 }
 
-.ppt-capability-booking-ui em {
+.ppt-capability-Order-ui em {
   width: fit-content;
   border-radius: 999px;
   background: rgba(29, 255, 138, 0.14);
@@ -3429,7 +3429,7 @@
   padding: 3px;
 }
 
-.ppt-store-booking-strip svg,
+.ppt-store-Order-strip svg,
 .ppt-hero-trust-point svg {
   color: var(--ppt-green);
 }
@@ -3460,7 +3460,7 @@
   font-size: 11px;
 }
 
-.ppt-hero-float-card--booking {
+.ppt-hero-float-card--Order {
   top: 74px;
   left: -8px;
 }
@@ -3636,7 +3636,7 @@
   }
 
   .ppt-hero-float-card,
-  .ppt-hero-float-card--booking,
+  .ppt-hero-float-card--Order,
   .ppt-hero-float-card--buyer,
   .ppt-hero-float-card--whatsapp,
   .ppt-hero-float-card--remaining {
@@ -3695,7 +3695,7 @@
   }
 
   .ppt-hero-float-card,
-  .ppt-hero-float-card--booking,
+  .ppt-hero-float-card--Order,
   .ppt-hero-float-card--buyer,
   .ppt-hero-float-card--whatsapp,
   .ppt-hero-float-card--remaining {
@@ -3819,7 +3819,7 @@
 
   .ppt-store-topbar,
   .ppt-store-search,
-  .ppt-store-booking-strip {
+  .ppt-store-Order-strip {
     padding: 8px;
   }
 
@@ -3860,11 +3860,11 @@
     font-size: 10px;
   }
 
-  .ppt-store-booking-strip strong {
+  .ppt-store-Order-strip strong {
     font-size: 10.5px;
   }
 
-  .ppt-store-booking-strip span {
+  .ppt-store-Order-strip span {
     font-size: 9.5px;
   }
 
@@ -5065,7 +5065,7 @@
     font-size: 9.5px;
   }
 
-  .ppt-store-booking-strip,
+  .ppt-store-Order-strip,
   .ppt-store-whatsapp {
     display: none;
   }
@@ -5128,7 +5128,7 @@
 .ppt-store-topbar,
 .ppt-store-hero-card,
 .ppt-store-search,
-.ppt-store-booking-strip,
+.ppt-store-Order-strip,
 .ppt-store-whatsapp,
 .ppt-dm-phone,
 .ppt-capability-card,
@@ -5196,7 +5196,7 @@
   .ppt-store-topbar,
   .ppt-store-hero-card,
   .ppt-store-search,
-  .ppt-store-booking-strip,
+  .ppt-store-Order-strip,
   .ppt-store-whatsapp,
   .ppt-dm-phone,
   .ppt-capability-card,

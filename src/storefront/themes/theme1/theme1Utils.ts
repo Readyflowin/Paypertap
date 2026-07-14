@@ -98,7 +98,7 @@ export function getTheme1StoreAnnouncement(store: StorefrontThemeProps["store"])
   return (
     toText(flexibleStore.announcementText) ||
     toText(flexibleStore.announcement) ||
-    "LIMITED DROP LIVE · RESERVE BEFORE IT'S GONE"
+    "LIMITED DROP LIVE - ORDER BEFORE IT'S GONE"
   );
 }
 
@@ -117,7 +117,7 @@ export function getTheme1StoreDescription(store: StorefrontThemeProps["store"]) 
     toText(flexibleStore.description) ||
     toText(store.bio) ||
     toText(store.tagline) ||
-    "Fresh finds, easy booking, and seller confirmation on WhatsApp."
+    "Fresh finds, easy ordering, and seller confirmation on WhatsApp."
   );
 }
 
@@ -155,10 +155,10 @@ export function getTheme1Collections(
 export function getTheme1TrustBadges(store: StorefrontThemeProps["store"]) {
   const description = getStoreFooterSubheading(store);
   return [
-    "Verified booking",
+    "Verified order",
     "Limited stock",
     "WhatsApp confirmation",
-    description.includes("return") ? "Seller policies" : "Secure checkout",
+    description.includes("return") ? "Seller policies" : "Direct seller payment",
     "UPI accepted",
     "Seller confirmation",
   ];
@@ -170,7 +170,7 @@ export function getTheme1SocialProof(
 ) {
   return [
     `${products.length} live piece${products.length === 1 ? "" : "s"}`,
-    "Verified booking",
+    "Verified order",
     "WhatsApp confirmation",
   ];
 }

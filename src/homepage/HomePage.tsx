@@ -20,8 +20,8 @@ export function HomePage() {
     <MarketingLayout>
       <Seo
         canonicalPath="/"
-        title="PayPerTap | Verified Booking Storefront"
-        description="PayPerTap helps Indian Instagram and WhatsApp sellers create booking storefronts, verify buyer intent, and continue order confirmation on WhatsApp."
+        title="PayPerTap | Verified order Storefront"
+        description="PayPerTap helps Indian Instagram and WhatsApp sellers create order storefronts, verify buyer intent, and continue order confirmation on WhatsApp."
         jsonLd={[
           organizationSchema(),
           websiteSchema(),

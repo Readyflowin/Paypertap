@@ -4,9 +4,9 @@ import { WhatsAppIcon } from "./HeroBadge";
 
 const flowCards = [
   {
-    className: "ppt-hero-float-card--booking",
+    className: "ppt-hero-float-card--Order",
     icon: <ShieldCheck size={18} strokeWidth={2.2} />,
-    title: "₹20 booking via PayPerTap",
+    title: "order via PayPerTap",
     text: "A small step before WhatsApp.",
   },
   {
@@ -31,7 +31,7 @@ const flowCards = [
 
 export function HeroFlowCards() {
   return (
-    <div className="ppt-hero-float-cards" aria-label="PayPerTap booking flow highlights">
+    <div className="ppt-hero-float-cards" aria-label="PayPerTap order flow highlights">
       {flowCards.map((card) => (
         <div className={`ppt-hero-float-card ${card.className}`} key={card.title}>
           <div className="ppt-hero-float-icon">{card.icon}</div>

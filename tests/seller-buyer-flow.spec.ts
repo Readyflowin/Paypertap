@@ -9,7 +9,7 @@ const runFullE2E = process.env.RUN_FULL_E2E === "1";
 test.skip(!runFullE2E, "Set RUN_FULL_E2E=1 to create real Firebase smoke data.");
 test.use({ channel: "chrome" });
 
-test("seller can onboard and buyer can complete a demo booking", async ({ page }) => {
+test("seller can onboard and buyer can complete a demo Order", async ({ page }) => {
   const stamp = Date.now();
   const email = `paypertap-smoke-${stamp}@paypertap.in`;
   const password = `Smoke${stamp}!`;
@@ -75,7 +75,7 @@ test("seller can onboard and buyer can complete a demo booking", async ({ page }
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: /Pay .* reserve/ }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/${storeSlug}/booking-success/`), {
+  await expect(page).toHaveURL(new RegExp(`/${storeSlug}/order-success/`), {
     timeout: 45000,
   });
   await expect(page.getByText("Your item is reserved.")).toBeVisible({

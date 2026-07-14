@@ -29,7 +29,6 @@ import {
   PptField as Field,
   PptIconButton as IconButton,
   PptNotice as Notice,
-  PptPriceBreakdown as PriceBreakdown,
   PptSelectField as SelectField,
   PptSkeletonProductGrid as SkeletonSet,
   PptStatCard as StatCard,
@@ -59,8 +58,8 @@ const badgeSamples: Array<[string, PptTone, React.ReactNode]> = [
   ["Hot", "hot", null],
   ["Reserved", "reserved", null],
   ["Sold", "sold", null],
-  ["₹20 paid", "success", null],
-  ["WhatsApp opened", "info", null],
+  ["Payment returned", "warning", null],
+  ["Processing", "info", null],
   ["Failed", "danger", null],
   ["Draft", "neutral", null],
   ["Private", "dark", null],
@@ -124,11 +123,11 @@ function ProductCard() {
         </div>
 
         <h3>Vintage Denim Jacket</h3>
-        <p>Clean oversized fit, limited piece, ready to reserve.</p>
+        <p>Clean oversized fit, limited piece, ready to order.</p>
 
         <div className="pds-product-price">
-          <strong>₹899</strong>
-          <span>Reserve with ₹20</span>
+          <strong>Rs 899</strong>
+          <span>Place order</span>
         </div>
 
         <Button variant="primary" fullWidth rightIcon={<ArrowRight size={17} />}>
@@ -159,9 +158,9 @@ function StoreHeaderPreview() {
       </div>
 
       <div className="pds-store-hero-card">
-        <Badge tone="reserved">First come, first served</Badge>
+        <Badge tone="reserved">Limited stock</Badge>
         <h3>Shop limited pieces before they sell out.</h3>
-        <p>Reserve with ₹20. Confirm the rest on WhatsApp.</p>
+        <p>Place an order. Pay the seller directly if required.</p>
       </div>
     </div>
   );
@@ -173,30 +172,29 @@ function CheckoutPreview() {
       <div className="pds-checkout-head">
         <WalletCards size={20} />
         <div>
-          <strong>Reserve your item</strong>
-          <span>Pay ₹20 now. Pay the rest directly to seller.</span>
+          <strong>Place your order</strong>
+          <span>Seller receives the order. Customer payments stay direct.</span>
         </div>
       </div>
-      <PriceBreakdown productPrice={899} />
       <Button variant="primary" fullWidth rightIcon={<ArrowRight size={17} />}>
-        Pay ₹20 & reserve
+        Create order
       </Button>
     </div>
   );
 }
 
-function BookingSuccessPreview() {
+function OrderSuccessPreview() {
   return (
     <div className="pds-success-card">
       <div className="pds-success-icon">
         <Check size={22} />
       </div>
-      <h3>Booking confirmed</h3>
-      <p>Your ₹20 booking via PayPerTap has been recorded. Please ensure to message the seller to confirm the delivery</p>
+      <h3>order submitted</h3>
+      <p>Your order has been sent to the seller. Continue on WhatsApp for delivery and payment coordination.</p>
       <Button variant="whatsapp" fullWidth icon={<BrandIcon type="whatsapp" />}>
         Message seller on WhatsApp
       </Button>
-      <span className="pds-success-note">No copy button here — WhatsApp is the primary action.</span>
+      <span className="pds-success-note">WhatsApp is the primary follow-up action.</span>
     </div>
   );
 }
@@ -267,12 +265,12 @@ function ChartPreview() {
     <div className="pds-chart-card">
       <div className="pds-chart-head">
         <div>
-          <strong>Booking trend</strong>
+          <strong>Order trend</strong>
           <span>Last 7 days</span>
         </div>
         <Badge tone="success">+18%</Badge>
       </div>
-      <svg viewBox="0 0 560 170" className="pds-chart" role="img" aria-label="Booking trend chart">
+      <svg viewBox="0 0 560 170" className="pds-chart" role="img" aria-label="Order trend chart">
         <defs>
           <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#5B35F5" stopOpacity="0.18" />
@@ -312,7 +310,7 @@ function ProductManagerPreview() {
         </div>
         <div className="pds-manager-copy">
           <strong>Vintage Denim Jacket</strong>
-          <span>₹899 · ₹20 booking · ₹879 later</span>
+          <span>Rs 899 - partial advance optional</span>
         </div>
         <Badge tone="success">Open</Badge>
         <Button variant="secondary" icon={<Eye size={16} />}>
@@ -329,7 +327,7 @@ function ProductManagerPreview() {
         </div>
         <div className="pds-manager-copy">
           <strong>Boxy Hoodie</strong>
-          <span>₹749 · reserved by buyer</span>
+          <span>Rs 749 - reserved by buyer</span>
         </div>
         <Badge tone="reserved">Reserved</Badge>
         <Button variant="whatsapp" icon={<BrandIcon type="whatsapp" size={17} />}>
@@ -351,15 +349,15 @@ export default function DesignSystemPage() {
                 <ShieldCheck size={16} />
                 PayPerTap design system
               </div>
-              <h1>Reusable UI for storefronts, bookings and seller dashboards.</h1>
+              <h1>Reusable UI for storefronts, orders and seller dashboards.</h1>
               <p>
                 A refined component kit for Instagram-first sellers: lighter typography,
-                real icons, polished controls, store customization, clear booking states,
+                real icons, polished controls, store customization, clear order states,
                 and conversion-focused buyer flows.
               </p>
               <div className="pds-hero-actions">
                 <Button variant="primary" icon={<ShieldCheck size={17} />}>
-                  Reserve for ₹20
+                  Place order
                 </Button>
                 <Button variant="secondary" icon={<Eye size={17} />}>
                   Preview store
@@ -455,7 +453,7 @@ export default function DesignSystemPage() {
               <div className="pds-form-grid">
                 <Field label="Store name" placeholder="Urban Vault" icon={<Store size={17} />} />
                 <Field label="Instagram profile" placeholder="@urbanvault.in" icon={<BrandIcon type="instagram" size={17} />} />
-                <Field label="Email" placeholder="seller@example.com" icon={<Mail size={17} />} helper="Used for booking notifications." />
+                <Field label="Email" placeholder="seller@example.com" icon={<Mail size={17} />} helper="Used for order and wallet notifications." />
                 <Field label="WhatsApp number" placeholder="Enter 10-digit WhatsApp number" icon={<BrandIcon type="whatsapp" size={17} />} error="Please enter a valid 10-digit Indian WhatsApp number." />
                 <SelectField
                   label="Store theme"
@@ -471,15 +469,15 @@ export default function DesignSystemPage() {
           <Section
             index="05"
             label="Commerce"
-            title="Storefront, checkout and booking components"
-            description="Reusable cards for public store, product detail, checkout and booking success pages."
+            title="Storefront, checkout and order components"
+            description="Reusable cards for public store, product detail, checkout and order success pages."
           >
             <div className="pds-commerce-grid">
               <ProductCard />
               <div className="pds-stack">
                 <div className="pds-flow-grid">
                   <CheckoutPreview />
-                  <BookingSuccessPreview />
+                  <OrderSuccessPreview />
                   <UploadPreview />
                 </div>
               </div>
@@ -499,7 +497,7 @@ export default function DesignSystemPage() {
             index="07"
             label="Status"
             title="Badges"
-            description="Readable pill statuses for products, bookings, stores and payment moments."
+            description="Readable pill statuses for products, orders, stores and payment moments."
           >
             <div className="pds-panel">
               <div className="pds-row">
@@ -528,7 +526,7 @@ export default function DesignSystemPage() {
             index="09"
             label="Empty"
             title="Empty states"
-            description="Seller-friendly states when products, bookings, customers or store content is missing."
+            description="Seller-friendly states when products, orders, customers or store content is missing."
           >
             <div className="pds-empty-grid">
               <EmptyState
@@ -538,8 +536,8 @@ export default function DesignSystemPage() {
                 action={<Button variant="primary" icon={<Plus size={17} />}>Add product</Button>}
               />
               <EmptyState
-                title="No bookings yet"
-                description="When buyers reserve with ₹20, their details will show up here."
+                title="No orders yet"
+                description="When buyers place orders, their details will show up here."
                 icon={<CalendarCheck size={22} />}
                 action={<Button variant="secondary" icon={<Store size={17} />}>View store</Button>}
               />
@@ -550,7 +548,7 @@ export default function DesignSystemPage() {
             index="10"
             label="Notices"
             title="Inline notices"
-            description="Soft feedback blocks for saved states, upload failures, low stock and booking explanations."
+            description="Soft feedback blocks for saved states, upload failures, low stock and wallet/order explanations."
           >
             <div className="pds-notice-grid">
               <Notice tone="success" title="Store link copied" icon={<Check size={19} />}>
@@ -562,8 +560,8 @@ export default function DesignSystemPage() {
               <Notice tone="warning" title="Low stock" icon={<AlertCircle size={19} />}>
                 Only one piece is left. Buyers will see an urgency badge.
               </Notice>
-              <Notice tone="info" title="Booking flow" icon={<Info size={19} />}>
-                Buyers pay ₹20 to reserve and confirm the remaining amount directly with the seller.
+              <Notice tone="info" title="order flow" icon={<Info size={19} />}>
+                Buyers place orders, sellers receive them, and PayPerTap charges the seller wallet.
               </Notice>
             </div>
           </Section>
@@ -576,7 +574,7 @@ export default function DesignSystemPage() {
           >
             <div className="pds-dashboard-grid">
               <StatCard icon={<ShoppingBag size={20} />} label="Open products" value="24" detail="+6 this week" />
-              <StatCard icon={<WalletCards size={20} />} label="₹20 bookings" value="118" detail="+18% this week" tone="success" />
+              <StatCard icon={<WalletCards size={20} />} label="Wallet balance" value="Rs 950" detail="50 paid orders" tone="success" />
               <StatCard icon={<MessageCircle size={20} />} label="WhatsApp leads" value="86" detail="+12 new leads" tone="info" />
             </div>
 

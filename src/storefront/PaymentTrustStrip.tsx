@@ -4,7 +4,6 @@ import googlePayLogo from "@/assets/payment/google-pay-logo.svg";
 import phonePeLogo from "@/assets/payment/phonepe-logo.svg";
 import upiLogo from "@/assets/payment/upi-logo.svg";
 import { PptBrandIcon } from "@/components/ui";
-import { BOOKING_ADVANCE_AMOUNT } from "@/lib/money";
 
 type PaymentTrustVariant = "theme1";
 
@@ -61,7 +60,7 @@ export function PaymentTrustStrip({
 
   return (
     <section
-      aria-label="Payment and booking trust"
+      aria-label="Payment and Order trust"
       className={`min-w-0 rounded-[24px] border ${classes.shell} ${
         compact ? "p-3" : "p-3.5 sm:p-4"
       }`}
@@ -72,9 +71,9 @@ export function PaymentTrustStrip({
         }`}
       >
         <div className="min-w-0">
-          <p className={`text-xs font-semibold ${classes.label}`}>Book your item</p>
+          <p className={`text-xs font-semibold ${classes.label}`}>Place your order</p>
           <p className="mt-1 text-xs leading-5">
-            Pay ₹20 to reserve this item. Seller details are shared after booking.
+            order details go to the seller. Payment and delivery are confirmed directly.
           </p>
         </div>
 
@@ -98,48 +97,44 @@ export function PaymentTrustStrip({
       </div>
 
       {showTrustRows ? (
-      <div
-        className={`mt-3 grid gap-2 ${
-          compact ? "" : "min-[560px]:grid-cols-3"
-        }`}
-      >
-        <div
-          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
-        >
-          <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+        <div className={`mt-3 grid gap-2 ${compact ? "" : "min-[560px]:grid-cols-3"}`}>
+          <div
+            className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
           >
-            <ShieldCheck size={14} aria-hidden="true" />
-          </span>
-          <span className="min-w-0 whitespace-normal break-words">
-            ₹{BOOKING_ADVANCE_AMOUNT} booking via PayPerTap
-          </span>
-        </div>
-        <div
-          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
-        >
-          <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+            >
+              <ShieldCheck size={14} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 whitespace-normal break-words">
+              order details sent to seller
+            </span>
+          </div>
+          <div
+            className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
           >
-            <PptBrandIcon type="whatsapp" size={15} />
-          </span>
-          <span className="min-w-0 whitespace-normal break-words">
-            Seller chat after booking
-          </span>
-        </div>
-        <div
-          className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
-        >
-          <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+            >
+              <PptBrandIcon type="whatsapp" size={15} />
+            </span>
+            <span className="min-w-0 whitespace-normal break-words">
+              Seller chat after order
+            </span>
+          </div>
+          <div
+            className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium ${classes.badge}`}
           >
-            <IndianRupee size={14} aria-hidden="true" />
-          </span>
-          <span className="min-w-0 whitespace-normal break-words">
-            Pay the seller directly
-          </span>
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${classes.iconBadge}`}
+            >
+              <IndianRupee size={14} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 whitespace-normal break-words">
+              Pay the seller directly
+            </span>
+          </div>
         </div>
-      </div>
       ) : null}
     </section>
   );

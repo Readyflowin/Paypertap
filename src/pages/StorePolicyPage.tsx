@@ -70,7 +70,7 @@ export default function StorePolicyPage() {
     return (
       <PolicyErrorState
         title="Policy not found"
-        description="Choose a privacy, returns, or booking policy for this store."
+        description="Choose a privacy, returns, or Order policy for this store."
       />
     );
   }
@@ -155,7 +155,7 @@ export default function StorePolicyPage() {
         </div>
 
         <footer className="border-t border-neutral-100 px-5 py-4 text-xs font-medium text-neutral-400 sm:px-7">
-          © {currentYear} {contact.displayName}. Powered by PayPerTap.
+          (c) {currentYear} {contact.displayName}. Powered by PayPerTap.
         </footer>
       </article>
     </main>

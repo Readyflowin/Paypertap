@@ -3,9 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================================
-    // CONSTANTS / HELPERS
-    // =========================================================
+    // -----------------------------
+    // Shared helpers
+    // -----------------------------
 
     function signedIn() {
       return request.auth != null;
@@ -19,151 +19,38 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == sellerId;
     }
 
-    function phaseOneBookingAdvance() {
-      return 20;
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    function isValidString(value) {
-      return value is string && value.size() > 0 && value.size() <= 500;
+    function hasOnlyChanged(keys) {
+      return changedKeys().hasOnly(keys);
     }
 
-    function isValidOptionalString(value) {
-      return value == null || (value is string && value.size() <= 1000);
+    function isNonEmptyString(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
     }
 
-    function isValidOptionalShortString(value) {
-      return value == null || (value is string && value.size() <= 200);
+    function isOptionalString(value, max) {
+      return value == null || (value is string && value.size() <= max);
     }
 
-    function isValidPhone(value) {
-      return value is string && value.size() >= 8 && value.size() <= 15;
-    }
-
-    function isValidPincode(value) {
-      return value is string && value.size() >= 4 && value.size() <= 10;
-    }
-
-    function isValidAmount(value) {
-      return value is int && value >= 0 && value <= 1000000;
-    }
-
-    function isValidPositiveAmount(value) {
-      return value is int && value > 0 && value <= 1000000;
-    }
-
-    function isPhaseOneBookingAmount(value) {
-      return value is int && value == phaseOneBookingAdvance();
-    }
-
-    function isValidSellerConfirmationAdvanceType(value) {
-      return value in ["paypertap_only", "fixed", "percentage"];
-    }
-
-    function isValidReturnsPolicyType(value) {
-      return value in ["returns_accepted", "exchange_only", "no_returns"];
-    }
-
-    function hasValidSellerConfirmationAdvanceFields(data) {
-      return (
-          !("sellerConfirmationAdvanceType" in data)
-          || isValidSellerConfirmationAdvanceType(data.sellerConfirmationAdvanceType)
-        )
-        && (
-          !("sellerConfirmationAdvanceFixedAmount" in data)
-          || data.sellerConfirmationAdvanceFixedAmount == null
-          || (
-            data.sellerConfirmationAdvanceFixedAmount is number
-            && data.sellerConfirmationAdvanceFixedAmount >= phaseOneBookingAdvance()
-            && data.sellerConfirmationAdvanceFixedAmount <= 1000000
-          )
-        )
-        && (
-          !("sellerConfirmationAdvancePercent" in data)
-          || data.sellerConfirmationAdvancePercent == null
-          || (
-            data.sellerConfirmationAdvancePercent is number
-            && data.sellerConfirmationAdvancePercent > 0
-            && data.sellerConfirmationAdvancePercent <= 100
-          )
-        )
-        && (
-          !("sellerConfirmationAdvanceType" in data)
-          || data.sellerConfirmationAdvanceType != "fixed"
-          || (
-            "sellerConfirmationAdvanceFixedAmount" in data
-            && data.sellerConfirmationAdvanceFixedAmount is number
-            && data.sellerConfirmationAdvanceFixedAmount >= phaseOneBookingAdvance()
-            && data.sellerConfirmationAdvanceFixedAmount <= 1000000
-          )
-        )
-        && (
-          !("sellerConfirmationAdvanceType" in data)
-          || data.sellerConfirmationAdvanceType != "percentage"
-          || (
-            "sellerConfirmationAdvancePercent" in data
-            && data.sellerConfirmationAdvancePercent is number
-            && data.sellerConfirmationAdvancePercent > 0
-            && data.sellerConfirmationAdvancePercent <= 100
-          )
+    function isOptionalHttpsUrl(value) {
+      return value == null
+        || value == ""
+        || (
+          value is string
+          && value.size() <= 3000
+          && value.matches("^https://.*")
         );
     }
 
-    function hasValidStoreContactAndPolicyFields(data) {
-      return (
-          !("ownerName" in data)
-          || isValidOptionalShortString(data.ownerName)
-        )
-        && (
-          !("supportEmail" in data)
-          || isValidOptionalShortString(data.supportEmail)
-        )
-        && (
-          !("supportPhone" in data)
-          || isValidOptionalShortString(data.supportPhone)
-        )
-        && (
-          !("returnsPolicyType" in data)
-          || isValidReturnsPolicyType(data.returnsPolicyType)
-        )
-        && (
-          !("returnsPolicyNotes" in data)
-          || isValidOptionalString(data.returnsPolicyNotes)
-        );
+    function isIntInRange(value, min, max) {
+      return value is int && value >= min && value <= max;
     }
 
-    function hasValidStoreAppearanceFields(data) {
-      return (
-          !("heroTitle" in data)
-          || isValidOptionalShortString(data.heroTitle)
-        )
-        && (
-          !("heroSubtitle" in data)
-          || isValidOptionalString(data.heroSubtitle)
-        )
-        && (
-          !("heroEyebrowText" in data)
-          || isValidOptionalShortString(data.heroEyebrowText)
-        )
-        && (
-          !("heroPrimaryCtaText" in data)
-          || isValidOptionalShortString(data.heroPrimaryCtaText)
-        )
-        && (
-          !("heroSecondaryCtaText" in data)
-          || isValidOptionalShortString(data.heroSecondaryCtaText)
-        )
-        && (
-          !("heroImageUrl" in data)
-          || isValidOptionalString(data.heroImageUrl)
-        )
-        && (
-          !("heroImageKey" in data)
-          || isValidOptionalString(data.heroImageKey)
-        )
-        && (
-          !("announcementText" in data)
-          || isValidOptionalShortString(data.announcementText)
-        );
+    function isNumberInRange(value, min, max) {
+      return (value is int || value is float) && value >= min && value <= max;
     }
 
     function isValidSellerStatus(value) {
@@ -183,6 +70,46 @@ service cloud.firestore {
       return value in ["store", "product", "dashboard"];
     }
 
+    function isValidWalletStatus(value) {
+      return value in ["active", "low_balance", "empty", "paused"];
+    }
+
+    function isValidWalletTransactionType(value) {
+      return value in [
+        "recharge",
+        "free_order",
+        "order_charge",
+        "bonus",
+        "adjustment",
+        "refund"
+      ];
+    }
+
+    function isValidWalletRechargeStatus(value) {
+      return value in ["pending", "credited"];
+    }
+
+    function isValidPaymentMode(value) {
+      return value in ["cod", "partial_advance"];
+    }
+
+    function isValidRazorpayLink(value) {
+      return value is string
+        && value.size() <= 3000
+        && (
+          value == ""
+          || value.matches("^https://(rzp\\.io|([^/]+\\.)?razorpay\\.com)(/.*)?$")
+        );
+    }
+
+    function isValidPaymentReturnToken(value) {
+      return value is string && value.size() >= 32 && value.size() <= 256;
+    }
+
+    function isValidReturnsPolicyType(value) {
+      return value in ["returns_accepted", "exchange_only", "no_returns"];
+    }
+
     function isValidProductStatus(value) {
       return value in ["draft", "open", "hold", "sold", "unpublished"];
     }
@@ -191,33 +118,15 @@ service cloud.firestore {
       return value in ["open", "hold", "sold"];
     }
 
-    function isValidCheckoutStatus(value) {
-      return value in [
-        "started",
-        "details_submitted",
-        "payment_pending",
-        "payment_created",
-        "booking_paid",
-        "payment_failed",
-        "whatsapp_opened",
-        "contacted",
-        "remaining_paid",
-        "confirmed",
-        "sold",
-        "abandoned",
-        "expired",
-        "cancelled",
-        "released"
-      ];
-    }
-
     function isValidOrderStatus(value) {
       return value in [
-        "new_booking",
-        "contacted",
-        "remaining_paid",
+        "awaiting_payment",
+        "pending_payment",
+        "payment_returned",
+        "pending_confirmation",
         "confirmed",
-        "sold",
+        "processing",
+        "completed",
         "cancelled",
         "released"
       ];
@@ -225,51 +134,6 @@ service cloud.firestore {
 
     function isValidWhatsappStatus(value) {
       return value in ["not_opened", "opened", "message_sent"];
-    }
-
-    function isValidSlug(value) {
-      return value is string && value.size() > 0 && value.size() <= 120;
-    }
-
-    function isValidCollectionName(value) {
-      return value is string && value.size() > 0 && value.size() <= 80;
-    }
-
-    function isValidCollectionDescription(value) {
-      return value is string && value.size() <= 500;
-    }
-
-    function hasValidCollectionFields(data, storeId, collectionId) {
-      return data.keys().hasOnly([
-          "collectionId",
-          "storeId",
-          "name",
-          "slug",
-          "description",
-          "createdAt",
-          "updatedAt",
-          "productCount"
-        ])
-        && data.collectionId == collectionId
-        && data.storeId == storeId
-        && isValidCollectionName(data.name)
-        && isValidSlug(data.slug)
-        && (
-          !("description" in data)
-          || isValidCollectionDescription(data.description)
-        )
-        && (
-          !("createdAt" in data)
-          || data.createdAt is timestamp
-        )
-        && (
-          !("updatedAt" in data)
-          || data.updatedAt is timestamp
-        )
-        && (
-          !("productCount" in data)
-          || (data.productCount is int && data.productCount >= 0)
-        );
     }
 
     function storeExists(storeId) {
@@ -285,89 +149,607 @@ service cloud.firestore {
     }
 
     function isStoreOwner(storeId) {
-      return signedIn()
-        && storeExists(storeId)
-        && storeOwner(storeId) == request.auth.uid;
+      return signedIn() && storeExists(storeId) && storeOwner(storeId) == request.auth.uid;
     }
 
     function isPublishedStore(storeId) {
-      return storeExists(storeId)
-        && storeData(storeId).isPublished == true;
+      return storeExists(storeId) && storeData(storeId).isPublished == true;
     }
 
-    function productExists(productId) {
-      return exists(/databases/$(database)/documents/products/$(productId));
+    function slugReservationExists(slug) {
+      return exists(/databases/$(database)/documents/storeSlugs/$(slug));
     }
 
-    function productData(productId) {
-      return get(/databases/$(database)/documents/products/$(productId)).data;
+    function slugReservationData(slug) {
+      return get(/databases/$(database)/documents/storeSlugs/$(slug)).data;
     }
 
-    function hasValidInventoryFields(data) {
-      return data.inventoryQuantity is int
-        && data.reservedQuantity is int
-        && data.soldQuantity is int
-        && data.inventoryQuantity >= 0
-        && data.reservedQuantity >= 0
-        && data.soldQuantity >= 0
-        && data.reservedQuantity + data.soldQuantity <= data.inventoryQuantity;
+    function isSlugReservedByOwner(slug) {
+      return signedIn()
+        && slugReservationExists(slug)
+        && slugReservationData(slug).sellerId == request.auth.uid;
     }
 
-    function isValidImageUrl(value) {
-      return value is string
-        && value.size() > 0
-        && value.size() <= 3000
-        && value.matches("https://.*");
+    // -----------------------------
+    // Seller profiles
+    // -----------------------------
+
+    function sellerKeys() {
+      return [
+        "sellerId",
+        "authUid",
+        "name",
+        "email",
+        "phone",
+        "storeId",
+        "status",
+        "razorpayLinked",
+        "profileImageUrl",
+        "onboardingStatus",
+        "onboardingStep",
+        "emailEvents",
+        "createdAt",
+        "updatedAt"
+      ];
     }
 
-    function isValidOptionalImageUrl(image, field) {
-      return !(field in image)
-        || image[field] == null
-        || image[field] == ""
-        || isValidImageUrl(image[field]);
+    function validSellerData(data, sellerId) {
+      return data.keys().hasOnly(sellerKeys())
+        && data.sellerId == sellerId
+        && data.authUid == sellerId
+        && isOptionalString(data.name, 200)
+        && isOptionalString(data.email, 320)
+        && isOptionalString(data.phone, 30)
+        && isOptionalString(data.storeId, 120)
+        && isValidSellerStatus(data.status)
+        && data.razorpayLinked is bool
+        && isOptionalHttpsUrl(data.profileImageUrl)
+        && isValidOnboardingStatus(data.onboardingStatus)
+        && isValidOnboardingStep(data.onboardingStep)
+        && (
+          !("emailEvents" in data)
+          || (
+            data.emailEvents is map
+            && data.emailEvents.keys().hasOnly(["welcomeSentAt"])
+            && (
+              !("welcomeSentAt" in data.emailEvents)
+              || data.emailEvents.welcomeSentAt is timestamp
+            )
+          )
+        )
+        && (!("createdAt" in data) || data.createdAt is timestamp)
+        && (!("updatedAt" in data) || data.updatedAt is timestamp);
     }
 
-    function hasDurableProductImageUrl(image) {
-      return ("url" in image && isValidImageUrl(image.url))
-        || ("publicUrl" in image && isValidImageUrl(image.publicUrl))
-        || ("imageUrl" in image && isValidImageUrl(image.imageUrl));
+    match /sellers/{sellerId} {
+      allow create: if signedIn()
+        && sellerId == request.auth.uid
+        && validSellerData(request.resource.data, sellerId);
+
+      allow read: if isOwner(sellerId) || isAdmin();
+
+      allow update: if isOwner(sellerId)
+        && validSellerData(request.resource.data, sellerId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && hasOnlyChanged([
+          "name",
+          "phone",
+          "storeId",
+          "status",
+          "razorpayLinked",
+          "profileImageUrl",
+          "onboardingStatus",
+          "onboardingStep",
+          "updatedAt"
+        ]);
+
+      allow delete: if isAdmin();
     }
 
-    function isValidOptionalImageString(image, field) {
-      return !(field in image)
-        || (
-          image[field] is string
-          && image[field].size() <= 1000
+    // -----------------------------
+    // Wallets and wallet accounting
+    // -----------------------------
+
+    function validWalletData(data, sellerId) {
+      return data.keys().hasOnly([
+          "sellerId",
+          "balance",
+          "freeOrdersRemaining",
+          "totalOrdersCharged",
+          "totalWalletSpent",
+          "status",
+          "emailEvents",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.keys().hasAll([
+          "sellerId",
+          "balance",
+          "freeOrdersRemaining",
+          "totalOrdersCharged",
+          "totalWalletSpent",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.sellerId == sellerId
+        && isIntInRange(data.balance, 0, 100000000)
+        && isIntInRange(data.freeOrdersRemaining, 0, 1000000)
+        && isIntInRange(data.totalOrdersCharged, 0, 1000000)
+        && isIntInRange(data.totalWalletSpent, 0, 100000000)
+        && isValidWalletStatus(data.status)
+        && (
+          !("emailEvents" in data)
+          || (
+            data.emailEvents is map
+            && data.emailEvents.keys().hasOnly(["lowWalletSentAt", "walletEmptySentAt"])
+            && (!("lowWalletSentAt" in data.emailEvents) || data.emailEvents.lowWalletSentAt is timestamp)
+            && (!("walletEmptySentAt" in data.emailEvents) || data.emailEvents.walletEmptySentAt is timestamp)
+          )
+        )
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isDefaultWallet(data, sellerId) {
+      return validWalletData(data, sellerId)
+        && data.balance == 0
+        && data.freeOrdersRemaining == 5
+        && data.totalOrdersCharged == 0
+        && data.totalWalletSpent == 0
+        && data.status == "active";
+    }
+
+    match /wallets/{sellerId} {
+      allow read: if isOwner(sellerId) || isAdmin();
+
+      // Wallet creation/mutation is server-owned. Client code may only read.
+      allow create, update, delete: if isAdmin();
+    }
+
+    function validWalletTransactionData(data) {
+      return data.keys().hasOnly([
+          "sellerId",
+          "type",
+          "amount",
+          "balanceBefore",
+          "balanceAfter",
+          "referenceId",
+          "notes",
+          "createdAt"
+        ])
+        && data.keys().hasAll([
+          "sellerId",
+          "type",
+          "amount",
+          "balanceBefore",
+          "balanceAfter",
+          "createdAt"
+        ])
+        && data.sellerId is string
+        && isValidWalletTransactionType(data.type)
+        && isIntInRange(data.amount, 0, 100000000)
+        && isIntInRange(data.balanceBefore, 0, 100000000)
+        && isIntInRange(data.balanceAfter, 0, 100000000)
+        && (!("referenceId" in data) || isOptionalString(data.referenceId, 200))
+        && (!("notes" in data) || isOptionalString(data.notes, 1000))
+        && data.createdAt is timestamp;
+    }
+
+    match /walletTransactions/{transactionId} {
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+      allow create: if isAdmin() && validWalletTransactionData(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    function validWalletRechargeData(data, rechargeId) {
+      return data.keys().hasOnly([
+          "rechargeId",
+          "sellerId",
+          "amount",
+          "token",
+          "status",
+          "paymentProvider",
+          "paymentLink",
+          "returnUrl",
+          "referenceId",
+          "walletTransactionId",
+          "balanceBefore",
+          "balanceAfter",
+          "creditedAt",
+          "emailEvents",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.rechargeId == rechargeId
+        && data.sellerId is string
+        && isIntInRange(data.amount, 100, 25000)
+        && isValidPaymentReturnToken(data.token)
+        && isValidWalletRechargeStatus(data.status)
+        && data.paymentProvider == "razorpay"
+        && isOptionalString(data.paymentLink, 3000)
+        && isOptionalString(data.returnUrl, 3000)
+        && isOptionalString(data.referenceId, 200)
+        && (!("walletTransactionId" in data) || isOptionalString(data.walletTransactionId, 200))
+        && (!("balanceBefore" in data) || isIntInRange(data.balanceBefore, 0, 100000000))
+        && (!("balanceAfter" in data) || isIntInRange(data.balanceAfter, 0, 100000000))
+        && (!("creditedAt" in data) || data.creditedAt is timestamp)
+        && (
+          !("emailEvents" in data)
+          || (
+            data.emailEvents is map
+            && data.emailEvents.keys().hasOnly(["rechargeSuccessfulSentAt"])
+            && (
+              !("rechargeSuccessfulSentAt" in data.emailEvents)
+              || data.emailEvents.rechargeSuccessfulSentAt is timestamp
+            )
+          )
+        )
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /walletRecharges/{rechargeId} {
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+      allow create, update: if isAdmin() && validWalletRechargeData(request.resource.data, rechargeId);
+      allow delete: if isAdmin();
+    }
+
+    // -----------------------------
+    // Storefront configuration
+    // -----------------------------
+
+    match /storeSlugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+
+      // Slug reservation is part of server-owned onboarding.
+      allow create, update, delete: if isAdmin();
+    }
+
+    function storeKeys() {
+      return [
+        "storeId",
+        "sellerId",
+        "storeSlug",
+        "storeName",
+        "storeDescription",
+        "description",
+        "bio",
+        "tagline",
+        "phone",
+        "whatsappPhone",
+        "whatsappNumber",
+        "logoUrl",
+        "storeLogoUrl",
+        "logoKey",
+        "heroTitle",
+        "heroHeading",
+        "heroSubtitle",
+        "heroEyebrowText",
+        "heroPrimaryCtaText",
+        "heroSecondaryCtaText",
+        "heroImageUrl",
+        "heroImageKey",
+        "announcementText",
+        "instagramProfile",
+        "instagramUrl",
+        "instagramHandle",
+        "themeId",
+        "themeStyle",
+        "selectedThemeId",
+        "fontStyle",
+        "primaryColor",
+        "secondaryColor",
+        "accentColor",
+        "colors",
+        "isPublished",
+        "acceptingOrders",
+        "pauseReason",
+        "communicationPreferences",
+        "paymentMethods",
+        "upiId",
+        "googlePayNumber",
+        "phonePeNumber",
+        "paymentNote",
+        "paymentMode",
+        "advanceAmount",
+        "paymentProvider",
+        "paymentLink",
+        "paymentReturnToken",
+        "bookingAdvanceAmount",
+        "sellerConfirmationAdvance",
+        "sellerConfirmationAdvanceType",
+        "sellerConfirmationAdvanceFixedAmount",
+        "sellerConfirmationAdvancePercent",
+        "ownerName",
+        "supportEmail",
+        "supportPhone",
+        "returnsPolicyType",
+        "returnsPolicyNotes",
+        "emailEvents",
+        "adminOnboardingEmailSentAt",
+        "createdAt",
+        "updatedAt"
+      ];
+    }
+
+    function validStorePaymentFields(data) {
+      return (!("paymentMode" in data) || isValidPaymentMode(data.paymentMode))
+        && (!("advanceAmount" in data) || isIntInRange(data.advanceAmount, 1, 1000000))
+        && (!("paymentProvider" in data) || data.paymentProvider == "razorpay")
+        && (!("paymentLink" in data) || isValidRazorpayLink(data.paymentLink))
+        && (!("paymentReturnToken" in data) || isValidPaymentReturnToken(data.paymentReturnToken))
+        && (
+          !("paymentMode" in data)
+          || data.paymentMode != "partial_advance"
+          || (
+            data.advanceAmount is int
+            && data.advanceAmount >= 1
+            && data.paymentProvider == "razorpay"
+            && isValidRazorpayLink(data.paymentLink)
+            && data.paymentLink != ""
+          )
         );
     }
 
-    function isValidOptionalImageText(image, field) {
-      return !(field in image)
+    function validStoreData(data, storeId) {
+      return data.keys().hasOnly(storeKeys())
+        && data.storeId == storeId
+        && isOptionalString(data.storeSlug, 120)
+        && data.sellerId is string
+        && isNonEmptyString(data.storeName, 500)
+        && isOptionalString(data.storeDescription, 1000)
+        && isOptionalString(data.description, 1000)
+        && isOptionalString(data.bio, 1000)
+        && isOptionalString(data.tagline, 500)
+        && isOptionalString(data.phone, 30)
+        && isOptionalString(data.whatsappPhone, 30)
+        && isOptionalString(data.whatsappNumber, 30)
+        && isOptionalHttpsUrl(data.logoUrl)
+        && isOptionalHttpsUrl(data.storeLogoUrl)
+        && isOptionalString(data.heroTitle, 200)
+        && isOptionalString(data.heroHeading, 200)
+        && isOptionalString(data.heroSubtitle, 1000)
+        && isOptionalString(data.heroEyebrowText, 200)
+        && isOptionalString(data.heroPrimaryCtaText, 200)
+        && isOptionalString(data.heroSecondaryCtaText, 200)
+        && isOptionalHttpsUrl(data.heroImageUrl)
+        && isOptionalString(data.heroImageKey, 1000)
+        && isOptionalString(data.announcementText, 200)
+        && isOptionalString(data.instagramProfile, 1000)
+        && isOptionalString(data.instagramUrl, 1000)
+        && isOptionalString(data.instagramHandle, 200)
+        && (!("themeId" in data) || data.themeId is string)
+        && (!("themeStyle" in data) || data.themeStyle is string)
+        && (!("selectedThemeId" in data) || data.selectedThemeId is string)
+        && (!("fontStyle" in data) || data.fontStyle is string)
+        && (!("primaryColor" in data) || data.primaryColor is string)
+        && (!("secondaryColor" in data) || data.secondaryColor is string)
+        && (!("accentColor" in data) || data.accentColor is string)
+        && data.isPublished is bool
+        && (!("acceptingOrders" in data) || data.acceptingOrders is bool)
+        && (!("pauseReason" in data) || isOptionalString(data.pauseReason, 120))
+        && (
+          !("communicationPreferences" in data)
+          || data.communicationPreferences is map
+        )
+        && validStorePaymentFields(data)
+        && (!("bookingAdvanceAmount" in data) || isNumberInRange(data.bookingAdvanceAmount, 0, 1000000))
+        && (!("sellerConfirmationAdvance" in data) || isNumberInRange(data.sellerConfirmationAdvance, 0, 1000000))
+        && (!("sellerConfirmationAdvanceType" in data) || data.sellerConfirmationAdvanceType in ["paypertap_only", "fixed", "percentage"])
+        && (!("sellerConfirmationAdvanceFixedAmount" in data) || data.sellerConfirmationAdvanceFixedAmount == null || isNumberInRange(data.sellerConfirmationAdvanceFixedAmount, 0, 1000000))
+        && (!("sellerConfirmationAdvancePercent" in data) || data.sellerConfirmationAdvancePercent == null || (data.sellerConfirmationAdvancePercent is number && data.sellerConfirmationAdvancePercent >= 0 && data.sellerConfirmationAdvancePercent <= 100))
+        && isOptionalString(data.ownerName, 200)
+        && isOptionalString(data.supportEmail, 320)
+        && isOptionalString(data.supportPhone, 30)
+        && (!("returnsPolicyType" in data) || isValidReturnsPolicyType(data.returnsPolicyType))
+        && isOptionalString(data.returnsPolicyNotes, 1000)
+        && (!("createdAt" in data) || data.createdAt is timestamp)
+        && (!("updatedAt" in data) || data.updatedAt is timestamp);
+    }
+
+    function paymentReturnTokenNotRegenerated() {
+      return !("paymentReturnToken" in resource.data)
+        || resource.data.paymentReturnToken == ""
+        || request.resource.data.paymentReturnToken == resource.data.paymentReturnToken;
+    }
+
+    function storePaymentReturnTokenSafe(storeId) {
+      return !changedKeys().hasAny(["paymentReturnToken"])
         || (
-          image[field] is string
-          && image[field].size() <= 500
+          isStoreOwnerOrSlugOwner(storeId)
+          && isValidPaymentReturnToken(request.resource.data.paymentReturnToken)
         );
     }
 
-    function isValidOptionalImageNumber(image, field) {
-      return !(field in image)
+    function storeIdentitySafeForOwnerWrite(storeId) {
+      return (!changedKeys().hasAny(["sellerId"]) || request.resource.data.sellerId == request.auth.uid)
+        && (!changedKeys().hasAny(["storeId"]) || request.resource.data.storeId == storeId)
+        && (!changedKeys().hasAny(["storeSlug"]) || request.resource.data.storeSlug == storeId);
+    }
+
+    function isStoreOwnerOrSlugOwner(storeId) {
+      return isSlugReservedByOwner(storeId) || isOwner(resource.data.sellerId);
+    }
+
+    function storeOperationalFieldsSafeForClient(storeId) {
+      return !changedKeys().hasAny(["acceptingOrders", "pauseReason"])
         || (
-          (image[field] is int || image[field] is float)
-          && image[field] >= 0
-          && image[field] <= 100000000
+          isStoreOwnerOrSlugOwner(storeId)
+          && (!changedKeys().hasAny(["acceptingOrders"]) || request.resource.data.acceptingOrders == true)
+          && (!changedKeys().hasAny(["pauseReason"]) || request.resource.data.pauseReason == "")
         );
     }
 
-    function isValidOptionalImageSize(image, field) {
-      return !(field in image)
-        || (
-          image[field] is int
-          && image[field] >= 0
-          && image[field] <= 10000000
-        );
+    function storeOwnerProtectedKeys() {
+      return [
+        "sellerId",
+        "storeId",
+        "storeSlug",
+        "acceptingOrders",
+        "pauseReason",
+        "paymentReturnToken",
+        "emailEvents",
+        "adminOnboardingEmailSentAt",
+        "createdAt"
+      ];
     }
 
-    function isValidProductImage(image) {
+    function relaxedStoreOwnerUpdate(storeId) {
+      return isStoreOwnerOrSlugOwner(storeId)
+        && storeIdentitySafeForOwnerWrite(storeId)
+        && !changedKeys().hasAny(storeOwnerProtectedKeys())
+        && (!changedKeys().hasAny(["paymentMode"]) || isValidPaymentMode(request.resource.data.paymentMode))
+        && (!changedKeys().hasAny(["advanceAmount"]) || isIntInRange(request.resource.data.advanceAmount, 1, 1000000))
+        && (!changedKeys().hasAny(["paymentProvider"]) || request.resource.data.paymentProvider == "razorpay")
+        && (!changedKeys().hasAny(["paymentLink"]) || isValidRazorpayLink(request.resource.data.paymentLink))
+        && (!changedKeys().hasAny(["isPublished"]) || request.resource.data.isPublished is bool)
+        && (!changedKeys().hasAny(["updatedAt"]) || request.resource.data.updatedAt is timestamp);
+    }
+
+    function validStoreUpdateData() {
+      return (!changedKeys().hasAny(["storeName"]) || isNonEmptyString(request.resource.data.storeName, 500))
+        && (!changedKeys().hasAny(["sellerId"]) || request.resource.data.sellerId == request.auth.uid)
+        && (!changedKeys().hasAny(["storeDescription"]) || isOptionalString(request.resource.data.storeDescription, 1000))
+        && (!changedKeys().hasAny(["description"]) || isOptionalString(request.resource.data.description, 1000))
+        && (!changedKeys().hasAny(["bio"]) || isOptionalString(request.resource.data.bio, 1000))
+        && (!changedKeys().hasAny(["tagline"]) || isOptionalString(request.resource.data.tagline, 500))
+        && (!changedKeys().hasAny(["phone"]) || isOptionalString(request.resource.data.phone, 30))
+        && (!changedKeys().hasAny(["whatsappPhone"]) || isOptionalString(request.resource.data.whatsappPhone, 30))
+        && (!changedKeys().hasAny(["whatsappNumber"]) || isOptionalString(request.resource.data.whatsappNumber, 30))
+        && (!changedKeys().hasAny(["logoUrl"]) || isOptionalHttpsUrl(request.resource.data.logoUrl))
+        && (!changedKeys().hasAny(["storeLogoUrl"]) || isOptionalHttpsUrl(request.resource.data.storeLogoUrl))
+        && (!changedKeys().hasAny(["logoKey"]) || isOptionalString(request.resource.data.logoKey, 1000))
+        && (!changedKeys().hasAny(["heroTitle"]) || isOptionalString(request.resource.data.heroTitle, 200))
+        && (!changedKeys().hasAny(["heroHeading"]) || isOptionalString(request.resource.data.heroHeading, 200))
+        && (!changedKeys().hasAny(["heroSubtitle"]) || isOptionalString(request.resource.data.heroSubtitle, 1000))
+        && (!changedKeys().hasAny(["heroEyebrowText"]) || isOptionalString(request.resource.data.heroEyebrowText, 200))
+        && (!changedKeys().hasAny(["heroPrimaryCtaText"]) || isOptionalString(request.resource.data.heroPrimaryCtaText, 200))
+        && (!changedKeys().hasAny(["heroSecondaryCtaText"]) || isOptionalString(request.resource.data.heroSecondaryCtaText, 200))
+        && (!changedKeys().hasAny(["heroImageUrl"]) || isOptionalHttpsUrl(request.resource.data.heroImageUrl))
+        && (!changedKeys().hasAny(["heroImageKey"]) || isOptionalString(request.resource.data.heroImageKey, 1000))
+        && (!changedKeys().hasAny(["announcementText"]) || isOptionalString(request.resource.data.announcementText, 200))
+        && (!changedKeys().hasAny(["instagramProfile"]) || isOptionalString(request.resource.data.instagramProfile, 1000))
+        && (!changedKeys().hasAny(["instagramUrl"]) || isOptionalString(request.resource.data.instagramUrl, 1000))
+        && (!changedKeys().hasAny(["instagramHandle"]) || isOptionalString(request.resource.data.instagramHandle, 200))
+        && (!changedKeys().hasAny(["themeId"]) || request.resource.data.themeId is string)
+        && (!changedKeys().hasAny(["themeStyle"]) || request.resource.data.themeStyle is string)
+        && (!changedKeys().hasAny(["selectedThemeId"]) || request.resource.data.selectedThemeId is string)
+        && (!changedKeys().hasAny(["fontStyle"]) || request.resource.data.fontStyle is string)
+        && (!changedKeys().hasAny(["primaryColor"]) || request.resource.data.primaryColor is string)
+        && (!changedKeys().hasAny(["secondaryColor"]) || request.resource.data.secondaryColor is string)
+        && (!changedKeys().hasAny(["accentColor"]) || request.resource.data.accentColor is string)
+        && (!changedKeys().hasAny(["colors"]) || request.resource.data.colors is map)
+        && (!changedKeys().hasAny(["isPublished"]) || request.resource.data.isPublished is bool)
+        && (!changedKeys().hasAny(["acceptingOrders"]) || request.resource.data.acceptingOrders is bool)
+        && (!changedKeys().hasAny(["pauseReason"]) || isOptionalString(request.resource.data.pauseReason, 120))
+        && (!changedKeys().hasAny(["communicationPreferences"]) || request.resource.data.communicationPreferences is map)
+        && (!changedKeys().hasAny(["ownerName"]) || isOptionalString(request.resource.data.ownerName, 200))
+        && (!changedKeys().hasAny(["supportEmail"]) || isOptionalString(request.resource.data.supportEmail, 320))
+        && (!changedKeys().hasAny(["supportPhone"]) || isOptionalString(request.resource.data.supportPhone, 30))
+        && (!changedKeys().hasAny(["returnsPolicyType"]) || isValidReturnsPolicyType(request.resource.data.returnsPolicyType))
+        && (!changedKeys().hasAny(["returnsPolicyNotes"]) || isOptionalString(request.resource.data.returnsPolicyNotes, 1000))
+        && (!changedKeys().hasAny(["paymentMethods"]) || request.resource.data.paymentMethods is list)
+        && (!changedKeys().hasAny(["upiId"]) || isOptionalString(request.resource.data.upiId, 200))
+        && (!changedKeys().hasAny(["googlePayNumber"]) || isOptionalString(request.resource.data.googlePayNumber, 30))
+        && (!changedKeys().hasAny(["phonePeNumber"]) || isOptionalString(request.resource.data.phonePeNumber, 30))
+        && (!changedKeys().hasAny(["paymentNote"]) || isOptionalString(request.resource.data.paymentNote, 500))
+        && validStorePaymentFields(request.resource.data)
+        && (!changedKeys().hasAny(["bookingAdvanceAmount"]) || isNumberInRange(request.resource.data.bookingAdvanceAmount, 0, 1000000))
+        && (!changedKeys().hasAny(["sellerConfirmationAdvance"]) || isNumberInRange(request.resource.data.sellerConfirmationAdvance, 0, 1000000))
+        && (!changedKeys().hasAny(["sellerConfirmationAdvanceType"]) || request.resource.data.sellerConfirmationAdvanceType in ["paypertap_only", "fixed", "percentage"])
+        && (!changedKeys().hasAny(["sellerConfirmationAdvanceFixedAmount"]) || request.resource.data.sellerConfirmationAdvanceFixedAmount == null || isNumberInRange(request.resource.data.sellerConfirmationAdvanceFixedAmount, 0, 1000000))
+        && (!changedKeys().hasAny(["sellerConfirmationAdvancePercent"]) || request.resource.data.sellerConfirmationAdvancePercent == null || (request.resource.data.sellerConfirmationAdvancePercent is number && request.resource.data.sellerConfirmationAdvancePercent >= 0 && request.resource.data.sellerConfirmationAdvancePercent <= 100))
+        && (!changedKeys().hasAny(["updatedAt"]) || request.resource.data.updatedAt is timestamp);
+    }
+
+    match /stores/{storeId} {
+      allow read: if isSlugReservedByOwner(storeId)
+        || isAdmin()
+        || resource.data.isPublished == true
+        || isOwner(resource.data.sellerId);
+
+      // Store creation is server-owned through /api/store-onboarding.
+      allow create: if isAdmin();
+
+      allow update: if isAdmin() || relaxedStoreOwnerUpdate(storeId);
+
+      allow delete: if isAdmin();
+
+      match /collections/{collectionId} {
+        allow read: if isPublishedStore(storeId) || isStoreOwner(storeId) || isAdmin();
+
+        allow create: if isStoreOwner(storeId)
+          && request.resource.data.keys().hasOnly([
+            "collectionId",
+            "storeId",
+            "name",
+            "slug",
+            "description",
+            "createdAt",
+            "updatedAt",
+            "productCount"
+          ])
+          && request.resource.data.collectionId == collectionId
+          && request.resource.data.storeId == storeId
+          && isNonEmptyString(request.resource.data.name, 80)
+          && isNonEmptyString(request.resource.data.slug, 120)
+          && isOptionalString(request.resource.data.description, 500)
+          && (!("productCount" in request.resource.data) || isIntInRange(request.resource.data.productCount, 0, 1000000))
+          && (!("createdAt" in request.resource.data) || request.resource.data.createdAt is timestamp)
+          && (!("updatedAt" in request.resource.data) || request.resource.data.updatedAt is timestamp);
+
+        allow update: if isStoreOwner(storeId)
+          && request.resource.data.collectionId == resource.data.collectionId
+          && request.resource.data.storeId == resource.data.storeId
+          && request.resource.data.keys().hasOnly([
+            "collectionId",
+            "storeId",
+            "name",
+            "slug",
+            "description",
+            "createdAt",
+            "updatedAt",
+            "productCount"
+          ])
+          && isNonEmptyString(request.resource.data.name, 80)
+          && isNonEmptyString(request.resource.data.slug, 120)
+          && isOptionalString(request.resource.data.description, 500)
+          && (!("productCount" in request.resource.data) || isIntInRange(request.resource.data.productCount, 0, 1000000))
+          && hasOnlyChanged(["name", "slug", "description", "updatedAt", "productCount"]);
+
+        allow delete: if isStoreOwner(storeId) || isAdmin();
+      }
+    }
+
+    // -----------------------------
+    // Themes
+    // -----------------------------
+
+    match /themes/{themeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -----------------------------
+    // Products
+    // -----------------------------
+
+    function productProtectedOwnerKeys() {
+      return [
+        "id",
+        "sellerId",
+        "storeId",
+        "productId",
+        "reservedQuantity",
+        "soldQuantity",
+        "emailEvents",
+        "createdAt"
+      ];
+    }
+
+    function validImage(image) {
       return image is map
         && image.keys().hasOnly([
           "id",
@@ -391,481 +773,66 @@ service cloud.firestore {
           "sortOrder",
           "uploadedAt"
         ])
-        && hasDurableProductImageUrl(image)
-        && isValidOptionalImageUrl(image, "url")
-        && isValidOptionalImageUrl(image, "publicUrl")
-        && isValidOptionalImageUrl(image, "imageUrl")
-        && isValidOptionalImageUrl(image, "thumbnailUrl")
-        && isValidOptionalImageUrl(image, "thumbUrl")
-        && isValidOptionalImageUrl(image, "mediumUrl")
-        && isValidOptionalImageString(image, "id")
-        && isValidOptionalImageString(image, "path")
-        && isValidOptionalImageString(image, "key")
-        && isValidOptionalImageString(image, "thumbKey")
-        && isValidOptionalImageString(image, "name")
-        && isValidOptionalImageString(image, "originalName")
-        && isValidOptionalImageText(image, "alt")
-        && isValidOptionalImageNumber(image, "width")
-        && isValidOptionalImageNumber(image, "height")
-        && isValidOptionalImageSize(image, "size")
-        && isValidOptionalImageSize(image, "sizeBytes")
         && (
-          !("mimeType" in image)
-          || image.mimeType in ["image/jpeg", "image/png", "image/webp", "image/gif"]
+          ("url" in image && isOptionalHttpsUrl(image.url))
+          || ("publicUrl" in image && isOptionalHttpsUrl(image.publicUrl))
+          || ("imageUrl" in image && isOptionalHttpsUrl(image.imageUrl))
         )
-        && (
-          !("sortOrder" in image)
-          || (
-            image.sortOrder is int
-            && image.sortOrder >= 0
-            && image.sortOrder <= 2
-          )
-        )
-        && (
-          !("uploadedAt" in image)
-          || image.uploadedAt is timestamp
-        );
+        && (!("thumbnailUrl" in image) || isOptionalHttpsUrl(image.thumbnailUrl))
+        && (!("thumbUrl" in image) || isOptionalHttpsUrl(image.thumbUrl))
+        && (!("mediumUrl" in image) || isOptionalHttpsUrl(image.mediumUrl));
     }
 
-    function hasValidProductImages(data) {
+    function validImages(data) {
       return !("images" in data)
         || (
           data.images is list
           && data.images.size() <= 3
-          && (data.images.size() < 1 || isValidProductImage(data.images[0]))
-          && (data.images.size() < 2 || isValidProductImage(data.images[1]))
-          && (data.images.size() < 3 || isValidProductImage(data.images[2]))
+          && (data.images.size() < 1 || validImage(data.images[0]))
+          && (data.images.size() < 2 || validImage(data.images[1]))
+          && (data.images.size() < 3 || validImage(data.images[2]))
         );
     }
 
-    function hasValidProductVariants(data) {
-      return (
-          !("hasVariants" in data)
-          || data.hasVariants is bool
-        )
-        && (
-          !("variantOptions" in data)
-          || (
-            data.variantOptions is list
-            && data.variantOptions.size() <= 2
-          )
-        )
-        && (
-          !("variants" in data)
-          || (
-            data.variants is list
-            && data.variants.size() <= 100
-          )
-        )
-        && (
-          !("defaultVariantId" in data)
-          || data.defaultVariantId is string
-        );
+    function validVariants(data) {
+      return (!("hasVariants" in data) || data.hasVariants is bool)
+        && (!("variantOptions" in data) || (data.variantOptions is list && data.variantOptions.size() <= 2))
+        && (!("variants" in data) || (data.variants is list && data.variants.size() <= 100))
+        && (!("defaultVariantId" in data) || data.defaultVariantId is string);
     }
 
-    function hasValidSelectedVariantFields(data) {
-      return (
-          !("selectedVariantId" in data)
-          || data.selectedVariantId is string
-        )
-        && (
-          !("selectedVariantLabel" in data)
-          || data.selectedVariantLabel is string
-        )
-        && (
-          !("selectedVariantOptions" in data)
-          || data.selectedVariantOptions is map
-        );
+    function validInventory(data) {
+      return isIntInRange(data.inventoryQuantity, 0, 1000000)
+        && isIntInRange(data.reservedQuantity, 0, 1000000)
+        && isIntInRange(data.soldQuantity, 0, 1000000)
+        && data.reservedQuantity + data.soldQuantity <= data.inventoryQuantity;
     }
 
-    function hasNoSelectedVariantFields(data) {
-      return !("selectedVariantId" in data)
-        && !("selectedVariantLabel" in data)
-        && !("selectedVariantOptions" in data);
+    function validProductCreateData(data, productId) {
+      return data.sellerId == request.auth.uid
+        && data.storeId is string
+        && (!("productId" in data) || data.productId == productId)
+        && (!("id" in data) || data.id == productId)
+        && (!("emailEvents" in data))
+        && data.reservedQuantity == 0
+        && data.soldQuantity == 0
+        && (!("price" in data) || isIntInRange(data.price, 1, 100000000))
+        && (!("status" in data) || isValidProductStatus(data.status))
+        && (!("inventoryQuantity" in data) || isIntInRange(data.inventoryQuantity, 0, 1000000))
+        && (!("createdAt" in data) || data.createdAt is timestamp)
+        && (!("updatedAt" in data) || data.updatedAt is timestamp);
     }
 
-    function checkoutVariantFieldsAreSafe(data) {
-      return (
-          !("hasVariants" in productData(data.productId))
-          || productData(data.productId).hasVariants != true
-        )
-        && hasNoSelectedVariantFields(data);
+    function validProductOwnerUpdate() {
+      return !changedKeys().hasAny(productProtectedOwnerKeys())
+        && (!("sellerId" in request.resource.data) || request.resource.data.sellerId == resource.data.sellerId)
+        && (!("storeId" in request.resource.data) || request.resource.data.storeId == resource.data.storeId)
+        && (!("productId" in resource.data) || request.resource.data.productId == resource.data.productId)
+        && (!changedKeys().hasAny(["price"]) || isIntInRange(request.resource.data.price, 1, 100000000))
+        && (!changedKeys().hasAny(["status"]) || isValidProductStatus(request.resource.data.status))
+        && (!changedKeys().hasAny(["inventoryQuantity"]) || isIntInRange(request.resource.data.inventoryQuantity, 0, 1000000))
+        && (!changedKeys().hasAny(["updatedAt"]) || request.resource.data.updatedAt is timestamp);
     }
-
-    function selectedVariantFieldsUnchanged() {
-      return (
-          (
-            !("selectedVariantId" in resource.data)
-            && !("selectedVariantId" in request.resource.data)
-          )
-          || (
-            ("selectedVariantId" in resource.data)
-            && ("selectedVariantId" in request.resource.data)
-            && request.resource.data.selectedVariantId == resource.data.selectedVariantId
-          )
-        )
-        && (
-          (
-            !("selectedVariantLabel" in resource.data)
-            && !("selectedVariantLabel" in request.resource.data)
-          )
-          || (
-            ("selectedVariantLabel" in resource.data)
-            && ("selectedVariantLabel" in request.resource.data)
-            && request.resource.data.selectedVariantLabel == resource.data.selectedVariantLabel
-          )
-        )
-        && (
-          (
-            !("selectedVariantOptions" in resource.data)
-            && !("selectedVariantOptions" in request.resource.data)
-          )
-          || (
-            ("selectedVariantOptions" in resource.data)
-            && ("selectedVariantOptions" in request.resource.data)
-            && request.resource.data.selectedVariantOptions == resource.data.selectedVariantOptions
-          )
-        );
-    }
-
-    function productAvailableFromData(data) {
-      return data.inventoryQuantity - data.reservedQuantity - data.soldQuantity;
-    }
-
-    function productAfterReservation(productId) {
-      return getAfter(/databases/$(database)/documents/products/$(productId)).data;
-    }
-
-    function publicReservationNextStatus() {
-      return resource.data.inventoryQuantity
-        - (resource.data.reservedQuantity + 1)
-        - resource.data.soldQuantity > 0
-          ? "open"
-          : "hold";
-    }
-
-    function productStatusForInventory(data) {
-      return data.inventoryQuantity > 0
-        && data.soldQuantity >= data.inventoryQuantity
-          ? "sold"
-          : productAvailableFromData(data) > 0
-            ? "open"
-            : data.reservedQuantity > 0
-              ? "hold"
-              : "open";
-    }
-
-    function isValidPublicReservationUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "reservedQuantity",
-          "status",
-          "updatedAt"
-        ])
-        && resource.data.status == "open"
-        && isPublishedStore(resource.data.storeId)
-        && hasValidInventoryFields(resource.data)
-        && productAvailableFromData(resource.data) > 0
-        && request.resource.data.inventoryQuantity == resource.data.inventoryQuantity
-        && request.resource.data.soldQuantity == resource.data.soldQuantity
-        && request.resource.data.reservedQuantity == resource.data.reservedQuantity + 1
-        && request.resource.data.status == publicReservationNextStatus()
-        && request.resource.data.updatedAt == request.time;
-    }
-
-    function isValidSellerInventoryTransition() {
-      return isOwner(resource.data.sellerId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          "reservedQuantity",
-          "soldQuantity",
-          "status",
-          "updatedAt"
-        ])
-        && hasValidInventoryFields(resource.data)
-        && hasValidInventoryFields(request.resource.data)
-        && resource.data.reservedQuantity > 0
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.status == productStatusForInventory(request.resource.data)
-        && (
-          (
-            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
-            && request.resource.data.soldQuantity == resource.data.soldQuantity + 1
-          )
-          || (
-            request.resource.data.reservedQuantity == resource.data.reservedQuantity - 1
-            && request.resource.data.soldQuantity == resource.data.soldQuantity
-          )
-        );
-    }
-
-    function checkoutHasValidReservationFields(data, checkoutId) {
-      return data.checkoutId == checkoutId
-        && data.status == "booking_paid"
-        && data.whatsappOpened == false
-        && data.reservationApplied == true
-        && data.reservedProductId == data.productId
-        && data.reservedQuantity == 1;
-    }
-
-    function checkoutMatchesReservedProduct(data) {
-      let beforeProduct = productData(data.productId);
-      let afterProduct = productAfterReservation(data.productId);
-
-      return data.sellerId == beforeProduct.sellerId
-        && data.storeId == beforeProduct.storeId
-        && data.productTitle == beforeProduct.title
-        && data.productPrice == beforeProduct.price
-        && afterProduct.inventoryQuantity == beforeProduct.inventoryQuantity
-        && afterProduct.soldQuantity == beforeProduct.soldQuantity
-        && afterProduct.reservedQuantity == beforeProduct.reservedQuantity + 1
-        && afterProduct.status ==
-          (
-            beforeProduct.inventoryQuantity
-            - (beforeProduct.reservedQuantity + 1)
-            - beforeProduct.soldQuantity > 0
-              ? "open"
-              : "hold"
-          );
-    }
-
-    function isOpenProductInPublishedStore(productId, storeId) {
-      return productExists(productId)
-        && productData(productId).storeId == storeId
-        && productData(productId).status == "open"
-        && productData(productId).inventoryQuantity is int
-        && productData(productId).reservedQuantity is int
-        && productData(productId).soldQuantity is int
-        && productData(productId).inventoryQuantity
-          - productData(productId).reservedQuantity
-          - productData(productId).soldQuantity > 0
-        && isPublishedStore(storeId);
-    }
-
-    function slugReservationExists(slug) {
-      return exists(/databases/$(database)/documents/storeSlugs/$(slug));
-    }
-
-    function slugReservationData(slug) {
-      return get(/databases/$(database)/documents/storeSlugs/$(slug)).data;
-    }
-
-    function isSlugReservedByOwner(slug) {
-      return slugReservationExists(slug)
-        && slugReservationData(slug).sellerId == request.auth.uid;
-    }
-
-    function hasValidSellerEmailEvents(data) {
-      return data is map
-        && data.keys().hasOnly(["welcomeSentAt"])
-        && (
-          !("welcomeSentAt" in data)
-          || data.welcomeSentAt is timestamp
-        );
-    }
-
-    function hasOnlySellerMutableFields() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        "name",
-        "phone",
-        "storeId",
-        "status",
-        "razorpayLinked",
-        "profileImageUrl",
-        "onboardingStatus",
-        "onboardingStep",
-        "updatedAt",
-        "emailEvents"
-      ]);
-    }
-
-    function hasOnlyStoreSellerMutableFields() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        "storeName",
-        "storeDescription",
-        "description",
-        "bio",
-        "phone",
-        "whatsappPhone",
-        "logoUrl",
-        "storeLogoUrl",
-        "heroTitle",
-        "heroSubtitle",
-        "heroEyebrowText",
-        "heroPrimaryCtaText",
-        "heroSecondaryCtaText",
-        "heroImageUrl",
-        "heroImageKey",
-        "announcementText",
-        "instagramProfile",
-        "instagramUrl",
-        "themeId",
-        "primaryColor",
-        "secondaryColor",
-        "accentColor",
-        "isPublished",
-        "bookingAdvanceAmount",
-        "sellerConfirmationAdvanceType",
-        "sellerConfirmationAdvanceFixedAmount",
-        "sellerConfirmationAdvancePercent",
-        "ownerName",
-        "supportEmail",
-        "supportPhone",
-        "returnsPolicyType",
-        "returnsPolicyNotes",
-        "paymentMethods",
-        "upiId",
-        "googlePayNumber",
-        "phonePeNumber",
-        "paymentNote",
-        "updatedAt"
-      ]);
-    }
-
-    function hasOnlyOrderSellerMutableFields() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        "orderStatus",
-        "whatsappStatus",
-        "sellerNotes",
-        "updatedAt"
-      ]);
-    }
-
-    function hasOnlyCustomerSellerMutableFields() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        "tags",
-        "notes",
-        "updatedAt"
-      ]);
-    }
-
-    // =========================================================
-    // SELLERS
-    // =========================================================
-
-    match /sellers/{sellerId} {
-      allow create: if signedIn()
-        && sellerId == request.auth.uid
-        && request.resource.data.sellerId == request.auth.uid
-        && request.resource.data.authUid == request.auth.uid
-        && isValidSellerStatus(request.resource.data.status)
-        && isValidOnboardingStatus(request.resource.data.onboardingStatus)
-        && isValidOnboardingStep(request.resource.data.onboardingStep);
-
-      allow read: if isOwner(sellerId) || isAdmin();
-
-      allow update: if isOwner(sellerId)
-        && request.resource.data.sellerId == resource.data.sellerId
-        && request.resource.data.authUid == resource.data.authUid
-        && isValidSellerStatus(request.resource.data.status)
-        && isValidOnboardingStatus(request.resource.data.onboardingStatus)
-        && isValidOnboardingStep(request.resource.data.onboardingStep)
-        && (
-          !("emailEvents" in request.resource.data)
-          || hasValidSellerEmailEvents(request.resource.data.emailEvents)
-        )
-        && hasOnlySellerMutableFields();
-
-      allow delete: if isAdmin();
-    }
-
-    // =========================================================
-    // STORE SLUG RESERVATIONS
-    // =========================================================
-
-    match /storeSlugs/{slug} {
-      allow get: if true;
-      allow list: if false;
-
-      allow create: if signedIn()
-        && request.resource.data.slug == slug
-        && request.resource.data.storeId == slug
-        && request.resource.data.sellerId == request.auth.uid
-        && !slugReservationExists(slug);
-
-      allow update: if false;
-
-      allow delete: if isAdmin();
-    }
-
-    // =========================================================
-    // STORES
-    // =========================================================
-
-    match /stores/{storeId} {
-      allow read: if resource.data.isPublished == true
-        || isOwner(resource.data.sellerId)
-        || isAdmin();
-
-      allow create: if signedIn()
-        && request.resource.data.sellerId == request.auth.uid
-        && request.resource.data.storeId == storeId
-        && request.resource.data.storeSlug == storeId
-        && isSlugReservedByOwner(storeId)
-        && isValidString(request.resource.data.storeName)
-        && request.resource.data.isPublished is bool
-        && request.resource.data.themeId is string
-        && request.resource.data.primaryColor is string
-        && request.resource.data.secondaryColor is string
-        && request.resource.data.accentColor is string
-        && (
-          !("bookingAdvanceAmount" in request.resource.data)
-          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        )
-        && hasValidSellerConfirmationAdvanceFields(request.resource.data)
-        && hasValidStoreContactAndPolicyFields(request.resource.data)
-        && hasValidStoreAppearanceFields(request.resource.data);
-
-      allow update: if isOwner(resource.data.sellerId)
-        && request.resource.data.sellerId == resource.data.sellerId
-        && request.resource.data.storeId == resource.data.storeId
-        && request.resource.data.storeSlug == resource.data.storeSlug
-        && isValidString(request.resource.data.storeName)
-        && request.resource.data.isPublished is bool
-        && hasOnlyStoreSellerMutableFields()
-        && (
-          !("bookingAdvanceAmount" in request.resource.data)
-          || isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        )
-        && hasValidSellerConfirmationAdvanceFields(request.resource.data)
-        && hasValidStoreContactAndPolicyFields(request.resource.data)
-        && hasValidStoreAppearanceFields(request.resource.data);
-
-      allow delete: if isAdmin();
-    }
-
-    // =========================================================
-    // STORE COLLECTIONS
-    // =========================================================
-
-    match /stores/{storeId}/collections/{collectionId} {
-      allow read: if isPublishedStore(storeId)
-        || isStoreOwner(storeId)
-        || isAdmin();
-
-      allow create: if isStoreOwner(storeId)
-        && hasValidCollectionFields(request.resource.data, storeId, collectionId);
-
-      allow update: if isStoreOwner(storeId)
-        && resource.data.storeId == storeId
-        && resource.data.collectionId == collectionId
-        && request.resource.data.storeId == resource.data.storeId
-        && request.resource.data.collectionId == resource.data.collectionId
-        && hasValidCollectionFields(request.resource.data, storeId, collectionId);
-
-      allow delete: if isStoreOwner(storeId) || isAdmin();
-    }
-
-    // =========================================================
-    // THEMES
-    // =========================================================
-
-    match /themes/{themeId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // =========================================================
-    // PRODUCTS
-    // =========================================================
 
     match /products/{productId} {
       allow read: if (
@@ -877,261 +844,139 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.resource.data.sellerId == request.auth.uid
-        && request.resource.data.storeId is string
         && isStoreOwner(request.resource.data.storeId)
-        && isValidString(request.resource.data.title)
-        && request.resource.data.description is string
-        && request.resource.data.category is string
-        && isValidPositiveAmount(request.resource.data.price)
-        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        && isValidAmount(request.resource.data.sellerCollectAmount)
-        && request.resource.data.sellerCollectAmount ==
-          request.resource.data.price - phaseOneBookingAdvance()
-        && isValidProductStatus(request.resource.data.status)
-        && request.resource.data.isFeatured is bool
-        && request.resource.data.sortOrder is int
-        && hasValidInventoryFields(request.resource.data)
-        && hasValidProductImages(request.resource.data)
-        && hasValidProductVariants(request.resource.data);
+        && validProductCreateData(request.resource.data, productId);
 
-      allow update: if (
-          isOwner(resource.data.sellerId)
-          && request.resource.data.sellerId == resource.data.sellerId
-          && request.resource.data.storeId == resource.data.storeId
-          && isValidString(request.resource.data.title)
-          && request.resource.data.description is string
-          && request.resource.data.category is string
-          && isValidPositiveAmount(request.resource.data.price)
-          && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-          && isValidAmount(request.resource.data.sellerCollectAmount)
-          && request.resource.data.sellerCollectAmount ==
-            request.resource.data.price - phaseOneBookingAdvance()
-          && isValidProductStatus(request.resource.data.status)
-          && request.resource.data.isFeatured is bool
-          && request.resource.data.sortOrder is int
-          && hasValidInventoryFields(request.resource.data)
-          && hasValidProductImages(request.resource.data)
-          && hasValidProductVariants(request.resource.data)
-        )
-        || isValidPublicReservationUpdate()
-        || isValidSellerInventoryTransition();
+      allow update: if isOwner(resource.data.sellerId)
+        && validProductOwnerUpdate();
 
       allow delete: if isOwner(resource.data.sellerId) || isAdmin();
     }
 
-    // =========================================================
-    // CHECKOUT SESSIONS
-    // =========================================================
+    // -----------------------------
+    // Orders
+    // -----------------------------
 
-    match /checkoutSessions/{checkoutId} {
-      allow create: if
-        request.resource.data.keys().hasOnly([
-          "checkoutId",
-          "sellerId",
-          "storeId",
-          "productId",
-          "productTitle",
-          "productPrice",
-          "bookingAdvanceAmount",
-          "sellerCollectAmount",
-          "confirmationAdvanceType",
-          "totalConfirmationAdvance",
-          "sellerConfirmationAmountPending",
-          "finalBalanceAfterConfirmation",
-          "buyerName",
-          "buyerEmail",
-          "buyerPhone",
-          "buyerAddress",
-          "buyerCity",
-          "buyerPincode",
-          "status",
-          "whatsappOpened",
-          "reservationApplied",
-          "reservedProductId",
-          "reservedQuantity",
-          "selectedVariantId",
-          "selectedVariantLabel",
-          "selectedVariantOptions",
-          "createdAt",
-          "updatedAt"
-        ])
-        && request.resource.data.keys().hasAll([
-          "checkoutId",
-          "sellerId",
-          "storeId",
-          "productId",
-          "productTitle",
-          "productPrice",
-          "bookingAdvanceAmount",
-          "sellerCollectAmount",
-          "confirmationAdvanceType",
-          "totalConfirmationAdvance",
-          "sellerConfirmationAmountPending",
-          "finalBalanceAfterConfirmation",
-          "buyerName",
-          "buyerPhone",
-          "buyerAddress",
-          "buyerCity",
-          "buyerPincode",
-          "status",
-          "whatsappOpened",
-          "reservationApplied",
-          "reservedProductId",
-          "reservedQuantity",
-          "createdAt",
-          "updatedAt"
-        ])
-        && checkoutHasValidReservationFields(request.resource.data, checkoutId)
-        && request.resource.data.sellerId == storeOwner(request.resource.data.storeId)
-        && isOpenProductInPublishedStore(
-          request.resource.data.productId,
-          request.resource.data.storeId
-        )
-        && checkoutMatchesReservedProduct(request.resource.data)
-        && request.resource.data.productTitle is string
-        && isValidPositiveAmount(request.resource.data.productPrice)
-        && isPhaseOneBookingAmount(request.resource.data.bookingAdvanceAmount)
-        && isValidAmount(request.resource.data.sellerCollectAmount)
-        && request.resource.data.sellerCollectAmount ==
-          request.resource.data.productPrice - phaseOneBookingAdvance()
-        && (
-          !("confirmationAdvanceType" in request.resource.data)
-          || isValidSellerConfirmationAdvanceType(request.resource.data.confirmationAdvanceType)
-        )
-        && (
-          !("totalConfirmationAdvance" in request.resource.data)
-          || isValidAmount(request.resource.data.totalConfirmationAdvance)
-        )
-        && (
-          !("sellerConfirmationAmountPending" in request.resource.data)
-          || isValidAmount(request.resource.data.sellerConfirmationAmountPending)
-        )
-        && (
-          !("finalBalanceAfterConfirmation" in request.resource.data)
-          || isValidAmount(request.resource.data.finalBalanceAfterConfirmation)
-        )
-        && (
-          !("totalConfirmationAdvance" in request.resource.data)
-          || !("sellerConfirmationAmountPending" in request.resource.data)
-          || !("finalBalanceAfterConfirmation" in request.resource.data)
-          || (
-            request.resource.data.bookingAdvanceAmount +
-            request.resource.data.sellerConfirmationAmountPending +
-            request.resource.data.finalBalanceAfterConfirmation ==
-            request.resource.data.productPrice
-            && request.resource.data.totalConfirmationAdvance ==
-              request.resource.data.bookingAdvanceAmount +
-              request.resource.data.sellerConfirmationAmountPending
-          )
-        )
-        && request.resource.data.buyerName is string
-        && (
-          !("buyerEmail" in request.resource.data)
-          || request.resource.data.buyerEmail is string
-        )
-        && isValidPhone(request.resource.data.buyerPhone)
-        && request.resource.data.buyerAddress is string
-        && request.resource.data.buyerCity is string
-        && isValidPincode(request.resource.data.buyerPincode)
-        && hasValidSelectedVariantFields(request.resource.data)
-        && checkoutVariantFieldsAreSafe(request.resource.data)
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-
-      allow read: if isOwner(resource.data.sellerId) || isAdmin();
-
-      allow update: if isOwner(resource.data.sellerId)
-        && request.resource.data.sellerId == resource.data.sellerId
+    function immutableOrderFieldsUnchanged() {
+      return request.resource.data.sellerId == resource.data.sellerId
         && request.resource.data.storeId == resource.data.storeId
         && request.resource.data.productId == resource.data.productId
-        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
         && request.resource.data.productPrice == resource.data.productPrice
-        && request.resource.data.sellerCollectAmount == resource.data.sellerCollectAmount
-        && selectedVariantFieldsUnchanged()
-        && isValidCheckoutStatus(request.resource.data.status);
-
-      allow delete: if isAdmin();
+        && request.resource.data.walletCharge == resource.data.walletCharge
+        && request.resource.data.walletTransactionId == resource.data.walletTransactionId
+        && request.resource.data.walletType == resource.data.walletType
+        && request.resource.data.walletBalanceAfter == resource.data.walletBalanceAfter
+        && request.resource.data.freeOrdersRemainingAfter == resource.data.freeOrdersRemainingAfter
+        && request.resource.data.buyerName == resource.data.buyerName
+        && request.resource.data.buyerPhone == resource.data.buyerPhone
+        && request.resource.data.buyerAddress == resource.data.buyerAddress
+        && request.resource.data.buyerCity == resource.data.buyerCity
+        && request.resource.data.buyerPincode == resource.data.buyerPincode;
     }
 
-    // =========================================================
-    // ORDERS / BOOKINGS
-    // =========================================================
+    function orderNotesOnly() {
+      return hasOnlyChanged(["sellerNotes", "updatedAt"]);
+    }
+
+    function paymentVerificationTransition() {
+      return resource.data.status == "payment_returned"
+        && request.resource.data.status == "pending_confirmation"
+        && hasOnlyChanged([
+          "status",
+          "sellerPaymentConfirmedAt",
+          "sellerConfirmationAt",
+          "updatedAt"
+        ]);
+    }
+
+    function acceptOrderTransition() {
+      return resource.data.status in ["pending_confirmation", "confirmed"]
+        && request.resource.data.status == "processing"
+        && hasOnlyChanged([
+          "status",
+          "sellerAcceptedAt",
+          "processingAt",
+          "updatedAt"
+        ]);
+    }
+
+    function completeOrderTransition() {
+      return resource.data.status == "processing"
+        && request.resource.data.status == "completed"
+        && hasOnlyChanged([
+          "status",
+          "reservationApplied",
+          "reservationSold",
+          "completedAt",
+          "updatedAt"
+        ]);
+    }
+
+    function cancelOrderTransition() {
+      return resource.data.status in [
+          "awaiting_payment",
+          "pending_payment",
+          "payment_returned",
+          "pending_confirmation",
+          "confirmed",
+          "processing"
+        ]
+        && request.resource.data.status == "cancelled"
+        && hasOnlyChanged([
+          "status",
+          "reservationApplied",
+          "reservationReleased",
+          "cancelledAt",
+          "releasedAt",
+          "updatedAt"
+        ]);
+    }
 
     match /orders/{orderId} {
+      // Order creation is public-facing but server-owned because wallet deduction,
+      // product reservation, and order creation must stay atomic.
       allow create: if false;
 
       allow read: if isOwner(resource.data.sellerId) || isAdmin();
 
-      allow update: if isOwner(resource.data.sellerId)
-        && request.resource.data.sellerId == resource.data.sellerId
-        && request.resource.data.storeId == resource.data.storeId
-        && request.resource.data.productId == resource.data.productId
-        && request.resource.data.checkoutId == resource.data.checkoutId
-        && request.resource.data.bookingAdvanceAmount == resource.data.bookingAdvanceAmount
-        && request.resource.data.productPrice == resource.data.productPrice
-        && request.resource.data.sellerCollectAmount == resource.data.sellerCollectAmount
-        && isValidOrderStatus(request.resource.data.orderStatus)
-        && isValidWhatsappStatus(request.resource.data.whatsappStatus)
-        && hasOnlyOrderSellerMutableFields();
+      // Order lifecycle, notes, payment verification, and inventory transitions
+      // are server-owned through /api/order-action.
+      allow update: if false;
 
       allow delete: if isAdmin();
     }
 
-    // =========================================================
-    // CUSTOMERS / LEADS
-    // =========================================================
+    // -----------------------------
+    // Deprecated / server-only collections
+    // -----------------------------
 
     match /customers/{customerId} {
       allow create: if false;
-
       allow read: if isOwner(resource.data.sellerId) || isAdmin();
-
       allow update: if isOwner(resource.data.sellerId)
         && request.resource.data.sellerId == resource.data.sellerId
-        && hasOnlyCustomerSellerMutableFields();
-
+        && hasOnlyChanged(["tags", "notes", "updatedAt"]);
       allow delete: if isAdmin();
     }
 
-    // =========================================================
-    // PAYMENTS
-    // =========================================================
-
     match /payments/{paymentId} {
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
       allow create, update, delete: if false;
-
-      allow read: if isOwner(resource.data.sellerId) || isAdmin();
     }
 
-    // =========================================================
-    // EVENTS
-    // =========================================================
-
+    // No current client code writes analytics events. Keep closed until an
+    // abuse-resistant event ingestion endpoint exists.
     match /events/{eventId} {
-      allow create: if
-        request.resource.data.sellerId is string
-        && request.resource.data.storeId is string
-        && request.resource.data.eventType in [
-          "store_view",
-          "product_click",
-          "checkout_start",
-          "details_submit",
-          "payment_initiated",
-          "booking_paid",
-          "whatsapp_open"
-        ];
-
-      allow read: if isOwner(resource.data.sellerId) || isAdmin();
-
-      allow update, delete: if isAdmin();
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
     }
-
-    // =========================================================
-    // ADMIN SETTINGS
-    // =========================================================
 
     match /adminSettings/{settingId} {
       allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

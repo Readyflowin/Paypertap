@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Grid2X2, Home, Search, ShoppingBag, User } from "lucide-react";
 
 import {
   ALL_COLLECTIONS,
@@ -21,6 +22,40 @@ import {
 
 export { Theme1EditorialFooter as Theme1CleanFooter } from "./Theme1Footer";
 export { Theme1Header as Theme1StorefrontChrome } from "./Theme1Header";
+
+function Theme1BottomNav() {
+  const navItems = [
+    { label: "Home", href: "#top", icon: Home },
+    { label: "Search", href: "#products", icon: Search },
+    { label: "Collection", href: "#products", icon: Grid2X2 },
+    { label: "Account", href: "#footer", icon: User },
+    { label: "Orders", href: "#products", icon: ShoppingBag },
+  ];
+
+  return (
+    <nav
+      aria-label="Store quick navigation"
+      className="fixed inset-x-3 bottom-3 z-40 rounded-[22px] border border-[#e5ded4] bg-white/92 px-2 py-2 shadow-[0_12px_34px_rgba(17,17,17,0.18)] backdrop-blur-xl sm:hidden"
+    >
+      <div className="grid grid-cols-5 gap-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <a
+              key={item.label}
+              href={item.href}
+              className="grid min-h-12 place-items-center rounded-2xl text-[10px] font-medium !text-[#2b2926]"
+            >
+              <Icon size={19} aria-hidden="true" />
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 export default function Theme1({
   collections: managedCollections = [],
@@ -82,7 +117,7 @@ export default function Theme1({
   }
 
   return (
-    <main id="top" className="relative min-h-screen overflow-x-hidden bg-[#F6F1E8] text-[#111111]">
+    <main id="top" className="relative min-h-screen overflow-x-hidden bg-[#fffdfa] pb-24 text-[#111111] sm:pb-0">
       <Theme1Header
         collections={managedCollections}
         isPreviewMobile={false}
@@ -114,6 +149,7 @@ export default function Theme1({
         store={store}
         storeSlug={storeSlug}
       />
+      <Theme1BottomNav />
     </main>
   );
 }

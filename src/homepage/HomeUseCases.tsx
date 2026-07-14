@@ -25,7 +25,7 @@ const useCases = [
   },
   {
     alt: "Boutique clothing and accessories on display",
-    benefit: "Show collections, product pages, and booking context in one place.",
+    benefit: "Show collections, product pages, and order context in one place.",
     image:
       "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=640&q=74",
     pain: "Customers want boutique-level clarity before they commit.",
@@ -43,7 +43,7 @@ const useCases = [
   },
   {
     alt: "Student seller packing a small ecommerce order",
-    benefit: "Separate real buyers from casual questions with a small booking step.",
+    benefit: "Separate real buyers from casual questions with a small order step.",
     image:
       "https://images.unsplash.com/photo-1607083206968-13611e3d76db?auto=format&fit=crop&w=640&q=74",
     pain: "Time is limited, and every uncertain chat takes energy.",
@@ -66,7 +66,7 @@ export function HomeUseCases() {
     <MarketingSection
       eyebrow="Built for"
       title="Who is PayPerTap for?"
-      intro="Use the same social selling motion, with cleaner product discovery and booking intent."
+      intro="Use the same social selling motion, with cleaner product discovery and Order intent."
     >
       <div className="ppt-use-case-grid">
         {useCases.map((useCase) => (

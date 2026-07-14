@@ -166,7 +166,6 @@ function parseUpload(req: any) {
 
 export default async function handler(req: any, res: any) {
   loadLocalEnv({ override: true });
-  // TODO: require authenticated seller session before production launch.
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");

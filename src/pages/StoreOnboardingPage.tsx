@@ -5,7 +5,6 @@ import { AtSign, ImageIcon, Phone, Store, UploadCloud } from "lucide-react";
 import { PptBadge, PptButton, PptField, PptNotice, PptTapLoader } from "../components/ui";
 import { useAuthUser } from "../hooks/useAuthUser";
 import { assertValidImageFile } from "../lib/imageCompression";
-import type { SellerConfirmationAdvanceType } from "../lib/confirmationAdvance";
 import { normalizeIndianMobileInput } from "../lib/phone";
 import {
   completeStoreOnboarding,
@@ -20,10 +19,6 @@ export default function StoreOnboardingPage() {
   const [phone, setPhone] = useState("");
   const [storeName, setStoreName] = useState("");
   const [instagramProfile, setInstagramProfile] = useState("");
-  const [confirmationAdvanceType, setConfirmationAdvanceType] =
-    useState<SellerConfirmationAdvanceType>("paypertap_only");
-  const [confirmationFixedAmount, setConfirmationFixedAmount] = useState("");
-  const [confirmationPercent, setConfirmationPercent] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [logoFileName, setLogoFileName] = useState("");
@@ -72,17 +67,6 @@ export default function StoreOnboardingPage() {
         throw new Error(message);
       }
 
-      const fixedAmount = Math.round(Number(confirmationFixedAmount) || 0);
-      const percent = Math.round(Number(confirmationPercent) || 0);
-
-      if (confirmationAdvanceType === "fixed" && fixedAmount < 20) {
-        throw new Error("Fixed confirmation amount must be at least ₹20.");
-      }
-
-      if (confirmationAdvanceType === "percentage" && percent <= 0) {
-        throw new Error("Confirmation percentage must be greater than 0.");
-      }
-
       setPhone(normalizedPhone.localNumber);
       let uploadedLogo: { url: string; key: string } | null = null;
 
@@ -98,9 +82,6 @@ export default function StoreOnboardingPage() {
         storeName,
         instagramProfile,
         logoUrl: uploadedLogo?.url,
-        sellerConfirmationAdvanceType: confirmationAdvanceType,
-        sellerConfirmationAdvanceFixedAmount: fixedAmount,
-        sellerConfirmationAdvancePercent: percent,
       });
 
       navigate(result.nextRoute);
@@ -241,16 +222,7 @@ export default function StoreOnboardingPage() {
             onChange={(event) => setInstagramProfile(event.target.value)}
             placeholder="https://instagram.com/yourstore or @yourstore"
             icon={<AtSign size={17} />}
-            helper="Stores with a visible Instagram presence build trust faster. Add your profile so buyers can verify your brand before booking."
-          />
-
-          <ConfirmationAdvanceSettings
-            type={confirmationAdvanceType}
-            fixedAmount={confirmationFixedAmount}
-            percent={confirmationPercent}
-            onTypeChange={setConfirmationAdvanceType}
-            onFixedAmountChange={setConfirmationFixedAmount}
-            onPercentChange={setConfirmationPercent}
+            helper="Stores with a visible Instagram presence build trust faster. Add your profile so buyers can verify your brand before ordering."
           />
 
           {error ? (
@@ -265,121 +237,5 @@ export default function StoreOnboardingPage() {
         </form>
       </section>
     </main>
-  );
-}
-
-function sanitizeNumberInput(value: string): string {
-  return value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
-}
-
-function ConfirmationAdvanceSettings({
-  fixedAmount,
-  onFixedAmountChange,
-  onPercentChange,
-  onTypeChange,
-  percent,
-  type,
-}: {
-  fixedAmount: string;
-  onFixedAmountChange: (value: string) => void;
-  onPercentChange: (value: string) => void;
-  onTypeChange: (value: SellerConfirmationAdvanceType) => void;
-  percent: string;
-  type: SellerConfirmationAdvanceType;
-}) {
-  const fixedValue = Number(fixedAmount) || 0;
-  const percentValue = Number(percent) || 0;
-  const showFixedWarning = type === "fixed" && fixedValue >= 1000;
-  const showPercentWarning = type === "percentage" && percentValue > 50;
-
-  return (
-    <section className="rounded-[24px] border border-[var(--pds-border)] bg-[var(--pds-surface-soft)] p-4">
-      <h2 className="text-base font-semibold text-[var(--pds-text)]">
-        How much advance do you usually collect before confirming an order?
-      </h2>
-      <div className="mt-4 grid gap-3">
-        <AdvanceOption
-          checked={type === "paypertap_only"}
-          label="Only ₹20 PayPerTap booking"
-          description="Buyer pays ₹20 to reserve the product. You collect the rest directly on WhatsApp."
-          onChange={() => onTypeChange("paypertap_only")}
-        />
-        <AdvanceOption
-          checked={type === "fixed"}
-          label="Fixed confirmation amount"
-          description="Example: ₹100, ₹150, ₹200 total advance before final confirmation."
-          onChange={() => onTypeChange("fixed")}
-        />
-        {type === "fixed" ? (
-          <PptField
-            label="Total confirmation advance"
-            type="number"
-            min={20}
-            step={1}
-            inputMode="numeric"
-            value={fixedAmount}
-            onChange={(event) => onFixedAmountChange(sanitizeNumberInput(event.target.value))}
-            placeholder="150"
-            helper="This is the total advance. PayPerTap still collects only ₹20 online."
-          />
-        ) : null}
-        <AdvanceOption
-          checked={type === "percentage"}
-          label="Percentage of product price"
-          description="Example: 10%, 20%, 30% of product price as total advance."
-          onChange={() => onTypeChange("percentage")}
-        />
-        {type === "percentage" ? (
-          <PptField
-            label="Total confirmation advance percentage"
-            type="number"
-            min={1}
-            step={1}
-            inputMode="numeric"
-            value={percent}
-            onChange={(event) => onPercentChange(sanitizeNumberInput(event.target.value))}
-            placeholder="10"
-            helper="Percentage is rounded to the nearest rupee during checkout."
-          />
-        ) : null}
-      </div>
-      <p className="mt-4 text-xs leading-5 text-[var(--pds-muted)]">
-        Higher advance can improve buyer commitment, but it may also reduce bookings. We recommend keeping it reasonable for faster confirmations.
-      </p>
-      {showFixedWarning || showPercentWarning ? (
-        <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-5 text-amber-800">
-          High advance may reduce buyer conversions.
-        </p>
-      ) : null}
-    </section>
-  );
-}
-
-function AdvanceOption({
-  checked,
-  description,
-  label,
-  onChange,
-}: {
-  checked: boolean;
-  description: string;
-  label: string;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex cursor-pointer gap-3 rounded-2xl border border-[var(--pds-border)] bg-white p-3 text-left">
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="mt-1 h-4 w-4 shrink-0 accent-[var(--pds-primary)]"
-      />
-      <span>
-        <strong className="block text-sm text-[var(--pds-text)]">{label}</strong>
-        <span className="mt-1 block text-xs leading-5 text-[var(--pds-muted)]">
-          {description}
-        </span>
-      </span>
-    </label>
   );
 }

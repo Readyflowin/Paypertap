@@ -4,14 +4,14 @@ export function TermsPage() {
   return (
     <LegalPage
       canonicalPath="/terms"
-      title="PayPerTap Terms of Use | Verified Booking Storefront"
+      title="PayPerTap Terms of Use | Verified order Storefront"
       h1="Terms of Service"
-      description="Terms for using PayPerTap verified booking storefronts, including the fixed ₹20 booking model and direct seller-buyer confirmation."
-      directAnswer="These Terms explain how PayPerTap provides verified booking storefront tools for sellers and buyers. Buyers pay a fixed ₹20 booking through PayPerTap, while sellers remain responsible for product accuracy, delivery, remaining payment collection, returns, and buyer communication."
+      description="Terms for using PayPerTap verified order storefronts, including the order model and direct seller-buyer confirmation."
+      directAnswer="These Terms explain how PayPerTap provides verified order storefront tools for sellers and buyers. buyers place orders through PayPerTap, while sellers remain responsible for product accuracy, delivery, remaining payment collection, returns, and buyer communication."
       sections={[
         {
           title: "What does PayPerTap provide?",
-          body: "PayPerTap provides storefront and verified booking tools that let sellers display products, share product or store links, receive a fixed booking record, reserve an item in the flow, and continue buyer communication on WhatsApp.",
+          body: "PayPerTap provides storefront and verified order tools that let sellers display products, share product or store links, receive an order record, reserve an item in the flow, and continue buyer communication on WhatsApp.",
         },
         {
           title: "What are sellers responsible for?",
@@ -19,11 +19,11 @@ export function TermsPage() {
         },
         {
           title: "What are buyers responsible for?",
-          body: "Buyers are responsible for reviewing product information and seller policies, providing accurate booking and contact details, communicating with the seller after handoff, and making any agreed remaining product payment directly to the seller.",
+          body: "Buyers are responsible for reviewing product information and seller policies, providing accurate Order and contact details, communicating with the seller after handoff, and making any agreed remaining product payment directly to the seller.",
         },
         {
-          title: "How does the fixed ₹20 booking work?",
-          body: "Buyers pay a fixed ₹20 booking through PayPerTap to reserve an item in the booking flow. In Phase 1, PayPerTap keeps the ₹20 as the platform verified-booking fee; the seller does not receive it as a payout or advance.",
+          title: "How does the order work?",
+          body: "buyers place orders through PayPerTap to reserve an item in the order flow. In the current model, PayPerTap charges the seller wallet for the order as the platform per-order charge; the seller does not receive it as a payout or advance.",
         },
         {
           title: "Who handles the remaining product amount?",
@@ -31,7 +31,7 @@ export function TermsPage() {
         },
         {
           title: "Is PayPerTap a full payment gateway?",
-          body: "No. In Phase 1 PayPerTap is not a full payment gateway, has no seller payout or split-payment flow, and does not support custom seller advance amounts. Its payment role is the fixed ₹20 verified-booking fee.",
+          body: "No. In the current model, PayPerTap is not a full payment gateway, has no seller payout or split-payment flow, and does not support custom seller advance amounts. Its payment role is the seller wallet per-order charge.",
         },
         {
           title: "How are returns and exchanges handled?",
@@ -39,7 +39,7 @@ export function TermsPage() {
         },
         {
           title: "What misuse can affect access?",
-          body: "PayPerTap may restrict or remove access where accounts, listings, booking activity, or communications misuse the service, provide misleading product information, interfere with platform operation, or violate applicable requirements.",
+          body: "PayPerTap may restrict or remove access where accounts, listings, Order activity, or communications misuse the service, provide misleading product information, interfere with platform operation, or violate applicable requirements.",
         },
         {
           title: "When were these terms updated?",

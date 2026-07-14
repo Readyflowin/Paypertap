@@ -16,28 +16,28 @@ import {
 } from "./schema";
 
 const pricingFaqQuestions = [
-  "How does the ₹20 booking work?",
-  "Does the seller receive the ₹20?",
+  "How does the order work?",
+  "Does PayPerTap process buyer payments?",
   "Who collects the remaining product amount?",
   "Can sellers use UPI, Google Pay, PhonePe, or COD?",
   "Does PayPerTap provide seller payouts?",
-  "Do sellers need payout KYC in Phase 1?",
+  "Do sellers need payout KYC in current model?",
   "Is PayPerTap a payment gateway?",
-  "Can sellers change the booking amount in Phase 1?",
+  "Can sellers change the order amount in current model?",
 ];
 
 const howItWorksFaqQuestions = [
-  "How does the ₹20 booking work?",
-  "Does the seller receive the ₹20?",
+  "How does the order work?",
+  "Does PayPerTap process buyer payments?",
   "What happens after a buyer books?",
   "How does WhatsApp handoff work?",
-  "Does the product become reserved after booking?",
+  "Does the product become reserved after Order?",
   "What is the difference between reserved and sold?",
   "Can sellers use WhatsApp Business?",
   "Can sellers use UPI, Google Pay, PhonePe, or COD?",
   "Can sellers share direct product links?",
   "Who handles returns and exchanges?",
-  "Can buyers cancel a booking?",
+  "Can buyers cancel an order?",
   "Is PayPerTap a payment gateway?",
 ];
 

@@ -230,7 +230,6 @@ a:hover {
 
 .ppt-inline-loader {
   display: inline-flex;
-  width: 1.25rem;
   min-width: 1.25rem;
   flex: 0 0 auto;
   align-items: center;
@@ -260,32 +259,34 @@ a:hover {
 }
 
 .ppt-inline-loader-mark span {
-  --ppt-inline-loader-dot-transform: rotate(0deg) translateX(0.43rem);
+  --ppt-inline-loader-dot-transform: translate(-50%, -50%) rotate(0deg) translateX(0.43rem);
   position: absolute;
+  top: 50%;
+  left: 50%;
   width: 0.28rem;
   height: 0.28rem;
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 0 0.35rem currentColor;
-  transform-origin: 0.62rem 0.62rem;
+  transform-origin: center;
   animation: ppt-inline-orbit 1.05s ease-in-out infinite;
   will-change: opacity, transform;
 }
 
 .ppt-inline-loader-mark span:nth-child(1) {
-  --ppt-inline-loader-dot-transform: rotate(0deg) translateX(0.43rem);
+  --ppt-inline-loader-dot-transform: translate(-50%, -50%) rotate(0deg) translateX(0.43rem);
   transform: var(--ppt-inline-loader-dot-transform) scale(0.86);
 }
 
 .ppt-inline-loader-mark span:nth-child(2) {
-  --ppt-inline-loader-dot-transform: rotate(120deg) translateX(0.43rem);
+  --ppt-inline-loader-dot-transform: translate(-50%, -50%) rotate(120deg) translateX(0.43rem);
   animation-delay: 0.12s;
   opacity: 0.72;
   transform: var(--ppt-inline-loader-dot-transform) scale(0.86);
 }
 
 .ppt-inline-loader-mark span:nth-child(3) {
-  --ppt-inline-loader-dot-transform: rotate(240deg) translateX(0.43rem);
+  --ppt-inline-loader-dot-transform: translate(-50%, -50%) rotate(240deg) translateX(0.43rem);
   animation-delay: 0.24s;
   opacity: 0.5;
   transform: var(--ppt-inline-loader-dot-transform) scale(0.86);

@@ -1,7 +1,7 @@
 import { headerLinks } from "../header/headerLinks";
 
 export const productLinks = [
-  { label: "Verified booking", to: "/features/verified-booking" },
+  { label: "Verified order", to: "/features/verified-order" },
   { label: "Link-in-bio storefront", to: "/features/link-in-bio-storefront" },
   { label: "WhatsApp handoff", to: "/features/whatsapp-handoff" },
   { label: "Compare tools", to: "/compare" },

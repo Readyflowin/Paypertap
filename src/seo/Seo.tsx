@@ -25,7 +25,7 @@ export function NoIndex() {
 }
 
 export function RouteMeta({
-  description = "PayPerTap storefront and verified booking flow.",
+  description = "PayPerTap storefront and verified order flow.",
   robots = "index,follow",
   title = SITE_NAME,
 }: {
