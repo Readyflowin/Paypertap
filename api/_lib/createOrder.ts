@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 
 import { loadLocalEnv } from "../_env.js";
@@ -94,11 +95,13 @@ type CanonicalVariant = {
 };
 
 class OrderEngineError extends Error {
+  debugReason?: string;
   statusCode: number;
 
-  constructor(message: string, statusCode = 400) {
+  constructor(message: string, statusCode = 400, debugReason?: string) {
     super(message);
     this.name = "OrderEngineError";
+    this.debugReason = debugReason;
     this.statusCode = statusCode;
   }
 }
@@ -122,6 +125,49 @@ function getRequestBody(req: { body?: unknown }) {
 
 function toText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isOrderDebugEnabled() {
+  return (
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV !== "production" ||
+    process.env.PAYPERTAP_DEBUG_ORDER_ERRORS === "true"
+  );
+}
+
+function getErrorDebugDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return {
+      message: "Unknown order error",
+      rawType: typeof error,
+    };
+  }
+
+  return {
+    name: error.name,
+    message: error.message,
+    code:
+      "code" in error && typeof (error as { code?: unknown }).code !== "undefined"
+        ? String((error as { code?: unknown }).code)
+        : "",
+    stack: error.stack?.split("\n").slice(0, 8).join("\n") || "",
+  };
+}
+
+function getSafeOrderDebugInput(input: OrderInput) {
+  return {
+    sellerId: input.sellerId,
+    storeId: input.storeId,
+    productId: input.productId,
+    hasBuyerName: Boolean(input.buyerName),
+    buyerPhoneLength: input.buyerPhone.length,
+    buyerAddressLength: input.buyerAddress.length,
+    hasBuyerCity: Boolean(input.buyerCity),
+    buyerPincodeLength: input.buyerPincode.length,
+    hasBuyerEmail: Boolean(input.buyerEmail),
+    selectedVariantId: input.selectedVariantId,
+    selectedVariantOptionKeys: Object.keys(input.selectedVariantOptions || {}),
+  };
 }
 
 function toInt(value: unknown, fallback = 0) {
@@ -173,19 +219,19 @@ function validateBuyerInput(input: OrderInput) {
     !input.buyerCity ||
     !input.buyerPincode
   ) {
-    throw new OrderEngineError("Order Creation Failed");
+    throw new OrderEngineError("Order Creation Failed", 400, "missing_required_order_input");
   }
 
   if (!/^[6-9]\d{9}$/.test(input.buyerPhone)) {
-    throw new OrderEngineError("Order Creation Failed");
+    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_phone");
   }
 
   if (!/^\d{6}$/.test(input.buyerPincode)) {
-    throw new OrderEngineError("Order Creation Failed");
+    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_pincode");
   }
 
   if (input.buyerAddress.length < 12 || input.buyerAddress.length > 160) {
-    throw new OrderEngineError("Order Creation Failed");
+    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_address_length");
   }
 }
 
@@ -318,13 +364,19 @@ function shouldAcceptOrders(walletCharge: WalletChargeResult) {
   );
 }
 
+function generatePaymentTrackingToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
 function buildPaymentReturnUrl(
   req: { headers?: Record<string, string | string[] | undefined> },
-  token?: string
+  sellerReturnToken?: string,
+  paymentTrackingToken?: string
 ) {
-  const trimmedToken = token?.trim();
+  const trimmedSellerReturnToken = sellerReturnToken?.trim();
+  const trimmedPaymentTrackingToken = paymentTrackingToken?.trim();
 
-  if (!trimmedToken) return "";
+  if (!trimmedSellerReturnToken || !trimmedPaymentTrackingToken) return "";
 
   const originHeader = req.headers?.origin;
   const hostHeader = req.headers?.host;
@@ -337,7 +389,9 @@ function buildPaymentReturnUrl(
           ? `https://${hostHeader}`
           : "");
 
-  return origin ? `${origin}/payment-return/${trimmedToken}` : "";
+  if (!origin) return "";
+
+  return `${origin}/payment-return/${trimmedSellerReturnToken}?orderToken=${trimmedPaymentTrackingToken}`;
 }
 
 function normalizePaymentMode(store: StoreData) {
@@ -388,6 +442,7 @@ export async function createChargeableOrder({
   let responseOrder: Record<string, unknown> | null = null;
   let responsePaymentLink = "";
   let responsePaymentMode: "cod" | "partial_advance" = "cod";
+  let responsePaymentReturnUrl = "";
   let rejection: OrderEngineError | null = null;
   let walletStatusAfter: WalletStatus | "" = "";
   let walletRejectedEmpty = false;
@@ -486,9 +541,31 @@ export async function createChargeableOrder({
       paymentMode === "partial_advance" ? getPaymentAmount(store, productPrice) : 0;
     const sellerAmountDue = Math.max(productPrice - paymentAmount, 0);
     const paymentLink = paymentMode === "partial_advance" ? toText(store.paymentLink) : "";
+    const sellerReturnToken = paymentMode === "partial_advance" ? toText(store.paymentReturnToken) : "";
+    const paymentTrackingToken =
+      paymentMode === "partial_advance" ? generatePaymentTrackingToken() : "";
+    const paymentReturnUrl = buildPaymentReturnUrl(
+      req,
+      sellerReturnToken,
+      paymentTrackingToken
+    );
 
     if (paymentMode === "partial_advance" && !paymentLink) {
       console.warn("Order engine rejected partial advance store without payment link.", {
+        storeId: input.storeId,
+      });
+      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+    }
+
+    if (paymentMode === "partial_advance" && !sellerReturnToken) {
+      console.warn("Order engine rejected partial advance store without return token.", {
+        storeId: input.storeId,
+      });
+      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+    }
+
+    if (paymentMode === "partial_advance" && !paymentReturnUrl) {
+      console.warn("Order engine rejected partial advance store without return URL.", {
         storeId: input.storeId,
       });
       throw new OrderEngineError("Store Temporarily Not Accepting Orders");
@@ -518,7 +595,8 @@ export async function createChargeableOrder({
       paymentMode,
       paymentProvider: "razorpay",
       paymentLink,
-      paymentReturnUrl: buildPaymentReturnUrl(req, store.paymentReturnToken),
+      paymentReturnUrl,
+      ...(paymentTrackingToken ? { paymentTrackingToken } : {}),
       walletStatusSnapshot: walletSnapshot,
       walletCharge: walletCharge.walletCharge,
       walletTransactionId,
@@ -624,6 +702,7 @@ export async function createChargeableOrder({
 
     responsePaymentMode = paymentMode;
     responsePaymentLink = paymentLink;
+    responsePaymentReturnUrl = paymentReturnUrl;
     walletStatusAfter = walletCharge.walletStatusAfter;
     responseOrder = {
       ...orderPayload,
@@ -673,6 +752,7 @@ export async function createChargeableOrder({
     order: responseOrder,
     paymentMode: responsePaymentMode,
     paymentLink: responsePaymentLink,
+    paymentReturnUrl: responsePaymentReturnUrl,
   };
 }
 
@@ -697,12 +777,20 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
   const body = getRequestBody(req) as Record<string, unknown> | null;
 
   if (!body) {
-    sendJson(res, 400, { success: false, error: "Order Creation Failed" });
+    sendJson(res, 400, {
+      success: false,
+      error: "Order Creation Failed",
+      ...(isOrderDebugEnabled()
+        ? { debug: { reason: "invalid_or_unparseable_request_body" } }
+        : {}),
+    });
     return;
   }
 
+  let input: OrderInput | null = null;
+
   try {
-    const input = getOrderInput(body);
+    input = getOrderInput(body);
     const result = await createChargeableOrder({ db, input, req });
 
     sendJson(res, 200, {
@@ -714,10 +802,26 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
       error instanceof OrderEngineError
         ? error
         : new OrderEngineError("Order Creation Failed");
+    const debugDetails = getErrorDebugDetails(error);
 
     console.error("Order engine failed.", {
-      error: error instanceof Error ? error.message : "Unknown order error",
+      publicError: orderError.message,
+      debugReason: orderError.debugReason,
+      input: input ? getSafeOrderDebugInput(input) : null,
+      underlying: debugDetails,
     });
-    sendJson(res, orderError.statusCode, { success: false, error: orderError.message });
+    sendJson(res, orderError.statusCode, {
+      success: false,
+      error: orderError.message,
+      ...(isOrderDebugEnabled()
+        ? {
+            debug: {
+              reason: orderError.debugReason || "unhandled_order_exception",
+              underlying: debugDetails,
+              input: input ? getSafeOrderDebugInput(input) : null,
+            },
+          }
+        : {}),
+    });
   }
 }

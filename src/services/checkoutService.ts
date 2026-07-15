@@ -36,6 +36,7 @@ export type CreateOrderResult = {
   order: CreateChargeableOrderResult["order"];
   paymentMode: CreateChargeableOrderResult["paymentMode"];
   paymentLink: CreateChargeableOrderResult["paymentLink"];
+  paymentReturnUrl: CreateChargeableOrderResult["paymentReturnUrl"];
 };
 
 export async function createCheckoutSessionWithReservation(

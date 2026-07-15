@@ -66,6 +66,7 @@ export type CreateChargeableOrderResult = {
   order: CheckoutSession;
   paymentMode: StorePaymentMode;
   paymentLink: string;
+  paymentReturnUrl: string;
 };
 
 export type WalletTransaction = {
@@ -321,10 +322,12 @@ export async function reconcileWalletFromActivity(): Promise<WalletReconcileResu
 type CreateChargeableOrderApiResponse = {
   success?: boolean;
   error?: string;
+  debug?: unknown;
   orderId?: string;
   order?: CheckoutSession;
   paymentMode?: StorePaymentMode;
   paymentLink?: string;
+  paymentReturnUrl?: string;
 };
 
 function normalizeBuyerPhone(phone: string): string {
@@ -349,6 +352,10 @@ export async function createChargeableOrder(
     | null;
 
   if (!response.ok || !payload?.success || !payload.orderId || !payload.order) {
+    if (payload?.debug) {
+      console.error("Order creation API debug:", payload.debug);
+    }
+
     throw new Error(payload?.error || "Order Creation Failed");
   }
 
@@ -357,5 +364,6 @@ export async function createChargeableOrder(
     order: payload.order,
     paymentMode: payload.paymentMode || payload.order.paymentMode || "cod",
     paymentLink: payload.paymentLink || payload.order.paymentLink || "",
+    paymentReturnUrl: payload.paymentReturnUrl || payload.order.paymentReturnUrl || "",
   };
 }

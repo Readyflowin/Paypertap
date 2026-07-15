@@ -226,6 +226,7 @@ export type CheckoutSession = {
   paymentProvider?: "razorpay";
   paymentLink?: string;
   paymentReturnUrl?: string;
+  paymentTrackingToken?: string;
   paymentReturnedAt?: unknown;
   paymentReturnDetected?: boolean;
   paymentReturnMethod?: "razorpay_redirect";

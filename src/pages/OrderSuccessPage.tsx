@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { CheckCircle2, Copy, ImageIcon, MessageCircle } from "lucide-react";
 
 import {
@@ -30,6 +30,7 @@ type SuccessState = {
 
 export default function OrderSuccessPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { storeSlug = "", checkoutId = "" } = useParams();
   const [state, setState] = useState<SuccessState>({
     checkout: null,
@@ -47,9 +48,18 @@ export default function OrderSuccessPage() {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
 
+        const navigationCheckout =
+          location.state &&
+          typeof location.state === "object" &&
+          "checkout" in location.state
+            ? (location.state as { checkout?: CheckoutSession }).checkout
+            : null;
         const storedCheckout = sessionStorage.getItem(`paypertap:checkout:${checkoutId}`);
         const checkout =
-          storedCheckout ? (JSON.parse(storedCheckout) as CheckoutSession) : await getOrderById(checkoutId);
+          navigationCheckout ||
+          (storedCheckout
+            ? (JSON.parse(storedCheckout) as CheckoutSession)
+            : await getOrderById(checkoutId));
 
         if (!checkout) {
           throw new Error("order details are not available.");
@@ -93,7 +103,7 @@ export default function OrderSuccessPage() {
     return () => {
       cancelled = true;
     };
-  }, [checkoutId, storeSlug]);
+  }, [checkoutId, location.state, storeSlug]);
 
   const whatsappInput = useMemo(() => {
     if (!state.checkout) return null;

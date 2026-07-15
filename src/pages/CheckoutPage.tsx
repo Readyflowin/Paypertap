@@ -25,7 +25,6 @@ import {
 import { getProductById, getPublicProductById } from "@/services/productService";
 import { getPublicStoreShellData } from "@/services/publicStoreService";
 import { createOrderWithReservation } from "@/services/checkoutService";
-import { storePendingPaymentOrder } from "@/services/paymentReturnService";
 import { getProductGridImageUrl } from "@/storefront/imageMedia";
 import type { CheckoutSession, Product, Store } from "@/types/firestore";
 
@@ -277,7 +276,6 @@ export default function CheckoutPage() {
       );
 
       if (result.paymentMode === "partial_advance") {
-        storePendingPaymentOrder(result.orderId);
         setOrderStatus("Order created. Redirecting to payment link...");
         window.location.assign(result.paymentLink);
         return;

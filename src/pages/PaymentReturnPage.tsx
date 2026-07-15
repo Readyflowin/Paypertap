@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 import { PptButton, PptEmptyState, PptTapLoader } from "@/components/ui";
-import {
-  getPendingPaymentOrderId,
-  processPaymentReturn,
-} from "@/services/paymentReturnService";
+import { processPaymentReturn } from "@/services/paymentReturnService";
 
 type ReturnState = {
   error: string;
@@ -16,6 +13,7 @@ type ReturnState = {
 export default function PaymentReturnPage() {
   const navigate = useNavigate();
   const { token = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const [state, setState] = useState<ReturnState>({
     error: "",
     loading: true,
@@ -26,17 +24,18 @@ export default function PaymentReturnPage() {
 
     async function handleReturn() {
       try {
-        const pendingOrderId = getPendingPaymentOrderId();
+        const orderToken = searchParams.get("orderToken") || "";
 
-        if (!pendingOrderId) {
-          throw new Error("We could not find the order from this browser session.");
+        if (!orderToken) {
+          throw new Error("This payment return link is missing the order tracking token.");
         }
 
-        const result = await processPaymentReturn(token, pendingOrderId);
+        const result = await processPaymentReturn(token, orderToken);
 
         if (!cancelled) {
           navigate(`/${result.storeSlug}/order-success/${result.orderId}`, {
             replace: true,
+            state: { checkout: result.order },
           });
         }
       } catch (error) {
@@ -59,7 +58,7 @@ export default function PaymentReturnPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, token]);
+  }, [navigate, searchParams, token]);
 
   if (state.loading) {
     return (

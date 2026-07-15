@@ -9,7 +9,7 @@ type JsonResponse = {
 };
 
 type PaymentReturnBody = {
-  pendingOrderId?: unknown;
+  orderToken?: unknown;
   token?: unknown;
 };
 
@@ -54,10 +54,10 @@ function getSafeOrder(orderData: Record<string, unknown>, orderId: string) {
 }
 
 export async function handlePaymentReturn({
-  pendingOrderId,
+  orderToken,
   token,
 }: {
-  pendingOrderId: string;
+  orderToken: string;
   token: string;
 }) {
   const db = getAdminDbIfConfigured();
@@ -67,43 +67,70 @@ export async function handlePaymentReturn({
   }
 
   const cleanToken = token.trim();
-  const cleanOrderId = pendingOrderId.trim();
+  const cleanOrderToken = orderToken.trim();
 
-  if (!cleanToken || cleanToken.length < 32 || !cleanOrderId) {
+  if (
+    !cleanToken ||
+    cleanToken.length < 32 ||
+    !cleanOrderToken ||
+    cleanOrderToken.length < 32
+  ) {
     throw new PaymentReturnError("Invalid payment return link.");
   }
 
-  const storesSnap = await db
-    .collection("stores")
-    .where("paymentReturnToken", "==", cleanToken)
-    .limit(1)
+  const ordersSnap = await db
+    .collection("orders")
+    .where("paymentTrackingToken", "==", cleanOrderToken)
+    .limit(2)
     .get();
 
-  if (storesSnap.empty) {
-    throw new PaymentReturnError("Invalid payment return link.");
+  if (ordersSnap.empty || ordersSnap.size !== 1) {
+    throw new PaymentReturnError("Order not found.");
   }
 
-  const storeDoc = storesSnap.docs[0];
-  const store = storeDoc.data();
-  const orderRef = db.collection("orders").doc(cleanOrderId);
+  const orderDoc = ordersSnap.docs[0];
+  const orderRef = orderDoc.ref;
+  const orderBeforeTransaction = orderDoc.data() || {};
+  const orderStoreId = String(orderBeforeTransaction.storeId || "").trim();
+
+  if (!orderStoreId) {
+    throw new PaymentReturnError("Order not found.");
+  }
+
+  const storeRef = db.collection("stores").doc(orderStoreId);
   let responseOrder: Record<string, unknown> | null = null;
+  let responseStoreId = "";
+  let responseStoreSlug = "";
 
   await db.runTransaction(async (transaction) => {
-    const orderSnap = await transaction.get(orderRef);
+    const [orderSnap, storeSnap] = await Promise.all([
+      transaction.get(orderRef),
+      transaction.get(storeRef),
+    ]);
 
     if (!orderSnap.exists) {
       throw new PaymentReturnError("Order not found.");
     }
 
+    if (!storeSnap.exists) {
+      throw new PaymentReturnError("Invalid payment return link.");
+    }
+
     const order = orderSnap.data() || {};
+    const store = storeSnap.data() || {};
 
     if (
-      order.storeId !== storeDoc.id ||
+      order.storeId !== storeSnap.id ||
       order.sellerId !== store.sellerId ||
-      order.paymentMode !== "partial_advance"
+      order.paymentMode !== "partial_advance" ||
+      order.paymentTrackingToken !== cleanOrderToken ||
+      store.paymentReturnToken !== cleanToken
     ) {
       throw new PaymentReturnError("Order not found.");
     }
+
+    responseStoreId = storeSnap.id;
+    responseStoreSlug = String(store.storeSlug || storeSnap.id);
 
     if (order.status === "awaiting_payment") {
       transaction.update(orderRef, {
@@ -136,9 +163,9 @@ export async function handlePaymentReturn({
 
   return {
     order: responseOrder,
-    orderId: cleanOrderId,
-    storeId: storeDoc.id,
-    storeSlug: String(store.storeSlug || storeDoc.id),
+    orderId: orderDoc.id,
+    storeId: responseStoreId,
+    storeSlug: responseStoreSlug,
   };
 }
 
@@ -154,8 +181,8 @@ export async function paymentReturnHandler(req: any, res: JsonResponse) {
 
   try {
     const token = toText(body?.token);
-    const pendingOrderId = toText(body?.pendingOrderId);
-    const result = await handlePaymentReturn({ pendingOrderId, token });
+    const orderToken = toText(body?.orderToken);
+    const result = await handlePaymentReturn({ orderToken, token });
 
     sendJson(res, 200, {
       success: true,

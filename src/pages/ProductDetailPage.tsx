@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  BadgeCheck,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ImageIcon,
   Info,
+  LockKeyhole,
   Maximize2,
+  MessageCircle,
   Package,
   RotateCcw,
   Ruler,
+  Share2,
   Sparkles,
   Store as StoreIcon,
   Truck,
@@ -32,17 +34,23 @@ import {
   getProductUnavailableLabel,
   isProductBookable,
 } from "@/lib/productAvailability";
-import { getProductById, getPublicProductById } from "@/services/productService";
+import {
+  getProductById,
+  getPublicProductById,
+  getPublicProductsByStoreId,
+  getSellerProductsForStore,
+} from "@/services/productService";
 import { getPublicStoreShellData } from "@/services/publicStoreService";
-import { PaymentTrustStrip } from "@/storefront/PaymentTrustStrip";
 import { Theme1EditorialFooter } from "@/storefront/themes/theme1/Theme1Footer";
 import { Theme1Header } from "@/storefront/themes/theme1/Theme1Header";
 import {
-  getStoreOrderPaymentBreakdown,
-  getStorefrontPaymentSubtext,
-  StorefrontPaymentBreakdown,
-} from "@/storefront/StorefrontPaymentBreakdown";
-import { getProductDetailImageUrls } from "@/storefront/imageMedia";
+  Theme1ProductCard,
+  getTheme1ProductCardKey,
+} from "@/storefront/themes/theme1/Theme1ProductCard";
+import {
+  getProductDetailImageUrls,
+} from "@/storefront/imageMedia";
+import { useStorefrontWishlist } from "@/storefront/useStorefrontWishlist";
 import { getDisplayImageUrl } from "@/lib/imageUrls";
 import { generateReturnsPolicy } from "@/storefront/storePolicies";
 import {
@@ -60,6 +68,7 @@ type PageThemeId = "theme1";
 type PageState = {
   store: Store | null;
   product: Product | null;
+  products: Product[];
   isOwnerPreview: boolean;
   loading: boolean;
   error: string;
@@ -90,11 +99,11 @@ const themeClasses: Record<PageThemeId, ThemeClasses> = {
   theme1: {
     main: "bg-[#fffdfa] text-[#111111]",
     back: "text-[#60646c] hover:text-[#111111]",
-    mediaPanel: "border-[#e5e7eb] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]",
-    imageSurface: "bg-[#f1f2f4]",
+    mediaPanel: "bg-[#f3f1ed]",
+    imageSurface: "bg-[#f3f1ed]",
     emptyImage: "text-[#60646c]",
     thumb: "border-[#e5e7eb] bg-[#f1f2f4]",
-    infoPanel: "border-[#e5e7eb] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]",
+    infoPanel: "bg-[#fffdfa]",
     eyebrow: "text-[#8d867d]",
     title: "text-[#111111]",
     price: "text-[#111111]",
@@ -147,6 +156,33 @@ function getStatusBadge(product: Product, isReserved: boolean): { label: string;
   }
   if (product.status === "open") return { label: "Available", tone: "success" };
   return { label: "Unavailable", tone: "neutral" };
+}
+
+function getProductKey(product: Product) {
+  return product.productId || product.id || product.title;
+}
+
+function getStableExploreScore(product: Product, seed: string) {
+  const source = `${seed}:${getProductKey(product)}:${product.title}`;
+  let hash = 0;
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) % 1000003;
+  }
+
+  return hash;
+}
+
+function getExploreProducts(products: Product[], currentProduct: Product, storeSlug: string) {
+  const currentProductKey = getProductKey(currentProduct);
+
+  return products
+    .filter((product) => getProductKey(product) !== currentProductKey)
+    .sort(
+      (left, right) =>
+        getStableExploreScore(left, storeSlug) - getStableExploreScore(right, storeSlug)
+    )
+    .slice(0, 4);
 }
 
 function toOptionalText(value: unknown) {
@@ -259,7 +295,7 @@ function ProductVariantSelector({
 
   return (
     <section
-      className={`mt-5 grid min-w-0 gap-4 rounded-[22px] transition ${
+      className={`mt-8 grid min-w-0 gap-6 transition ${
         hasError ? "ring-2 ring-amber-400/70 ring-offset-2" : ""
       }`}
     >
@@ -268,8 +304,8 @@ function ProductVariantSelector({
 
         return (
           <div key={option.name} className="min-w-0">
-            <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
-              <p className={`text-[10px] font-semibold uppercase ${classes.eyebrow}`}>
+            <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+              <p className={`text-xs font-semibold ${classes.title}`}>
                 {option.name}
               </p>
               {selectedOptions[option.name] ? (
@@ -278,7 +314,7 @@ function ProductVariantSelector({
                 </span>
               ) : null}
             </div>
-            <div className="flex min-w-0 flex-wrap gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2.5">
               {option.values.map((value) => {
                 const cssColor = isColor ? getCssColor(value) : null;
                 const isSelected = selectedOptions[option.name] === value;
@@ -289,26 +325,38 @@ function ProductVariantSelector({
                     key={value}
                     type="button"
                     disabled={!isAvailable}
+                    title={value}
+                    aria-label={`${option.name}: ${value}`}
+                    aria-pressed={isSelected}
                     onClick={() =>
                       onChange({
                         ...selectedOptions,
                         [option.name]: value,
                       })
                     }
-                    className={`inline-flex min-h-11 min-w-11 max-w-full items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111] ${
-                      isSelected
-                        ? classes.primaryCta
-                        : `${classes.OrderBox} hover:opacity-90`
-                    } ${!isAvailable ? "cursor-not-allowed opacity-45 line-through" : ""}`}
+                    className={
+                      isColor
+                        ? `grid h-11 w-11 place-items-center rounded-full border bg-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111] ${
+                            isSelected
+                              ? "border-[#111111] ring-2 ring-[#111111] ring-offset-2"
+                              : "border-[#dfd8cf] hover:border-[#111111]"
+                          } ${!isAvailable ? "cursor-not-allowed opacity-35" : ""}`
+                        : `inline-flex min-h-12 min-w-12 max-w-full items-center justify-center rounded-full border px-5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#111111] ${
+                            isSelected
+                              ? classes.primaryCta
+                              : "border-[#e5ded4] bg-white text-[#2f2b27] hover:border-[#111111]"
+                          } ${!isAvailable ? "cursor-not-allowed opacity-45 line-through" : ""}`
+                    }
                   >
                     {isColor ? (
                       <span
-                        className="h-4 w-4 shrink-0 rounded-full border border-black/10"
-                        style={{ backgroundColor: cssColor || "#e5e7eb" }}
+                        className="h-8 w-8 shrink-0 rounded-full border border-black/10"
+                        style={{ backgroundColor: cssColor || "#f3f1ed" }}
                         aria-hidden="true"
                       />
-                    ) : null}
-                    <span className="truncate">{value}</span>
+                    ) : (
+                      <span className="truncate">{value}</span>
+                    )}
                   </button>
                 );
               })}
@@ -336,124 +384,97 @@ function ProductImageGallery({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const touchStartX = useRef<number | null>(null);
-  const galleryImages = imageUrls.length ? imageUrls : [""];
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const galleryImages = (imageUrls.length ? imageUrls : [""]).slice(0, 3);
   const activeImage = galleryImages[activeIndex] || "";
-  const canNavigate = galleryImages.length > 1;
 
   function goToImage(nextIndex: number) {
-    setActiveIndex((nextIndex + galleryImages.length) % galleryImages.length);
-  }
-
-  function goPrevious() {
-    goToImage(activeIndex - 1);
-  }
-
-  function goNext() {
-    goToImage(activeIndex + 1);
+    const safeIndex = Math.max(0, Math.min(nextIndex, galleryImages.length - 1));
+    setActiveIndex(safeIndex);
+    scrollerRef.current?.scrollTo({
+      left: scrollerRef.current.clientWidth * safeIndex,
+      behavior: "smooth",
+    });
   }
 
   return (
     <>
-      <section className={`min-w-0 overflow-hidden rounded-[28px] border p-3 ${classes.mediaPanel}`}>
+      <section className={`min-w-0 ${classes.mediaPanel}`}>
         <div
-          className={`relative aspect-[4/5] min-w-0 overflow-hidden rounded-[24px] ${classes.imageSurface}`}
-          onTouchStart={(event) => {
-            touchStartX.current = event.touches[0]?.clientX ?? null;
-          }}
-          onTouchEnd={(event) => {
-            if (touchStartX.current === null || !canNavigate) return;
-            const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
-            const deltaX = touchStartX.current - endX;
-            touchStartX.current = null;
-
-            if (Math.abs(deltaX) < 42) return;
-            if (deltaX > 0) goNext();
-            else goPrevious();
+          ref={scrollerRef}
+          className={`relative flex aspect-[4/5] min-w-0 snap-x snap-mandatory overflow-x-auto scroll-smooth ${classes.imageSurface} [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+          onScroll={(event) => {
+            const target = event.currentTarget;
+            const nextIndex = Math.round(target.scrollLeft / Math.max(target.clientWidth, 1));
+            setActiveIndex(Math.max(0, Math.min(nextIndex, galleryImages.length - 1)));
           }}
           style={{ touchAction: "pan-y pinch-zoom" }}
         >
-          {activeImage ? (
-            <button
-              type="button"
-              aria-label={`Open ${product.title} image ${activeIndex + 1} fullscreen`}
-              onClick={() => setZoomOpen(true)}
-              className="group block h-full w-full bg-[#f7f7f8]"
+          {galleryImages.map((imageUrl, index) => (
+            <div
+              key={`${imageUrl || "empty"}-${index}`}
+              className="relative h-full w-full shrink-0 snap-center"
             >
-              <img
-                key={activeImage}
-                src={activeImage}
-                alt={product.images?.[activeIndex]?.alt || `${product.title} image ${activeIndex + 1}`}
-                decoding="async"
-                fetchPriority={activeIndex === 0 ? "high" : "auto"}
-                loading={activeIndex === 0 ? "eager" : "lazy"}
-                className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.015]"
-              />
-              <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/86 text-[#111111] shadow-lg backdrop-blur">
-                <Maximize2 size={17} aria-hidden="true" />
-              </span>
-            </button>
-          ) : (
-            <div className={`flex h-full flex-col items-center justify-center gap-2 ${classes.emptyImage}`}>
-              <ImageIcon size={32} />
-              <span className="text-sm font-medium">Product image</span>
-            </div>
-          )}
-
-          {canNavigate ? (
-            <>
-              <button
-                type="button"
-                aria-label="Previous product image"
-                onClick={goPrevious}
-                className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#111111] shadow-lg transition hover:bg-white sm:grid"
-              >
-                <ChevronLeft size={20} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                aria-label="Next product image"
-                onClick={goNext}
-                className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#111111] shadow-lg transition hover:bg-white sm:grid"
-              >
-                <ChevronRight size={20} aria-hidden="true" />
-              </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-[#111111]/76 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
-                {activeIndex + 1} / {galleryImages.length}
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        {galleryImages.length > 1 ? (
-          <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {galleryImages.map((imageUrl, index) => {
-              const isActive = index === activeIndex;
-
-              return (
+              {imageUrl ? (
                 <button
-                  key={`${imageUrl}-${index}`}
                   type="button"
-                  aria-label={`Show product image ${index + 1}`}
-                  aria-current={isActive ? "true" : undefined}
-                  onClick={() => setActiveIndex(index)}
-                  className={`aspect-square w-16 shrink-0 snap-start overflow-hidden rounded-2xl border transition sm:w-20 ${
-                    isActive
-                      ? "border-[#111111] ring-2 ring-[#111111]/12"
-                      : "border-[#e5e7eb] opacity-70 hover:opacity-100"
-                  }`}
+                  aria-label={`Open ${product.title} image ${index + 1} fullscreen`}
+                  onClick={() => {
+                    setActiveIndex(index);
+                    setZoomOpen(true);
+                  }}
+                  className="group block h-full w-full bg-[#f3f1ed]"
                 >
                   <img
                     src={imageUrl}
-                    alt={`${product.title} thumbnail ${index + 1}`}
+                    alt={product.images?.[index]?.alt || `${product.title} image ${index + 1}`}
                     decoding="async"
-                    loading="lazy"
-                    className="h-full w-full object-cover"
+                    fetchPriority={index === 0 ? "high" : "auto"}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
                   />
                 </button>
-              );
-            })}
+              ) : (
+                <div className={`flex h-full flex-col items-center justify-center gap-2 ${classes.emptyImage}`}>
+                  <ImageIcon size={32} />
+                  <span className="text-sm font-medium">Product image</span>
+                </div>
+              )}
+              {imageUrl && index === activeIndex ? (
+                <button
+                  type="button"
+                  aria-label="Zoom product image"
+                  onClick={() => setZoomOpen(true)}
+                  className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/86 text-[#111111] shadow-lg backdrop-blur transition hover:bg-white"
+                >
+                  <Maximize2 size={17} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        {galleryImages.length > 1 ? (
+          <div className="mt-4 flex items-center justify-center gap-2" aria-label="Product image pagination">
+            {galleryImages.map((imageUrl, index) => (
+              <button
+                key={`${imageUrl || "dot"}-${index}`}
+                type="button"
+                aria-label={`Show image ${index + 1}`}
+                aria-current={index === activeIndex ? "true" : undefined}
+                onClick={() => goToImage(index)}
+                className={`h-1.5 rounded-full transition-all ${
+                  index === activeIndex ? "w-8 bg-[#111111]" : "w-1.5 bg-[#c9c1b5]"
+                }`}
+              />
+            ))}
           </div>
+        ) : null}
+
+        {galleryImages.length > 1 ? (
+          <p className="mt-2 text-center text-[11px] font-medium uppercase tracking-[0.14em] text-[#8d867d]">
+            Swipe to view
+          </p>
         ) : null}
       </section>
 
@@ -486,7 +507,6 @@ function ProductImageGallery({
     </>
   );
 }
-
 function SizeChartPanel({
   imageUrl,
   productTitle,
@@ -495,20 +515,19 @@ function SizeChartPanel({
   productTitle: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
 
   if (!imageUrl) return null;
 
   return (
-    <section className="mt-5 rounded-[22px] border border-[#e5e7eb] bg-[#f7f7f8]">
+    <section className="border-t border-[#ece7df]">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left"
+        className="flex min-h-16 w-full items-center justify-between gap-3 py-1 text-left"
       >
-        <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#111111]">
+        <span className="inline-flex items-center gap-2 text-base font-medium text-[#111111]">
           <Ruler size={17} aria-hidden="true" />
-          Size chart
+          Size Guide
         </span>
         <ChevronDown
           size={18}
@@ -516,58 +535,33 @@ function SizeChartPanel({
           className={`transition ${open ? "rotate-180" : ""}`}
         />
       </button>
-      {open ? (
-        <div className="border-t border-[#e5e7eb] p-3">
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="block w-full overflow-hidden rounded-2xl bg-white"
-          >
+      <div
+        className={`grid transition-all duration-300 ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="pb-5">
             <img
               src={imageUrl}
               alt={`${productTitle} size chart`}
               loading="lazy"
               decoding="async"
-              className="max-h-[360px] w-full object-contain"
+              className="max-h-[420px] w-full bg-[#f7f4ef] object-contain"
             />
-          </button>
+          </div>
         </div>
-      ) : null}
-      {modalOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${productTitle} size chart`}
-          className="fixed inset-0 z-[85] grid place-items-center bg-[#111111]/92 p-3"
-          onClick={() => setModalOpen(false)}
-        >
-          <button
-            type="button"
-            aria-label="Close size chart"
-            onClick={() => setModalOpen(false)}
-            className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white text-[#111111] shadow-xl"
-          >
-            <X size={20} aria-hidden="true" />
-          </button>
-          <img
-            src={imageUrl}
-            alt={`${productTitle} size chart`}
-            decoding="async"
-            className="max-h-[88vh] max-w-full object-contain"
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
-      ) : null}
+      </div>
     </section>
   );
 }
 
 type ProductInfoSectionKey =
   | "description"
-  | "shipping"
-  | "returns"
-  | "care"
-  | "notes";
+  | "details"
+  | "shippingReturns"
+  | "orderProcess"
+  | "policies";
 
 function ProductInfoAccordions({
   product,
@@ -576,7 +570,7 @@ function ProductInfoAccordions({
   product: Product;
   store: Store;
 }) {
-  const [openSection, setOpenSection] = useState<ProductInfoSectionKey>("description");
+  const [openSection, setOpenSection] = useState<ProductInfoSectionKey | null>(null);
   const sections: Array<{
     body: string;
     icon: typeof Info;
@@ -590,46 +584,55 @@ function ProductInfoAccordions({
       body: product.description || "Product details will be confirmed by the seller.",
     },
     {
-      key: "shipping",
-      title: "Shipping",
-      icon: Truck,
-      body: "Delivery, pickup, or courier details are confirmed directly by the seller after you place the order.",
-    },
-    {
-      key: "returns",
-      title: "Return policy",
-      icon: RotateCcw,
-      body: generateReturnsPolicy(store),
-    },
-    {
-      key: "care",
-      title: "Care instructions",
+      key: "details",
+      title: "Product Details",
       icon: Sparkles,
-      body: getProductCareInstructions(product),
+      body: [
+        product.category ? `Category: ${product.category}` : "",
+        `Availability: ${getAvailableQuantity(product)} available`,
+        `Care: ${getProductCareInstructions(product)}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
     },
     {
-      key: "notes",
-      title: "Seller notes",
-      icon: StoreIcon,
+      key: "shippingReturns",
+      title: "Shipping & Returns",
+      icon: Truck,
+      body: [
+        "Delivery, pickup, or courier details are confirmed directly by the seller after you place the order.",
+        generateReturnsPolicy(store),
+      ].join("\n\n"),
+    },
+    {
+      key: "orderProcess",
+      title: "Order Process",
+      icon: BadgeCheck,
       body: getProductSellerNotes(product),
+    },
+    {
+      key: "policies",
+      title: "Store Policies",
+      icon: StoreIcon,
+      body: "The seller confirms payment, delivery, and product availability directly. PayPerTap records the order details so both sides have a clean handoff.",
     },
   ];
 
   return (
-    <section className="mt-5 overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-[#ffffff]">
+    <section className="mt-8 border-b border-[#ece7df]">
       {sections.map((section) => {
         const isOpen = openSection === section.key;
         const Icon = section.icon;
 
         return (
-          <div key={section.key} className="border-b border-[#e5e7eb] last:border-b-0">
+          <div key={section.key} className="border-t border-[#ece7df]">
             <button
               type="button"
               aria-expanded={isOpen}
-              onClick={() => setOpenSection(isOpen ? "description" : section.key)}
-              className="flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left"
+              onClick={() => setOpenSection(isOpen ? null : section.key)}
+              className="flex min-h-16 w-full items-center justify-between gap-3 py-1 text-left"
             >
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#111111]">
+              <span className="inline-flex items-center gap-2 text-base font-medium text-[#111111]">
                 <Icon size={17} aria-hidden="true" />
                 {section.title}
               </span>
@@ -645,11 +648,41 @@ function ProductInfoAccordions({
               }`}
             >
               <div className="overflow-hidden">
-                <p className="whitespace-pre-line px-4 pb-4 text-sm leading-7 text-[#60646c]">
+                <p className="max-w-2xl whitespace-pre-line pb-5 text-sm leading-7 text-[#60646c]">
                   {section.body}
                 </p>
               </div>
             </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function ProductTrustSection() {
+  const items = [
+    { label: "Verified Order", icon: BadgeCheck },
+    { label: "WhatsApp Confirmation", icon: MessageCircle },
+    { label: "Easy Checkout", icon: LockKeyhole },
+    { label: "Seller Support", icon: StoreIcon },
+    { label: "Secure Ordering", icon: LockKeyhole },
+    { label: "Returns Policy", icon: RotateCcw },
+  ];
+
+  return (
+    <section className="mt-8 grid grid-cols-2 gap-x-4 gap-y-4 border-y border-[#ece7df] py-5 sm:grid-cols-3">
+      {items.map((item) => {
+        const Icon = item.icon;
+
+        return (
+          <div key={item.label} className="flex min-w-0 items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#f3f1ed] text-[#111111]">
+              <Icon size={15} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 text-xs font-semibold leading-4 text-[#3d3934]">
+              {item.label}
+            </span>
           </div>
         );
       })}
@@ -679,9 +712,31 @@ function StoreMiniBlock({
 }) {
   const instagramUrl = getStoreInstagramUrl(store);
   const logoUrl = getDisplayImageUrl(store.logoUrl || store.storeLogoUrl);
+  const [shared, setShared] = useState(false);
+
+  async function shareStore() {
+    const shareUrl = `${window.location.origin}/${storeSlug}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: store.storeName,
+          text: store.tagline || store.bio || "Explore this PayPerTap store.",
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard?.writeText(shareUrl);
+      }
+
+      setShared(true);
+      window.setTimeout(() => setShared(false), 1800);
+    } catch {
+      // Store sharing is a convenience action.
+    }
+  }
 
   return (
-    <section className={`min-w-0 rounded-[24px] border p-4 ${classes.storePanel}`}>
+    <section className={`min-w-0 py-8 ${classes.storePanel}`}>
       <div className="flex min-w-0 items-center gap-3">
         {logoUrl ? (
           <img
@@ -711,7 +766,7 @@ function StoreMiniBlock({
       <div className="mt-4 flex flex-wrap gap-2">
         <Link
           to={`/${storeSlug}`}
-          className={`inline-flex min-h-10 items-center justify-center rounded-2xl px-4 text-sm font-medium ${classes.primaryCta}`}
+          className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#e5ded4] px-4 text-sm font-semibold !text-[#111111]"
         >
           Back to store
         </Link>
@@ -720,12 +775,70 @@ function StoreMiniBlock({
             href={instagramUrl}
             target="_blank"
             rel="noreferrer"
-            className={`inline-flex min-h-10 items-center gap-2 rounded-2xl border px-4 text-sm font-medium ${classes.OrderBox}`}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#e5ded4] px-4 text-sm font-semibold !text-[#111111]"
           >
             <PptBrandIcon type="instagram" size={16} />
             Instagram
           </a>
         ) : null}
+        <button
+          type="button"
+          onClick={shareStore}
+          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#e5ded4] px-4 text-sm font-semibold text-[#111111]"
+        >
+          <Share2 size={15} aria-hidden="true" />
+          {shared ? "Copied" : "Share Store"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ExploreMoreProducts({
+  getProductFallbackIndex,
+  isProductSaved,
+  onProductSelect,
+  onToggleProductSaved,
+  products,
+}: {
+  getProductFallbackIndex: (product: Product) => number;
+  isProductSaved: (product: Product, fallbackIndex?: number) => boolean;
+  onProductSelect: (product: Product) => void;
+  onToggleProductSaved: (product: Product, fallbackIndex?: number) => void;
+  products: Product[];
+}) {
+  if (!products.length) return null;
+
+  return (
+    <section className="mx-auto mt-12 w-full max-w-6xl px-4 sm:mt-16 sm:px-0">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d867d]">
+            Keep browsing
+          </p>
+          <h2
+            className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-[#111111] sm:text-4xl"
+            style={{ fontFamily: "Georgia, ui-serif, serif" }}
+          >
+            Explore More Products
+          </h2>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-7 md:grid-cols-4">
+        {products.map((product) => {
+          const fallbackIndex = getProductFallbackIndex(product);
+
+          return (
+            <Theme1ProductCard
+              key={getTheme1ProductCardKey(product)}
+              fallbackIndex={fallbackIndex}
+              isSaved={isProductSaved(product, fallbackIndex)}
+              onSelect={onProductSelect}
+              onToggleSaved={onToggleProductSaved}
+              product={product}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -738,13 +851,28 @@ export default function ProductDetailPage() {
   const [state, setState] = useState<PageState>({
     store: null,
     product: null,
+    products: [],
     isOwnerPreview: false,
     loading: true,
     error: "",
   });
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [variantError, setVariantError] = useState("");
+  const [showMobileStickyCta, setShowMobileStickyCta] = useState(false);
+  const mobileCtaAnchorRef = useRef<HTMLDivElement | null>(null);
   const variantSelectorRef = useRef<HTMLDivElement | null>(null);
+  const wishlist = useStorefrontWishlist({
+    isPreview: state.isOwnerPreview,
+    storeId: state.store?.storeId || "",
+    storeSlug,
+  });
+  const exploreProducts = useMemo(
+    () =>
+      state.product
+        ? getExploreProducts(state.products, state.product, storeSlug)
+        : [],
+    [state.product, state.products, storeSlug]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -771,12 +899,22 @@ export default function ProductDetailPage() {
           throw new Error("Product not found");
         }
 
+        const products = await (
+          storeData.isOwnerPreview && user?.uid
+            ? getSellerProductsForStore(user.uid, storeData.store.storeId)
+            : getPublicProductsByStoreId(storeData.store.storeId)
+        ).catch((error) => {
+          console.warn("Product detail related products failed:", error);
+          return [product];
+        });
+
         if (!cancelled) {
           setSelectedOptions({});
           setVariantError("");
           setState({
             store: storeData.store,
             product,
+            products,
             isOwnerPreview: storeData.isOwnerPreview,
             loading: false,
             error: "",
@@ -789,6 +927,7 @@ export default function ProductDetailPage() {
           setState({
             store: null,
             product: null,
+            products: [],
             isOwnerPreview: false,
             loading: false,
             error: "Product not found",
@@ -803,6 +942,27 @@ export default function ProductDetailPage() {
       cancelled = true;
     };
   }, [productId, storeSlug, user?.uid]);
+
+  useEffect(() => {
+    setShowMobileStickyCta(false);
+  }, [productId]);
+
+  useEffect(() => {
+    const node = mobileCtaAnchorRef.current;
+
+    if (!node || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowMobileStickyCta(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [productId, state.loading]);
 
   if (state.loading) {
     return <ProductDetailLoading />;
@@ -848,15 +1008,7 @@ export default function ProductDetailPage() {
       : isReserved
         ? "Currently reserved"
       : getProductUnavailableLabel(product);
-  const orderPaymentBreakdown = getStoreOrderPaymentBreakdown({
-    productPrice: product.price,
-    store,
-  });
-  const stickyPaymentSubtext = getStorefrontPaymentSubtext(orderPaymentBreakdown);
-  const orderCtaLabel =
-    orderPaymentBreakdown.paymentMode === "partial_advance"
-      ? `Pay seller advance ${formatINR(orderPaymentBreakdown.advanceAmount)}`
-      : "Place order";
+  const orderCtaLabel = "Buy now";
 
   function handleTheme1ChromeProductSelect(nextProduct: Product) {
     const nextProductId = nextProduct.productId || nextProduct.id;
@@ -892,34 +1044,40 @@ export default function ProductDetailPage() {
     navigate(nextHref);
   }
 
+  function getProductFallbackIndex(nextProduct: Product) {
+    return Math.max(0, state.products.indexOf(nextProduct));
+  }
+
   return (
     <>
       <Theme1Header
         onProductSelect={handleTheme1ChromeProductSelect}
-        products={[product]}
+        products={state.products.length ? state.products : [product]}
         store={store}
+        storeSlug={storeSlug}
       />
-    <main className={`min-h-screen overflow-x-hidden px-3 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-6 ${classes.main}`}>
-      <section className="mx-auto w-full max-w-6xl">
-        <Link
-          to={`/${storeSlug}`}
-          className={`inline-flex items-center gap-2 text-sm font-medium transition ${classes.back}`}
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to store
-        </Link>
+      <main className={`min-h-screen overflow-x-hidden pb-28 sm:pb-10 ${classes.main}`}>
+        <section className="mx-auto w-full max-w-6xl">
+          <div className="px-4 py-4 sm:px-0">
+            <Link
+              to={`/${storeSlug}`}
+              className={`inline-flex items-center gap-2 text-sm font-medium transition ${classes.back}`}
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              Back to store
+            </Link>
+          </div>
 
-        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start">
-          <ProductImageGallery
-            classes={classes}
-            imageUrls={imageUrls}
-            product={product}
-          />
+          <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start lg:gap-12">
+            <ProductImageGallery
+              classes={classes}
+              imageUrls={imageUrls}
+              product={product}
+            />
 
-          <div className="min-w-0 space-y-4 lg:sticky lg:top-5">
-            <section className={`min-w-0 rounded-[28px] border p-5 ${classes.infoPanel}`}>
+            <section className={`min-w-0 px-4 sm:px-0 lg:sticky lg:top-6 ${classes.infoPanel}`}>
               {isOwnerPreview ? (
-                <div className={`mb-4 rounded-2xl border p-3 text-sm ${classes.OrderBox}`}>
+                <div className={`mb-5 rounded-2xl border p-3 text-sm ${classes.OrderBox}`}>
                   Owner preview. Checkout is disabled until this store is published.
                 </div>
               ) : null}
@@ -929,32 +1087,24 @@ export default function ProductDetailPage() {
                 <PptBadge tone={statusBadge.tone}>{statusBadge.label}</PptBadge>
               </div>
 
-              <p className={`mt-5 text-xs font-semibold uppercase tracking-[0.16em] ${classes.eyebrow}`}>
-                Product details
-              </p>
-              <h1 className={`mt-2 break-words text-4xl font-semibold leading-tight tracking-[-0.055em] sm:text-5xl ${classes.title}`}>
+              <h1 className={`mt-5 break-words text-4xl font-semibold leading-[1.04] tracking-[-0.055em] sm:text-5xl ${classes.title}`}>
                 {product.title}
               </h1>
               <p className={`mt-4 text-3xl font-semibold tracking-[-0.04em] ${classes.price}`}>
                 {formatINR(product.price)}
               </p>
-
-              <StorefrontPaymentBreakdown
-                classes={{
-                  shell: `mt-5 min-w-0 rounded-[22px] border p-4 ${classes.OrderBox}`,
-                  icon: `grid h-9 w-9 shrink-0 place-items-center rounded-2xl ${classes.Orderstrong} bg-white/65`,
-                  title: `text-base font-semibold leading-6 ${classes.Orderstrong}`,
-                  text: "mt-1 text-sm leading-6",
-                  panel: "mt-3 rounded-2xl border border-current/10 bg-white/55 p-3",
-                  eyebrow: `mb-2 text-[11px] font-semibold uppercase ${classes.eyebrow}`,
-                  rowLabel: "min-w-0 truncate text-xs",
-                  rowValue: `shrink-0 text-sm ${classes.Orderstrong}`,
-                  featuredValue: `shrink-0 text-base ${classes.Orderstrong}`,
-                  note: "mt-3 text-xs leading-5",
-                }}
-                productPrice={product.price}
-                store={store}
-              />
+              <p className={`mt-2 text-sm leading-6 ${classes.muted}`}>
+                {availableQuantity > 0
+                  ? `${availableQuantity} available`
+                  : isReserved
+                    ? "Currently reserved"
+                    : "Unavailable"}
+              </p>
+              {product.description ? (
+                <p className={`mt-5 max-w-xl text-base leading-7 ${classes.muted}`}>
+                  {product.description}
+                </p>
+              ) : null}
 
               <div ref={variantSelectorRef}>
                 <ProductVariantSelector
@@ -970,36 +1120,25 @@ export default function ProductDetailPage() {
               </div>
 
               {variantError ? (
-                <p className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${classes.OrderBox}`}>
+                <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
                   {variantError}
                 </p>
               ) : null}
 
               {!isAvailable ? (
-                <p className={`mt-3 rounded-2xl border px-4 py-3 text-sm ${classes.OrderBox}`}>
+                <p className="mt-4 rounded-2xl bg-[#f3f1ed] px-4 py-3 text-sm leading-6 text-[#6f6b64]">
                   {isReserved
                     ? "This item is currently reserved."
                     : "This item is not currently available for ordering."}
                 </p>
               ) : null}
 
-              <SizeChartPanel
-                imageUrl={sizeChartImageUrl}
-                productTitle={product.title}
-              />
-
-              <ProductInfoAccordions product={product} store={store} />
-
-              <div className="mt-5">
-                <PaymentTrustStrip compact variant={themeId} />
-              </div>
-
-              <div className="mt-5 hidden gap-3 sm:grid">
+              <div ref={mobileCtaAnchorRef} className="mt-8 sm:hidden">
                 {isAvailable ? (
                   <button
                     type="button"
                     onClick={handleBook}
-                    className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-5 py-3 text-center text-sm font-semibold ${classes.primaryCta}`}
+                    className={`inline-flex min-h-14 w-full items-center justify-center rounded-full px-6 py-4 text-center text-base font-semibold shadow-[0_16px_34px_rgba(17,17,17,0.16)] transition active:scale-[0.99] ${classes.primaryCta}`}
                   >
                     {orderCtaLabel}
                   </button>
@@ -1007,50 +1146,91 @@ export default function ProductDetailPage() {
                   <button
                     type="button"
                     disabled
-                    className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl border px-5 py-3 text-center text-sm font-semibold ${classes.disabledCta}`}
+                    className={`inline-flex min-h-14 w-full items-center justify-center rounded-full border px-6 py-4 text-center text-base font-semibold ${classes.disabledCta}`}
                   >
                     {unavailableLabel}
                   </button>
                 )}
               </div>
-            </section>
 
+              <div className="mt-8 hidden sm:block">
+                {isAvailable ? (
+                  <button
+                    type="button"
+                    onClick={handleBook}
+                    className={`inline-flex min-h-14 w-full items-center justify-center rounded-full px-6 py-4 text-center text-base font-semibold transition active:scale-[0.99] ${classes.primaryCta}`}
+                  >
+                    {orderCtaLabel}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={`inline-flex min-h-14 w-full items-center justify-center rounded-full border px-6 py-4 text-center text-base font-semibold ${classes.disabledCta}`}
+                  >
+                    {unavailableLabel}
+                  </button>
+                )}
+              </div>
+
+              <ProductTrustSection />
+
+              <SizeChartPanel
+                imageUrl={sizeChartImageUrl}
+                productTitle={product.title}
+              />
+
+              <ProductInfoAccordions product={product} store={store} />
+            </section>
+          </div>
+
+          <ExploreMoreProducts
+            getProductFallbackIndex={getProductFallbackIndex}
+            isProductSaved={wishlist.isWishlisted}
+            onProductSelect={handleTheme1ChromeProductSelect}
+            onToggleProductSaved={wishlist.toggleWishlistItem}
+            products={exploreProducts}
+          />
+
+          <div className="px-4 sm:px-0">
             <StoreMiniBlock classes={classes} store={store} storeSlug={storeSlug} />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#111111]/96 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] text-white shadow-[0_-18px_42px_rgba(15,23,42,0.22)] backdrop-blur-xl sm:hidden">
-        <div className="mx-auto flex w-full max-w-6xl min-w-0 items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-white/62">Product price</p>
-            <p className="truncate text-lg font-semibold tracking-[-0.035em] text-white">
-              {formatINR(product.price)}
-            </p>
+        <div
+          className={`fixed inset-x-0 bottom-0 z-50 border-t border-[#ece7df] bg-white/96 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] text-[#111111] shadow-[0_-18px_42px_rgba(15,23,42,0.12)] backdrop-blur-xl transition duration-300 sm:hidden ${
+            showMobileStickyCta
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-full opacity-0"
+          }`}
+        >
+          <div className="mx-auto flex w-full max-w-6xl min-w-0 items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-[#8d867d]">Product price</p>
+              <p className="truncate text-lg font-semibold tracking-[-0.035em]">
+                {formatINR(product.price)}
+              </p>
+            </div>
+            {isAvailable ? (
+              <button
+                type="button"
+                onClick={handleBook}
+                className={`inline-flex min-h-12 max-w-[64%] shrink-0 items-center justify-center truncate rounded-full px-5 text-sm font-semibold shadow-[0_14px_28px_rgba(17,17,17,0.18)] ${classes.primaryCta}`}
+              >
+                {orderCtaLabel}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-12 max-w-[64%] shrink-0 items-center justify-center truncate rounded-full border border-[#e5ded4] bg-[#f3f1ed] px-5 text-sm font-semibold text-[#8d867d]"
+              >
+                {unavailableLabel}
+              </button>
+            )}
           </div>
-          {isAvailable ? (
-            <button
-              type="button"
-              onClick={handleBook}
-              className={`inline-flex min-h-12 max-w-[60%] shrink-0 items-center justify-center truncate rounded-full px-5 text-sm font-semibold shadow-[0_16px_34px_rgba(17,17,17,0.2)] ${classes.primaryCta}`}
-            >
-              {orderCtaLabel}
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-12 max-w-[60%] shrink-0 items-center justify-center truncate rounded-full border border-white/12 bg-white/10 px-5 text-sm font-semibold text-white/70"
-            >
-              {unavailableLabel}
-            </button>
-          )}
         </div>
-        <p className="mt-2 break-words text-center text-xs font-medium text-white/60">
-          {stickyPaymentSubtext}
-        </p>
-      </div>
-    </main>
+      </main>
       <Theme1EditorialFooter reserveStickySpace store={store} storeSlug={storeSlug} />
     </>
   );
