@@ -1,11 +1,18 @@
 import { applicationDefault, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 type ServiceAccountShape = {
   client_email?: string;
   private_key?: string;
   project_id?: string;
+};
+
+type VerifiedFirebaseToken = {
+  uid: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  admin?: boolean;
 };
 
 function normalizeEnvValue(value: string | undefined) {
@@ -86,6 +93,7 @@ export function getFirebaseAdminEnvDebugState() {
     hasProjectId: Boolean(normalizeEnvValue(process.env.FIREBASE_PROJECT_ID)),
     hasClientEmail: Boolean(normalizeEnvValue(process.env.FIREBASE_CLIENT_EMAIL)),
     hasPrivateKey: Boolean(privateKey),
+    hasFirebaseApiKey: Boolean(normalizeEnvValue(process.env.VITE_FIREBASE_API_KEY)),
   };
 }
 
@@ -133,5 +141,55 @@ export function getAdminAuthIfConfigured() {
 
   if (!db) return null;
 
-  return getAuth();
+  const apiKey = normalizeEnvValue(process.env.VITE_FIREBASE_API_KEY);
+
+  if (!apiKey) return null;
+
+  return {
+    async verifyIdToken(idToken: string): Promise<VerifiedFirebaseToken> {
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        }
+      );
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: { message?: string };
+        };
+        throw new Error(payload.error?.message || "Firebase ID token verification failed.");
+      }
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        users?: Array<{
+          localId?: string;
+          email?: string;
+          displayName?: string;
+          photoUrl?: string;
+          customAttributes?: string;
+        }>;
+      };
+      const user = payload.users?.[0];
+      const uid = normalizeEnvValue(user?.localId);
+
+      if (!uid) {
+        throw new Error("Firebase ID token verification returned no user.");
+      }
+
+      const customClaims = user?.customAttributes
+        ? (JSON.parse(user.customAttributes) as { admin?: unknown })
+        : {};
+
+      return {
+        uid,
+        email: normalizeEnvValue(user?.email),
+        name: normalizeEnvValue(user?.displayName),
+        picture: normalizeEnvValue(user?.photoUrl),
+        admin: customClaims.admin === true,
+      };
+    },
+  };
 }

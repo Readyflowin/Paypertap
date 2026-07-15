@@ -165,9 +165,10 @@ function validateFirebaseAdminEnvironment() {
   const hasApplicationDefault = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
   const hasServiceAccountFields = env.hasProjectId && env.hasClientEmail && env.hasPrivateKey;
   const hasCredentials = env.hasServiceAccountJson || hasServiceAccountFields || hasApplicationDefault;
+  const hasAuthVerifierConfig = env.hasFirebaseApiKey;
 
   return {
-    ok: hasCredentials,
+    ok: hasCredentials && hasAuthVerifierConfig,
     env: {
       ...env,
       hasApplicationDefault,
