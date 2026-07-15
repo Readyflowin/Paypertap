@@ -59,7 +59,7 @@ async function uploadImageBlobToR2(
   formData.append("file", file);
   formData.append("folder", folder);
 
-  const response = await fetch("/api/upload-image", {
+  const response = await fetch("/api/upload?action=image", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${idToken}`,

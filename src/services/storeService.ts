@@ -94,7 +94,7 @@ async function ensureStorePaymentReturnToken(storeId: string): Promise<string> {
     throw new Error("Please sign in before saving payment settings.");
   }
 
-  const response = await fetch("/api/store-payment-token", {
+  const response = await fetch("/api/store?action=payment-token", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

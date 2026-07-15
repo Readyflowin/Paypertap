@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 
-import { loadLocalEnv } from "./_env.js";
+import { loadLocalEnv } from "../_env.js";
 import {
   getAdminAuthIfConfigured,
   getAdminDbIfConfigured,
-} from "./_lib/firebaseAdmin.js";
+} from "./firebaseAdmin.js";
 
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.setHeader("Cache-Control", "no-store");

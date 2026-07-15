@@ -227,7 +227,7 @@ export async function startWalletRecharge(
   amount: number
 ): Promise<WalletRechargeStartResult> {
   const rechargeAmount = assertRechargeAmount(amount);
-  const response = await fetch("/api/wallet-recharge", {
+  const response = await fetch("/api/wallet?action=recharge", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -262,7 +262,7 @@ export async function startWalletRecharge(
 export async function processWalletRechargeReturn(
   token: string
 ): Promise<WalletRechargeReturnResult> {
-  const response = await fetch("/api/wallet-recharge-return", {
+  const response = await fetch("/api/wallet?action=recharge-return", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
@@ -295,7 +295,7 @@ export async function processWalletRechargeReturn(
 }
 
 export async function reconcileWalletFromActivity(): Promise<WalletReconcileResult> {
-  const response = await fetch("/api/wallet-reconcile", {
+  const response = await fetch("/api/wallet?action=reconcile", {
     method: "POST",
     headers: await getAuthHeader(),
   });
@@ -339,7 +339,7 @@ function normalizeBuyerPhone(phone: string): string {
 export async function createChargeableOrder(
   input: CreateChargeableOrderInput
 ): Promise<CreateChargeableOrderResult> {
-  const response = await fetch("/api/create-order", {
+  const response = await fetch("/api/orders?action=create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

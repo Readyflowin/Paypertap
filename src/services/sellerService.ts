@@ -231,7 +231,7 @@ export async function completeStoreOnboarding(
 
   try {
     const idToken = await user.getIdToken();
-    const response = await fetch("/api/store-onboarding", {
+    const response = await fetch("/api/store?action=onboarding", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${idToken}`,

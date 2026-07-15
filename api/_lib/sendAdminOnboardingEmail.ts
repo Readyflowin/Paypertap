@@ -1,9 +1,9 @@
-import { loadLocalEnv } from "./_env.js";
+import { loadLocalEnv } from "../_env.js";
 import {
   getAdminDbIfConfigured,
   getFirebaseAdminEnvDebugState,
-} from "./_lib/firebaseAdmin.js";
-import { sendAdminSellerOnboardedEmailIfNeeded } from "./_lib/emailNotifications.js";
+} from "./firebaseAdmin.js";
+import { sendAdminSellerOnboardedEmailIfNeeded } from "./emailNotifications.js";
 
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.setHeader("Cache-Control", "no-store");

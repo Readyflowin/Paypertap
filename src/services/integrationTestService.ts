@@ -23,7 +23,7 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 }
 
 export async function sendTestEmail(to: string) {
-  const response = await fetch("/api/test-email", {
+  const response = await fetch("/api/email?action=test", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -38,7 +38,7 @@ export async function uploadTestImage(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("/api/upload-image", {
+  const response = await fetch("/api/upload?action=image", {
     method: "POST",
     body: formData,
   });

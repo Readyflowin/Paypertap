@@ -53,7 +53,7 @@ test("production integration test page is not exposed", async ({ page }) => {
   expect(bodyText).not.toContain("PayPerTap Integration Test");
 });
 
-const apiRoutes = ["/api/upload-image"];
+const apiRoutes = ["/api/upload?action=image"];
 
 for (const route of apiRoutes) {
   test(`GET is handled by API route: ${route}`, async ({ request }) => {
@@ -64,7 +64,7 @@ for (const route of apiRoutes) {
 }
 
 test("test email endpoint is disabled in production", async ({ request }) => {
-  const response = await request.get(`${baseUrl}/api/test-email`);
+  const response = await request.get(`${baseUrl}/api/email?action=test`);
 
   expect(response.status()).toBe(404);
 });

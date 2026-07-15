@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 
-import { loadLocalEnv } from "./_env.js";
+import { loadLocalEnv } from "../_env.js";
 import {
   getAdminAuthIfConfigured,
   getAdminDbIfConfigured,
   getFirebaseAdminEnvDebugState,
-} from "./_lib/firebaseAdmin.js";
+} from "./firebaseAdmin.js";
 
 const DEFAULT_ADVANCE_AMOUNT = 100;
 const DEFAULT_THEME_ID = "theme1";

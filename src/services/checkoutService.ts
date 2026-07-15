@@ -62,11 +62,10 @@ export async function repairMissingOrderReservation(
 export async function getOrderById(
   orderId: string
 ): Promise<CheckoutSession | null> {
-  const response = await fetch("/api/public-order", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId }),
-  });
+  const response = await fetch(
+    `/api/orders?action=status&orderId=${encodeURIComponent(orderId)}`,
+    { method: "GET" }
+  );
   const payload = (await response.json().catch(() => null)) as
     | {
         success?: boolean;
@@ -164,7 +163,7 @@ async function postOrderAction(
   orderId: string,
   payload: Record<string, unknown> = {}
 ): Promise<void> {
-  const response = await fetch("/api/order-action", {
+  const response = await fetch(`/api/orders?action=${encodeURIComponent(action)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

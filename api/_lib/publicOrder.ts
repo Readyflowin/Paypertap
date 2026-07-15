@@ -1,5 +1,5 @@
-import { loadLocalEnv } from "./_env.js";
-import { getAdminDbIfConfigured } from "./_lib/firebaseAdmin.js";
+import { loadLocalEnv } from "../_env.js";
+import { getAdminDbIfConfigured } from "./firebaseAdmin.js";
 
 type JsonResponse = {
   setHeader?: (name: string, value: string) => void;
@@ -75,7 +75,8 @@ function getPublicOrderPayload(order: Record<string, unknown>, orderId: string) 
 }
 
 export default async function handler(req: any, res: JsonResponse) {
-  if (req.method !== "POST") {
+  if (req.method !== "POST" && req.method !== "GET") {
+    res.setHeader?.("Allow", "GET, POST");
     sendJson(res, 405, { success: false, error: "Method not allowed." });
     return;
   }
@@ -92,8 +93,9 @@ export default async function handler(req: any, res: JsonResponse) {
     return;
   }
 
+  const url = new URL(req.url || "/", "https://paypertap.local");
   const body = getRequestBody(req) as Record<string, unknown> | null;
-  const orderId = toText(body?.orderId);
+  const orderId = toText(url.searchParams.get("orderId")) || toText(body?.orderId);
 
   if (!orderId || !/^[A-Za-z0-9_-]{8,160}$/.test(orderId)) {
     sendJson(res, 400, { success: false, error: "Invalid order link." });

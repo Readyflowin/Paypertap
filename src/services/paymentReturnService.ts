@@ -16,7 +16,7 @@ export async function processPaymentReturn(
   token: string,
   orderToken: string
 ): Promise<PaymentReturnResult> {
-  const response = await fetch("/api/payment-return", {
+  const response = await fetch("/api/orders?action=payment-return", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, orderToken }),

@@ -4,7 +4,7 @@ import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import formidable from "formidable";
 
-import { loadLocalEnv } from "./_env.js";
+import { loadLocalEnv } from "../_env.js";
 
 export const config = {
   api: {
