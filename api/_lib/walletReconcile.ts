@@ -10,13 +10,12 @@ import {
   LOW_BALANCE_THRESHOLD,
   ORDER_CHARGE,
 } from "../../src/config/wallet.js";
+import type { WalletStatus } from "../../src/types/firestore.js";
 
 type JsonResponse = {
   setHeader?: (name: string, value: string) => void;
   status: (statusCode: number) => { json: (body: unknown) => void };
 };
-
-type WalletStatus = "active" | "low_balance" | "empty" | "paused";
 
 type WalletData = {
   sellerId?: string;

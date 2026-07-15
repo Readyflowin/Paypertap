@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { normalizeIndianMobileInput } from "../lib/phone";
-import type { CheckoutSession } from "../types/firestore";
+import type { CheckoutSession, WalletStatus } from "../types/firestore";
 import {
   FREE_ORDER_COUNT,
   LOW_BALANCE_THRESHOLD,
@@ -18,8 +18,6 @@ import {
   WALLET_RECHARGE_MIN_AMOUNT,
 } from "../config/wallet";
 import type { StorePaymentMode } from "./storeService";
-
-export type WalletStatus = "active" | "low_balance" | "empty" | "paused";
 
 export type SellerWallet = {
   sellerId: string;

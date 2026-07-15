@@ -211,6 +211,8 @@ export type CheckoutSessionStatus =
   | "cancelled"
   | "released";
 
+export type WalletStatus = "active" | "low_balance" | "empty" | "paused";
+
 export type CheckoutSession = {
   checkoutId: string;
   orderId?: string;
@@ -239,7 +241,7 @@ export type CheckoutSession = {
   walletStatusSnapshot?: {
     balance: number;
     freeOrdersRemaining: number;
-    status: "active" | "low_balance" | "empty" | "paused";
+    status: WalletStatus;
     hasFunds: boolean;
   };
   walletCharge?: number;

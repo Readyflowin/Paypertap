@@ -10,6 +10,7 @@ import {
   LOW_BALANCE_THRESHOLD,
   ORDER_CHARGE,
 } from "../../src/config/wallet.js";
+import type { WalletStatus } from "../../src/types/firestore.js";
 
 const DEFAULT_ADVANCE_AMOUNT = 100;
 const INITIAL_FREE_ORDERS = FREE_ORDER_COUNT;
@@ -67,8 +68,6 @@ type StoreData = {
   paymentReturnToken?: string;
 };
 
-type WalletStatus = "active" | "low_balance" | "empty" | "paused";
-
 type WalletData = {
   sellerId: string;
   balance: number;
@@ -99,6 +98,22 @@ type CanonicalVariant = {
   label: string;
   options: Record<string, string>;
 };
+
+type OrderTransactionResult =
+  | {
+      status: "created";
+      order: Record<string, unknown>;
+      paymentLink: string;
+      paymentMode: "cod" | "partial_advance";
+      paymentRedirectUrl: string;
+      paymentReturnUrl: string;
+      walletStatusAfter: WalletStatus;
+    }
+  | {
+      status: "rejected";
+      error: OrderEngineError;
+      walletRejectedEmpty: boolean;
+    };
 
 class OrderEngineError extends Error {
   code: string;
@@ -347,14 +362,16 @@ function deriveWalletStatus(balance: number, freeOrdersRemaining = 0): WalletSta
   return "paused";
 }
 
-function createInitialWallet(sellerId: string) {
+function createInitialWallet(
+  sellerId: string
+): WalletData & { createdAt: FieldValue; updatedAt: FieldValue } {
   return {
     sellerId,
     balance: 0,
     freeOrdersRemaining: INITIAL_FREE_ORDERS,
     totalOrdersCharged: 0,
     totalWalletSpent: 0,
-    status: "active" as WalletStatus,
+    status: "active",
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -514,14 +531,6 @@ export async function createChargeableOrder({
   const walletTransactionRef = db.collection("walletTransactions").doc();
   const orderId = orderRef.id;
   const walletTransactionId = walletTransactionRef.id;
-  let responseOrder: Record<string, unknown> | null = null;
-  let responsePaymentLink = "";
-  let responsePaymentMode: "cod" | "partial_advance" = "cod";
-  let responsePaymentReturnUrl = "";
-  let responsePaymentRedirectUrl = "";
-  let rejection: OrderEngineError | null = null;
-  let walletStatusAfter: WalletStatus | "" = "";
-  let walletRejectedEmpty = false;
 
   orderLog("info", "Order transaction starting.", {
     orderId,
@@ -530,7 +539,7 @@ export async function createChargeableOrder({
     productId: input.productId,
   });
 
-  await db.runTransaction(async (transaction) => {
+  const transactionResult = await db.runTransaction<OrderTransactionResult>(async (transaction) => {
     const [storeSnap, productSnap, walletSnap, sellerSnap] = await Promise.all([
       transaction.get(storeRef),
       transaction.get(productRef),
@@ -610,13 +619,15 @@ export async function createChargeableOrder({
         });
       }
 
-      rejection = new OrderEngineError(
-        "Seller wallet exhausted. Please contact the seller.",
-        402,
-        "seller_wallet_exhausted"
-      );
-      walletRejectedEmpty = true;
-      return;
+      return {
+        status: "rejected",
+        error: new OrderEngineError(
+          "Seller wallet exhausted. Please contact the seller.",
+          402,
+          "seller_wallet_exhausted"
+        ),
+        walletRejectedEmpty: true,
+      };
     }
 
     let walletCharge: WalletChargeResult;
@@ -847,20 +858,23 @@ export async function createChargeableOrder({
       }
     );
 
-    responsePaymentMode = paymentMode;
-    responsePaymentLink = paymentLink;
-    responsePaymentReturnUrl = paymentReturnUrl;
-    responsePaymentRedirectUrl = paymentRedirectUrl;
-    walletStatusAfter = walletCharge.walletStatusAfter;
-    responseOrder = {
-      ...orderPayload,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    return {
+      status: "created",
+      order: {
+        ...orderPayload,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      paymentLink,
+      paymentMode,
+      paymentRedirectUrl,
+      paymentReturnUrl,
+      walletStatusAfter: walletCharge.walletStatusAfter,
     };
   });
 
-  if (rejection) {
-    if (walletRejectedEmpty) {
+  if (transactionResult.status === "rejected") {
+    if (transactionResult.walletRejectedEmpty) {
       await sendWalletStateEmailSafely({
         db,
         sellerId: input.sellerId,
@@ -868,16 +882,10 @@ export async function createChargeableOrder({
       });
     }
 
-    throw rejection;
+    throw transactionResult.error;
   }
 
-  if (!responseOrder) {
-    orderLog("error", "Order transaction completed without response order.", {
-      sellerId: input.sellerId,
-      orderId,
-    });
-    throw new OrderEngineError("Firestore transaction failed.", 500, "transaction_no_response_order");
-  }
+  const walletStatusAfter = transactionResult.walletStatusAfter;
 
   if (walletStatusAfter === "low_balance") {
     await sendWalletStateEmailSafely({
@@ -897,11 +905,11 @@ export async function createChargeableOrder({
 
   return {
     orderId,
-    order: responseOrder,
-    paymentMode: responsePaymentMode,
-    paymentLink: responsePaymentLink,
-    paymentReturnUrl: responsePaymentReturnUrl,
-    paymentRedirectUrl: responsePaymentRedirectUrl,
+    order: transactionResult.order,
+    paymentMode: transactionResult.paymentMode,
+    paymentLink: transactionResult.paymentLink,
+    paymentReturnUrl: transactionResult.paymentReturnUrl,
+    paymentRedirectUrl: transactionResult.paymentRedirectUrl,
   };
 }
 

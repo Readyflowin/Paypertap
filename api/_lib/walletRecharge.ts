@@ -17,6 +17,7 @@ import {
   WALLET_RECHARGE_MAX_AMOUNT,
   WALLET_RECHARGE_MIN_AMOUNT,
 } from "../../src/config/wallet.js";
+import type { WalletStatus } from "../../src/types/firestore.js";
 
 const INITIAL_FREE_ORDERS = FREE_ORDER_COUNT;
 const WALLET_ORDER_CHARGE_AMOUNT = ORDER_CHARGE;
@@ -28,7 +29,6 @@ type JsonResponse = {
   status: (statusCode: number) => { json: (body: unknown) => void };
 };
 
-type WalletStatus = "active" | "low_balance" | "empty" | "paused";
 type RechargeStatus = "pending" | "credited";
 type AdminAdjustmentType = "bonus" | "adjustment" | "refund";
 
