@@ -31,8 +31,10 @@ type StoreOnboardingApiResponse = {
   success?: boolean;
   storeId?: string;
   nextRoute?: string;
+  stage?: string;
   message?: string;
   error?: string;
+  originalError?: unknown;
   details?: Partial<StoreOnboardingDebugInfo> & {
     requestedSlug?: string;
     selectedStoreId?: string;
@@ -57,6 +59,8 @@ type StoreOnboardingDebugInfo = {
   creatingSlug: boolean;
   creatingStore: boolean;
   updatingSeller: boolean;
+  stage?: string;
+  originalError?: unknown;
 };
 
 type FirstProductInput = {
@@ -305,6 +309,8 @@ export async function completeStoreOnboarding(
           creatingSlug: data.details?.creatingSlug ?? true,
           creatingStore: data.details?.creatingStore ?? true,
           updatingSeller: data.details?.updatingSeller ?? false,
+          stage: data.stage,
+          originalError: data.originalError,
         }
       );
     }

@@ -30,6 +30,53 @@ type OnboardingDecisionDetails = {
   branch: "create_new_store" | "update_existing_store";
 };
 
+type OnboardingStage =
+  | "request-received"
+  | "env-validation"
+  | "firebase-admin-init"
+  | "auth-token"
+  | "auth-verification"
+  | "request-body"
+  | "validation"
+  | "slug-generation"
+  | "transaction-start"
+  | "seller-lookup"
+  | "slug-reservation"
+  | "store-creation"
+  | "wallet-init"
+  | "transaction-commit"
+  | "response";
+
+type OnboardingErrorDetails = {
+  uid?: string;
+  requestedSlug?: string;
+  selectedStoreId?: string;
+  decision?: OnboardingDecisionDetails | null;
+  [key: string]: unknown;
+};
+
+class OnboardingStageError extends Error {
+  stage: OnboardingStage;
+  statusCode: number;
+  details: OnboardingErrorDetails;
+  originalError: unknown;
+
+  constructor(
+    stage: OnboardingStage,
+    error: unknown,
+    details: OnboardingErrorDetails = {},
+    statusCode = 500
+  ) {
+    const message = error instanceof Error ? error.message : String(error || "Unknown error");
+    super(message);
+    this.name = "OnboardingStageError";
+    this.stage = stage;
+    this.statusCode = statusCode;
+    this.details = details;
+    this.originalError = error;
+  }
+}
+
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.setHeader("Cache-Control", "no-store");
   res.status(statusCode).json(body);
@@ -49,6 +96,85 @@ function onboardingLog(
   if (level === "error") console.error(event, payload);
   else if (level === "warn") console.warn(event, payload);
   else console.info(event, payload);
+}
+
+function getOriginalErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return {
+      name: "UnknownError",
+      message: String(error || "Unknown error"),
+      code: "",
+      stack: "",
+    };
+  }
+
+  return {
+    name: error.name,
+    message: error.message,
+    code:
+      "code" in error && typeof (error as { code?: unknown }).code !== "undefined"
+        ? String((error as { code?: unknown }).code)
+        : "",
+    stack: error.stack || "",
+  };
+}
+
+function isOnboardingDebugEnabled() {
+  return (
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV !== "production" ||
+    process.env.PAYPERTAP_DEBUG_ONBOARDING === "true"
+  );
+}
+
+async function runStage<T>(
+  stage: OnboardingStage,
+  details: OnboardingErrorDetails,
+  task: () => Promise<T>
+) {
+  onboardingLog("info", `Store onboarding stage started: ${stage}`, details);
+
+  try {
+    const result = await task();
+    onboardingLog("info", `Store onboarding stage completed: ${stage}`, details);
+    return result;
+  } catch (error) {
+    if (error instanceof OnboardingStageError) {
+      throw error;
+    }
+
+    onboardingLog("error", `Store onboarding stage failed: ${stage}`, {
+      ...details,
+      originalError: getOriginalErrorDetails(error),
+    });
+    throw new OnboardingStageError(stage, error, details);
+  }
+}
+
+function failStage(
+  stage: OnboardingStage,
+  message: string,
+  statusCode: number,
+  details: OnboardingErrorDetails = {}
+): never {
+  throw new OnboardingStageError(stage, new Error(message), details, statusCode);
+}
+
+function validateFirebaseAdminEnvironment() {
+  const env = getFirebaseAdminEnvDebugState();
+  const hasApplicationDefault = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+  const hasServiceAccountFields = env.hasProjectId && env.hasClientEmail && env.hasPrivateKey;
+  const hasCredentials = env.hasServiceAccountJson || hasServiceAccountFields || hasApplicationDefault;
+
+  return {
+    ok: hasCredentials,
+    env: {
+      ...env,
+      hasApplicationDefault,
+      vercelEnv: process.env.VERCEL_ENV || "",
+      nodeEnv: process.env.NODE_ENV || "",
+    },
+  };
 }
 
 function getBearerToken(req: any) {
@@ -169,19 +295,41 @@ async function readJson(req: any) {
 
 export default async function handler(req: any, res: any) {
   loadLocalEnv({ override: true });
+  const requestStartedAt = Date.now();
+
+  onboardingLog("info", "Store onboarding request received.", {
+    stage: "request-received",
+    method: req.method,
+    url: req.url || "",
+    hasAuthorizationHeader: Boolean(req.headers?.authorization || req.headers?.Authorization),
+    vercelEnv: process.env.VERCEL_ENV || "",
+  });
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-    return sendJson(res, 405, { success: false, error: "Method not allowed." });
+    return sendJson(res, 405, {
+      success: false,
+      code: "method_not_allowed",
+      stage: "request-received",
+      message: "Method not allowed.",
+      error: "Method not allowed.",
+    });
   }
 
-  const auth = getAdminAuthIfConfigured();
-  const db = getAdminDbIfConfigured();
+  const envValidation = validateFirebaseAdminEnvironment();
 
-  if (!auth || !db) {
+  onboardingLog(envValidation.ok ? "info" : "error", "Store onboarding env validation.", {
+    stage: "env-validation",
+    ...envValidation.env,
+  });
+
+  if (!envValidation.ok) {
     return sendJson(res, 500, {
       success: false,
-      error: "Firebase Admin is not configured for store onboarding.",
+      code: "firebase_admin_env_missing",
+      stage: "env-validation",
+      message: "Firebase Admin environment variables are missing.",
+      error: "Firebase Admin environment variables are missing.",
       env: getFirebaseAdminEnvDebugState(),
     });
   }
@@ -189,24 +337,75 @@ export default async function handler(req: any, res: any) {
   const idToken = getBearerToken(req);
 
   if (!idToken) {
-    return sendJson(res, 401, { success: false, error: "Please sign in first." });
+    return sendJson(res, 401, {
+      success: false,
+      code: "missing_auth_token",
+      stage: "auth-token",
+      message: "Please sign in first.",
+      error: "Please sign in first.",
+    });
   }
 
   let uidForLog = "";
   let requestedSlugForLog = "";
   let selectedStoreId = "";
   let decisionDetails: OnboardingDecisionDetails | null = null;
+  let activeStage: OnboardingStage = "request-received";
+  let transactionStage: OnboardingStage = "transaction-start";
+  let auth: ReturnType<typeof getAdminAuthIfConfigured> = null;
+  let db: ReturnType<typeof getAdminDbIfConfigured> = null;
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
+    activeStage = "firebase-admin-init";
+    const admin = await runStage(
+      "firebase-admin-init",
+      { env: envValidation.env },
+      async () => {
+        const initializedAuth = getAdminAuthIfConfigured();
+        const initializedDb = getAdminDbIfConfigured();
+
+        if (!initializedAuth || !initializedDb) {
+          throw new Error("Firebase Admin initialization returned no auth/db instance.");
+        }
+
+        return { auth: initializedAuth, db: initializedDb };
+      }
+    );
+    auth = admin.auth;
+    db = admin.db;
+
+    activeStage = "auth-verification";
+    const decodedToken = await runStage(
+      "auth-verification",
+      { tokenLength: idToken.length },
+      async () => auth.verifyIdToken(idToken)
+    );
     const uid = decodedToken.uid;
     uidForLog = uid;
-    const body = (await readJson(req)) as {
-      phone?: unknown;
-      storeName?: unknown;
-      instagramProfile?: unknown;
-      logoUrl?: unknown;
-    };
+
+    activeStage = "request-body";
+    const body = await runStage("request-body", { uid }, async () => {
+      const parsedBody = (await readJson(req)) as {
+        phone?: unknown;
+        storeName?: unknown;
+        instagramProfile?: unknown;
+        logoUrl?: unknown;
+      };
+
+      onboardingLog("info", "Store onboarding request body parsed.", {
+        stage: "request-body",
+        uid,
+        bodyKeys: Object.keys(parsedBody || {}).sort(),
+        storeNameLength:
+          typeof parsedBody?.storeName === "string" ? parsedBody.storeName.trim().length : 0,
+        hasLogoUrl: typeof parsedBody?.logoUrl === "string" && parsedBody.logoUrl.trim().length > 0,
+        hasInstagramProfile:
+          typeof parsedBody?.instagramProfile === "string" &&
+          parsedBody.instagramProfile.trim().length > 0,
+      });
+
+      return parsedBody;
+    });
 
     const storeName = typeof body.storeName === "string" ? body.storeName.trim() : "";
     const instagramProfile =
@@ -214,31 +413,40 @@ export default async function handler(req: any, res: any) {
     const logoUrl = typeof body.logoUrl === "string" ? body.logoUrl.trim() : "";
     const phoneResult = normalizeIndianMobileInput(String(body.phone || ""));
 
+    activeStage = "validation";
     if (!storeName) {
-      return sendJson(res, 400, { success: false, error: "Store name is required." });
+      failStage("validation", "Store name is required.", 400, { uid });
     }
 
     if (!phoneResult.ok || !phoneResult.localNumber) {
-      return sendJson(res, 400, {
-        success: false,
-        error: phoneResult.error || "Please enter a valid WhatsApp number.",
+      failStage("validation", phoneResult.error || "Please enter a valid WhatsApp number.", 400, {
+        uid,
+        storeNameLength: storeName.length,
       });
     }
 
     if (logoUrl && !isHttpsUrl(logoUrl)) {
-      return sendJson(res, 400, {
-        success: false,
-        error: "Please re-upload the store logo before saving.",
+      failStage("validation", "Please re-upload the store logo before saving.", 400, {
+        uid,
+        storeNameLength: storeName.length,
       });
     }
 
+    activeStage = "slug-generation";
     const requestedSlug = slugifyStoreName(storeName);
     requestedSlugForLog = requestedSlug;
+    onboardingLog("info", "Store onboarding slug generated.", {
+      stage: "slug-generation",
+      uid,
+      storeName,
+      requestedSlug,
+      source: "request.body.storeName",
+    });
 
     if (!requestedSlug) {
-      return sendJson(res, 400, {
-        success: false,
-        error: "Store name must include at least one letter or number.",
+      failStage("slug-generation", "Store name must include at least one letter or number.", 400, {
+        uid,
+        storeNameLength: storeName.length,
       });
     }
 
@@ -247,7 +455,17 @@ export default async function handler(req: any, res: any) {
     const instagram = normalizeInstagramProfile(instagramProfile);
     const now = FieldValue.serverTimestamp();
 
-    await db.runTransaction(async (transaction) => {
+    activeStage = "transaction-start";
+    await runStage(
+      "transaction-start",
+      { uid, requestedSlug, selectedStoreId, decision: decisionDetails },
+      async () => db.runTransaction(async (transaction) => {
+      transactionStage = "seller-lookup";
+      onboardingLog("info", "Store onboarding transaction seller lookup starting.", {
+        stage: transactionStage,
+        uid,
+        requestedSlug,
+      });
       const [sellerSnap, walletSnap] = await Promise.all([
         transaction.get(sellerRef),
         transaction.get(walletRef),
@@ -280,6 +498,7 @@ export default async function handler(req: any, res: any) {
       let storeSnap: FirebaseFirestore.DocumentSnapshot | null = null;
       let branch: OnboardingDecisionDetails["branch"] = "create_new_store";
 
+      transactionStage = "slug-reservation";
       if (existingStoreOwnedBySeller && previousStoreId) {
         storeId = previousStoreId;
         branch = "update_existing_store";
@@ -378,6 +597,14 @@ export default async function handler(req: any, res: any) {
           ? currentStore.paymentReturnToken.trim()
           : "";
 
+      transactionStage = "slug-reservation";
+      onboardingLog("info", "Store onboarding slug reservation write prepared.", {
+        stage: transactionStage,
+        uid,
+        requestedSlug,
+        selectedStoreId: storeId,
+        creatingSlug,
+      });
       transaction.set(
         slugRef,
         {
@@ -389,6 +616,14 @@ export default async function handler(req: any, res: any) {
         { merge: true },
       );
 
+      transactionStage = "store-creation";
+      onboardingLog("info", "Store onboarding store write prepared.", {
+        stage: transactionStage,
+        uid,
+        requestedSlug,
+        selectedStoreId: storeId,
+        creatingStore,
+      });
       transaction.set(
         storeRef,
         {
@@ -430,6 +665,13 @@ export default async function handler(req: any, res: any) {
         { merge: true },
       );
 
+      onboardingLog("info", "Store onboarding seller write prepared.", {
+        stage: transactionStage,
+        uid,
+        requestedSlug,
+        selectedStoreId: storeId,
+        sellerExists: sellerSnap.exists,
+      });
       transaction.set(
         sellerRef,
         {
@@ -463,7 +705,13 @@ export default async function handler(req: any, res: any) {
         { merge: true },
       );
 
+      transactionStage = "wallet-init";
       if (!walletSnap.exists) {
+        onboardingLog("info", "Store onboarding wallet initialization write prepared.", {
+          stage: transactionStage,
+          uid,
+          selectedStoreId: storeId,
+        });
         transaction.set(walletRef, {
           sellerId: uid,
           balance: 0,
@@ -474,36 +722,93 @@ export default async function handler(req: any, res: any) {
           createdAt: now,
           updatedAt: now,
         });
+      } else {
+        onboardingLog("info", "Store onboarding wallet already exists.", {
+          stage: transactionStage,
+          uid,
+          selectedStoreId: storeId,
+        });
       }
+      transactionStage = "transaction-commit";
+    }).catch((error) => {
+      throw new OnboardingStageError(transactionStage, error, {
+        uid,
+        requestedSlug,
+        selectedStoreId,
+        decision: decisionDetails,
+      });
+    })
+    );
+
+    activeStage = "transaction-commit";
+    onboardingLog("info", "Store onboarding transaction committed.", {
+      stage: "transaction-commit",
+      uid,
+      requestedSlug,
+      selectedStoreId,
+      decision: decisionDetails,
     });
 
-    return sendJson(res, 200, {
+    activeStage = "response";
+    const successResponse = {
       success: true,
       storeId: selectedStoreId,
       nextRoute: "/onboarding/product",
       details: decisionDetails,
+    };
+    onboardingLog("info", "Store onboarding response generated.", {
+      stage: "response",
+      uid,
+      requestedSlug,
+      selectedStoreId,
+      statusCode: 200,
+      durationMs: Date.now() - requestStartedAt,
     });
+    return sendJson(res, 200, successResponse);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not save your store.";
+    const stageError =
+      error instanceof OnboardingStageError
+        ? error
+        : new OnboardingStageError(activeStage, error, {
+            uid: uidForLog,
+            requestedSlug: requestedSlugForLog,
+            selectedStoreId,
+            decision: decisionDetails,
+          });
+    const originalError = getOriginalErrorDetails(stageError.originalError);
+    const message = originalError.message || stageError.message || "Store onboarding failed.";
     const status = message === "This store link is already taken." ? 409 : 500;
+    const statusCode = stageError.statusCode !== 500 ? stageError.statusCode : status;
 
     onboardingLog("error", "Store onboarding API failed.", {
       uid: uidForLog,
       requestedSlug: requestedSlugForLog,
       selectedStoreId,
       details: decisionDetails,
+      stage: stageError.stage,
       message,
-      error: error instanceof Error ? error.stack || error.message : error,
+      originalError,
+      durationMs: Date.now() - requestStartedAt,
     });
 
-    return sendJson(res, status, {
+    return sendJson(res, statusCode, {
       success: false,
       error: message,
       message,
-      code: status === 409 ? "store_slug_taken" : "store_onboarding_failed",
-      details: decisionDetails || {
+      code: statusCode === 409 ? "store_slug_taken" : "store_onboarding_failed",
+      stage: stageError.stage,
+      details: {
+        ...(decisionDetails || {}),
         requestedSlug: requestedSlugForLog,
         selectedStoreId,
+        uid: uidForLog,
+        stageDetails: stageError.details,
+      },
+      originalError: {
+        name: originalError.name,
+        message: originalError.message,
+        code: originalError.code,
+        ...(isOnboardingDebugEnabled() ? { stack: originalError.stack } : {}),
       },
     });
   }
