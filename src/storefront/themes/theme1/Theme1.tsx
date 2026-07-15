@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Grid2X2, Home, Search, ShoppingBag, User } from "lucide-react";
 
 import {
   ALL_COLLECTIONS,
@@ -12,6 +11,7 @@ import type { StorefrontProduct, StorefrontThemeProps } from "../types";
 import { Theme1EditorialFooter } from "./Theme1Footer";
 import { Theme1Header } from "./Theme1Header";
 import { Theme1HeroSection } from "./Theme1Hero";
+import { Theme1BottomNav } from "./Theme1Navigation";
 import { Theme1Sections } from "./Theme1Sections";
 import {
   adaptTheme1Product,
@@ -22,40 +22,6 @@ import {
 
 export { Theme1EditorialFooter as Theme1CleanFooter } from "./Theme1Footer";
 export { Theme1Header as Theme1StorefrontChrome } from "./Theme1Header";
-
-function Theme1BottomNav() {
-  const navItems = [
-    { label: "Home", href: "#top", icon: Home },
-    { label: "Search", href: "#products", icon: Search },
-    { label: "Collection", href: "#products", icon: Grid2X2 },
-    { label: "Account", href: "#footer", icon: User },
-    { label: "Orders", href: "#products", icon: ShoppingBag },
-  ];
-
-  return (
-    <nav
-      aria-label="Store quick navigation"
-      className="fixed inset-x-3 bottom-3 z-40 rounded-[22px] border border-[#e5ded4] bg-white/92 px-2 py-2 shadow-[0_12px_34px_rgba(17,17,17,0.18)] backdrop-blur-xl sm:hidden"
-    >
-      <div className="grid grid-cols-5 gap-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <a
-              key={item.label}
-              href={item.href}
-              className="grid min-h-12 place-items-center rounded-2xl text-[10px] font-medium !text-[#2b2926]"
-            >
-              <Icon size={19} aria-hidden="true" />
-              <span>{item.label}</span>
-            </a>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
 
 export default function Theme1({
   collections: managedCollections = [],
@@ -124,6 +90,7 @@ export default function Theme1({
         onProductSelect={handleProductSelect}
         products={visibleProducts}
         store={store}
+        storeSlug={storeSlug}
       />
       <Theme1HeroSection
         featuredProduct={featuredHeroProduct}
@@ -149,7 +116,12 @@ export default function Theme1({
         store={store}
         storeSlug={storeSlug}
       />
-      <Theme1BottomNav />
+      <Theme1BottomNav
+        collections={managedCollections}
+        products={visibleProducts}
+        store={store}
+        storeSlug={storeSlug}
+      />
     </main>
   );
 }

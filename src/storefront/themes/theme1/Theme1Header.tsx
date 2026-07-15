@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, ImageIcon, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
+import { getCollectionSlug } from "@/lib/collections";
 import { formatINR } from "@/lib/money";
+import { getStoreContactInfo } from "@/storefront/storePolicies";
 import type { StorefrontProduct, StorefrontThemeProps } from "../types";
+import { shareTheme1Store } from "./Theme1Navigation";
 import {
   adaptTheme1Product,
   adaptTheme1Store,
   getTheme1ProductDescription,
+  getTheme1ProductId,
   getTheme1ProductTitle,
   getTheme1StoreDescription,
 } from "./theme1Utils";
@@ -17,12 +21,14 @@ export function Theme1Header({
   onProductSelect,
   products = [],
   store,
+  storeSlug,
 }: {
   collections?: StorefrontThemeProps["collections"];
   isPreviewMobile?: boolean;
   onProductSelect?: (product: StorefrontProduct) => void;
   products?: StorefrontProduct[];
   store: StorefrontThemeProps["store"];
+  storeSlug?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,10 +43,23 @@ export function Theme1Header({
     { label: "Collections", href: "#products" },
     { label: "New arrivals", href: "#products-all" },
   ];
+  const storePath = storeSlug ? `/${storeSlug}` : "#top";
+  const policiesPath = storeSlug ? `/${storeSlug}/policies/returns` : "#footer";
+  const collectionsPath = storeSlug ? `/${storeSlug}/collections` : "#products";
+  const contact = getStoreContactInfo(store);
+  const contactHref =
+    contact.whatsappUrl ||
+    contact.supportPhoneHref ||
+    contact.supportEmailHref ||
+    `${storePath}#footer`;
+  const featuredCollections = displayStore.collections.slice(0, 4);
+  const featuredProducts = products.slice(0, 3);
   const mobileNavItems = [
-    { label: "Shop", href: "#products" },
-    { label: "Collections", href: "#products" },
-    { label: "Email list", href: "#footer" },
+    { label: "Home", href: storePath },
+    { label: "Collections", href: collectionsPath },
+    { label: "Policies", href: policiesPath },
+    { label: "About", href: `${storePath}#footer` },
+    { label: "Contact", href: contactHref },
   ];
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -136,22 +155,7 @@ export function Theme1Header({
   };
 
   const shareStore = async () => {
-    const shareUrl = window.location.href.split("#")[0];
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: displayStore.name,
-          text: getTheme1StoreDescription(store),
-          url: shareUrl,
-        });
-        return;
-      }
-
-      await navigator.clipboard?.writeText(shareUrl);
-    } catch {
-      // Sharing is best-effort UI chrome; buyers can continue browsing.
-    }
+    await shareTheme1Store({ collections, products, store, storeSlug: storeSlug || "" });
   };
 
   return (
@@ -266,22 +270,27 @@ export function Theme1Header({
         </div>
       </header>
 
-      {open ? (
-        <div
-          role="presentation"
-          onClick={() => setOpen(false)}
-          className={`fixed inset-0 z-40 bg-[#111111]/60 backdrop-blur-sm ${
-            isPreviewMobile ? "" : "md:hidden"
+      <div
+        role="presentation"
+        aria-hidden={!open}
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 z-40 bg-[#111111]/54 backdrop-blur-sm transition duration-300 ${
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        } ${isPreviewMobile ? "" : "md:hidden"}`}
+      >
+        <aside
+          aria-label="Theme 1 mobile navigation"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => event.stopPropagation()}
+          className={`flex h-full w-[min(92vw,380px)] flex-col bg-[#ffffff] px-5 py-4 shadow-2xl transition-transform duration-300 ease-out ${
+            open ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <aside
-            aria-label="Theme 1 mobile navigation"
-            onClick={(event) => event.stopPropagation()}
-            className="h-full w-[min(92vw,360px)] bg-[#ffffff] px-5 py-4 shadow-2xl"
-          >
-            <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-sm font-semibold text-[#ffffff]">
+                <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-sm font-semibold text-[#ffffff]">
                   {displayStore.logoUrl ? (
                     <img
                       src={displayStore.logoUrl}
@@ -296,41 +305,111 @@ export function Theme1Header({
                   {displayStore.name}
                 </strong>
               </div>
-              <button
-                type="button"
-                aria-label="Close menu"
-                ref={closeButtonRef}
-                onClick={() => setOpen(false)}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#e5e7eb] bg-[#f7f7f8] text-[#111111]"
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
+              <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#60646c]">
+                {getTheme1StoreDescription(store)}
+              </p>
             </div>
-            <nav className="mt-10 grid gap-2">
-              {mobileNavItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-11 items-center border-b border-[#e5e7eb] px-1 py-3 text-xl font-semibold !text-[#111111] hover:!text-[#6f6b64]"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
+            <button
+              type="button"
+              aria-label="Close menu"
+              ref={closeButtonRef}
+              onClick={() => setOpen(false)}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#e5e7eb] bg-[#f7f7f8] text-[#111111]"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+
+          <nav className="mt-8 grid overflow-hidden rounded-2xl bg-[#f7f4ef]">
+            {mobileNavItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="flex min-h-12 items-center border-b border-[#e7e1d8] px-4 text-base font-semibold !text-[#111111] last:border-b-0 hover:!text-[#6f6b64]"
+              >
+                {item.label}
+              </a>
+            ))}
             <button
               type="button"
               onClick={shareStore}
-              className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#111111] px-4 text-sm font-semibold text-white"
+              className="min-h-12 px-4 text-left text-base font-semibold text-[#111111]"
             >
-              Share store
+              Share Store
             </button>
-            <p className="mt-10 max-w-xs text-sm leading-6 text-[#60646c]">
-              {getTheme1StoreDescription(store)}
-            </p>
-          </aside>
-        </div>
-      ) : null}
+          </nav>
+
+          <div className="mt-7 min-h-0 flex-1 overflow-y-auto pb-3">
+            {featuredCollections.length ? (
+              <section aria-label="Featured collections">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8d867d]">
+                  Featured collections
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {featuredCollections.map((collection) => (
+                    <a
+                      key={collection}
+                      href={`${collectionsPath}/${getCollectionSlug(collection)}`}
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-[#fbfaf7] px-4 text-sm font-semibold !text-[#111111]"
+                    >
+                      <span className="min-w-0 truncate">{collection}</span>
+                      <span aria-hidden="true">-&gt;</span>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ) : featuredProducts.length ? (
+              <section aria-label="Featured products">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8d867d]">
+                  Featured products
+                </p>
+                <div className="mt-3 grid gap-3">
+                  {featuredProducts.map((product) => {
+                    const displayProduct = adaptTheme1Product(product);
+                    const productHref =
+                      storeSlug && getTheme1ProductId(product)
+                        ? `/${storeSlug}/product/${getTheme1ProductId(product)}`
+                        : "#products";
+
+                    return (
+                      <a
+                        key={displayProduct.id || getTheme1ProductTitle(product)}
+                        href={productHref}
+                        onClick={() => setOpen(false)}
+                        className="grid min-h-[74px] grid-cols-[56px_1fr] gap-3 rounded-2xl bg-[#fbfaf7] p-2 !text-[#111111]"
+                      >
+                        {displayProduct.imageUrl ? (
+                          <img
+                            src={displayProduct.imageUrl}
+                            alt={displayProduct.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="aspect-[4/5] h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="grid aspect-[4/5] h-full w-full place-items-center bg-[#f1f2f4] text-[#60646c]">
+                            <ImageIcon size={18} aria-hidden="true" />
+                          </span>
+                        )}
+                        <span className="min-w-0 self-center">
+                          <span className="line-clamp-2 text-sm font-semibold leading-5">
+                            {displayProduct.title}
+                          </span>
+                          <span className="mt-1 block text-xs font-semibold text-[#60646c]">
+                            {formatINR(displayProduct.price)}
+                          </span>
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+          </div>
+        </aside>
+      </div>
 
       {searchOpen ? (
         <div

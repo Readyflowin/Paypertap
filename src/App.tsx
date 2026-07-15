@@ -11,6 +11,7 @@ const DesignSystemPage = lazy(() => import("./pages/DesignSystemPage"));
 const IntegrationTestPage = lazy(() => import("./pages/IntegrationTestPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const ProductOnboardingPage = lazy(() => import("./pages/ProductOnboardingPage"));
+const PublicStoreCollectionsPage = lazy(() => import("./pages/PublicStoreCollectionsPage"));
 const PublicStorePage = lazy(() => import("./pages/PublicStorePage"));
 const PaymentReturnPage = lazy(() => import("./pages/PaymentReturnPage"));
 const OrderSuccessPage = lazy(() => import("./pages/OrderSuccessPage"));
@@ -160,6 +161,22 @@ export default function App() {
               <NoIndexAppRoute>
                 <CheckoutPage />
               </NoIndexAppRoute>
+            }
+          />
+          <Route
+            path="/:storeSlug/collections"
+            element={
+              <PublicAppRoute>
+                <PublicStoreCollectionsPage />
+              </PublicAppRoute>
+            }
+          />
+          <Route
+            path="/:storeSlug/collections/:collectionSlug"
+            element={
+              <PublicAppRoute>
+                <PublicStoreCollectionsPage />
+              </PublicAppRoute>
             }
           />
           <Route
