@@ -129,6 +129,27 @@ class OrderEngineError extends Error {
   }
 }
 
+type OrderSuccessResponse = {
+  success: true;
+  orderId: string;
+  order: Record<string, unknown>;
+  paymentMode: "cod" | "partial_advance";
+  paymentLink: string;
+  paymentRedirectUrl: string;
+  paymentReturnUrl: string;
+  redirectUrl: string;
+  nextAction: "order_success" | "payment_redirect";
+};
+
+type OrderFailureResponse = {
+  success: false;
+  code: string;
+  message: string;
+  error: string;
+  details?: Record<string, unknown>;
+  debug?: Record<string, unknown>;
+};
+
 function orderLog(
   level: "info" | "warn" | "error",
   event: string,
@@ -148,6 +169,33 @@ function orderLog(
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
   res.setHeader?.("Cache-Control", "no-store");
   res.status(statusCode).json(body);
+}
+
+function sendOrderJson(
+  res: JsonResponse,
+  statusCode: number,
+  body: OrderSuccessResponse | OrderFailureResponse
+) {
+  const isSuccessResponse = body.success === true;
+  const logDetails = isSuccessResponse
+    ? {
+        statusCode,
+        success: true,
+        orderId: body.orderId,
+        paymentMode: body.paymentMode,
+        nextAction: body.nextAction,
+      }
+    : {
+        statusCode,
+        success: false,
+        code: body.code,
+        message: body.message,
+      };
+
+  orderLog(body.success ? "info" : "warn", "Order API final response.", {
+    ...logDetails,
+  });
+  sendJson(res, statusCode, body);
 }
 
 function getRequestBody(req: { body?: unknown }) {
@@ -915,7 +963,12 @@ export async function createChargeableOrder({
 
 export async function createOrderHandler(req: any, res: JsonResponse) {
   if (req.method !== "POST") {
-    sendJson(res, 405, { success: false, error: "Method not allowed." });
+    sendOrderJson(res, 405, {
+      success: false,
+      code: "method_not_allowed",
+      message: "Method not allowed.",
+      error: "Method not allowed.",
+    });
     return;
   }
 
@@ -924,8 +977,10 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
   const db = getAdminDbIfConfigured();
 
   if (!db) {
-    sendJson(res, 500, {
+    sendOrderJson(res, 500, {
       success: false,
+      code: "firebase_admin_unavailable",
+      message: "Secure order creation requires Firebase Admin credentials.",
       error: "Secure order creation requires Firebase Admin credentials.",
     });
     return;
@@ -933,9 +988,16 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
 
   const body = getRequestBody(req) as Record<string, unknown> | null;
 
+  orderLog("info", "Order API request body parsed.", {
+    hasBody: Boolean(body),
+    bodyKeys: body ? Object.keys(body).sort() : [],
+  });
+
   if (!body) {
-    sendJson(res, 400, {
+    sendOrderJson(res, 400, {
       success: false,
+      code: "invalid_request_body",
+      message: "Request body could not be read.",
       error: "Request body could not be read.",
       ...(isOrderDebugEnabled()
         ? { debug: { reason: "invalid_or_unparseable_request_body" } }
@@ -948,11 +1010,22 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
 
   try {
     input = getOrderInput(body);
+    orderLog("info", "Order API validation passed.", {
+      input: getSafeOrderDebugInput(input),
+    });
     const result = await createChargeableOrder({ db, input, req });
+    const nextAction =
+      result.paymentMode === "partial_advance" ? "payment_redirect" : "order_success";
+    const redirectUrl =
+      result.paymentMode === "partial_advance"
+        ? result.paymentRedirectUrl
+        : `/${input.storeId}/order-success/${result.orderId}`;
 
-    sendJson(res, 200, {
+    sendOrderJson(res, 200, {
       success: true,
       ...result,
+      redirectUrl,
+      nextAction,
     });
   } catch (error) {
     const orderError =
@@ -968,10 +1041,14 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
       input: input ? getSafeOrderDebugInput(input) : null,
       underlying: debugDetails,
     });
-    sendJson(res, orderError.statusCode, {
+    sendOrderJson(res, orderError.statusCode, {
       success: false,
-      error: orderError.message,
       code: orderError.code,
+      message: orderError.message,
+      error: orderError.message,
+      details: {
+        reason: orderError.debugReason || orderError.code,
+      },
       ...(isOrderDebugEnabled()
         ? {
             debug: {

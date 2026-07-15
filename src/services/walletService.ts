@@ -8,7 +8,12 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { normalizeIndianMobileInput } from "../lib/phone";
-import type { CheckoutSession, WalletStatus } from "../types/firestore";
+import type { WalletStatus } from "../types/firestore";
+import {
+  normalizeCreateChargeableOrderResponse,
+  type CreateChargeableOrderApiResponse,
+  type CreateChargeableOrderResult,
+} from "./orderResponseContract";
 import {
   FREE_ORDER_COUNT,
   LOW_BALANCE_THRESHOLD,
@@ -17,7 +22,6 @@ import {
   WALLET_RECHARGE_MAX_AMOUNT,
   WALLET_RECHARGE_MIN_AMOUNT,
 } from "../config/wallet";
-import type { StorePaymentMode } from "./storeService";
 
 export type SellerWallet = {
   sellerId: string;
@@ -57,15 +61,6 @@ export type CreateChargeableOrderInput = {
   selectedVariantId?: string;
   selectedVariantLabel?: string;
   selectedVariantOptions?: Record<string, string>;
-};
-
-export type CreateChargeableOrderResult = {
-  orderId: string;
-  order: CheckoutSession;
-  paymentMode: StorePaymentMode;
-  paymentLink: string;
-  paymentRedirectUrl: string;
-  paymentReturnUrl: string;
 };
 
 export type WalletTransaction = {
@@ -318,18 +313,6 @@ export async function reconcileWalletFromActivity(): Promise<WalletReconcileResu
   };
 }
 
-type CreateChargeableOrderApiResponse = {
-  success?: boolean;
-  error?: string;
-  debug?: unknown;
-  orderId?: string;
-  order?: CheckoutSession;
-  paymentMode?: StorePaymentMode;
-  paymentLink?: string;
-  paymentRedirectUrl?: string;
-  paymentReturnUrl?: string;
-};
-
 function normalizeBuyerPhone(phone: string): string {
   const normalizedPhone = normalizeIndianMobileInput(phone);
 
@@ -343,6 +326,7 @@ export async function createChargeableOrder(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      action: "create",
       ...input,
       buyerPhone: normalizeBuyerPhone(input.buyerPhone),
     }),
@@ -351,25 +335,5 @@ export async function createChargeableOrder(
     | CreateChargeableOrderApiResponse
     | null;
 
-  if (!response.ok || !payload?.success || !payload.orderId || !payload.order) {
-    if (payload?.debug) {
-      console.error("Order creation API debug:", payload.debug);
-    }
-
-    throw new Error(payload?.error || "Order service did not return a valid response.");
-  }
-
-  return {
-    orderId: payload.orderId,
-    order: payload.order,
-    paymentMode: payload.paymentMode || payload.order.paymentMode || "cod",
-    paymentLink: payload.paymentLink || payload.order.paymentLink || "",
-    paymentRedirectUrl:
-      payload.paymentRedirectUrl ||
-      payload.order.paymentRedirectUrl ||
-      payload.paymentLink ||
-      payload.order.paymentLink ||
-      "",
-    paymentReturnUrl: payload.paymentReturnUrl || payload.order.paymentReturnUrl || "",
-  };
+  return normalizeCreateChargeableOrderResponse(response, payload);
 }

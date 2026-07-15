@@ -31,7 +31,14 @@ type StoreOnboardingApiResponse = {
   success?: boolean;
   storeId?: string;
   nextRoute?: string;
+  message?: string;
   error?: string;
+  details?: Partial<StoreOnboardingDebugInfo> & {
+    requestedSlug?: string;
+    selectedStoreId?: string;
+    previousStoreId?: string;
+    branch?: string;
+  };
 };
 
 type StoreOnboardingDebugInfo = {
@@ -91,6 +98,13 @@ function createStoreOnboardingWriteError(
 ) {
   console.error("Store onboarding write failed:", debugInfo, error);
   return new StoreOnboardingWriteError(error, debugInfo);
+}
+
+function onboardingLog(event: string, details: Record<string, unknown> = {}) {
+  console.info("Seller onboarding decision:", {
+    event,
+    ...details,
+  });
 }
 
 export function slugifyStoreName(name: string): string {
@@ -162,6 +176,14 @@ export async function prepareSellerAfterAuth(
   const seller = await loadSellerForAuth(user);
 
   if (!seller?.storeId) {
+    onboardingLog("new-or-auth-only-seller", {
+      uid,
+      sellerExists: Boolean(seller),
+      storeId: "",
+      onboardingStatus: seller?.onboardingStatus || "",
+      onboardingStep: seller?.onboardingStep || "",
+      nextRoute: "/onboarding/store",
+    });
     return {
       sellerId: uid,
       storeId: "",
@@ -172,9 +194,20 @@ export async function prepareSellerAfterAuth(
   const store = await getStore(seller.storeId);
 
   if (!seller.phone?.trim() || !store || !store.storeName?.trim()) {
+    onboardingLog("seller-needs-store-onboarding", {
+      uid,
+      sellerExists: true,
+      sellerStoreId: seller.storeId,
+      storeExists: Boolean(store),
+      storeHasName: Boolean(store?.storeName?.trim()),
+      hasPhone: Boolean(seller.phone?.trim()),
+      onboardingStatus: seller.onboardingStatus,
+      onboardingStep: seller.onboardingStep,
+      nextRoute: "/onboarding/store",
+    });
     return {
       sellerId: uid,
-      storeId: seller.storeId,
+      storeId: store ? seller.storeId : "",
       nextRoute: "/onboarding/store",
     };
   }
@@ -183,6 +216,13 @@ export async function prepareSellerAfterAuth(
     seller.onboardingStatus !== "completed" ||
     seller.onboardingStep !== "dashboard"
   ) {
+    onboardingLog("seller-needs-product-onboarding", {
+      uid,
+      storeId: seller.storeId,
+      onboardingStatus: seller.onboardingStatus,
+      onboardingStep: seller.onboardingStep,
+      nextRoute: "/onboarding/product",
+    });
     return {
       sellerId: uid,
       storeId: seller.storeId,
@@ -190,6 +230,13 @@ export async function prepareSellerAfterAuth(
     };
   }
 
+  onboardingLog("seller-ready-for-dashboard", {
+    uid,
+    storeId: seller.storeId,
+    onboardingStatus: seller.onboardingStatus,
+    onboardingStep: seller.onboardingStep,
+    nextRoute: "/dashboard",
+  });
   return {
     sellerId: uid,
     storeId: seller.storeId,
@@ -247,21 +294,45 @@ export async function completeStoreOnboarding(
     const data = (await response.json().catch(() => ({}))) as StoreOnboardingApiResponse;
 
     if (!response.ok || !data.success || !data.storeId || !data.nextRoute) {
-      throw new Error(data.error || "Could not save your store.");
+      const detailStoreId = data.details?.selectedStoreId || data.storeId || storeId;
+      throw createStoreOnboardingWriteError(
+        new Error(data.message || data.error || "Could not save your store."),
+        {
+          operation: "save-store",
+          attemptedStoreSlug: data.details?.requestedSlug || storeId,
+          storeId: detailStoreId,
+          payloadKeys: ["phone", "storeName", "instagramProfile", "logoUrl"],
+          creatingSlug: data.details?.creatingSlug ?? true,
+          creatingStore: data.details?.creatingStore ?? true,
+          updatingSeller: data.details?.updatingSeller ?? false,
+        }
+      );
     }
+
+    onboardingLog("store-onboarding-api-succeeded", {
+      uid: user.uid,
+      requestedSlug: storeId,
+      storeId: data.storeId,
+      nextRoute: data.nextRoute,
+      details: data.details || null,
+    });
 
     return {
       storeId: data.storeId,
       nextRoute: data.nextRoute,
     };
   } catch (error) {
+    if (error instanceof StoreOnboardingWriteError) {
+      throw error;
+    }
+
     throw createStoreOnboardingWriteError(error, {
       operation: "save-store",
       attemptedStoreSlug: storeId,
       storeId,
       payloadKeys: ["phone", "storeName", "instagramProfile", "logoUrl"],
-      creatingSlug: false,
-      creatingStore: false,
+      creatingSlug: true,
+      creatingStore: true,
       updatingSeller: false,
     });
   }

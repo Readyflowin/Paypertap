@@ -270,13 +270,15 @@ export default function CheckoutPage() {
           : {}),
       });
 
-      if (result.paymentMode === "partial_advance") {
-        if (!result.paymentRedirectUrl) {
+      if (result.nextAction === "payment_redirect") {
+        const redirectUrl = result.redirectUrl || result.paymentRedirectUrl;
+
+        if (!redirectUrl) {
           throw new Error("Payment settings incomplete.");
         }
 
         setOrderStatus("Order created. Redirecting to payment link...");
-        window.location.assign(result.paymentRedirectUrl);
+        window.location.assign(redirectUrl);
         return;
       }
 

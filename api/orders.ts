@@ -99,6 +99,7 @@ export default async function ordersRouter(req: ApiRequest, res: ApiResponse) {
       success: false,
       code: "UNKNOWN_ORDER_ACTION",
       message: "Unknown order action.",
+      error: "Unknown order action.",
       details: { method, action },
     });
   } catch (error) {
@@ -108,6 +109,8 @@ export default async function ordersRouter(req: ApiRequest, res: ApiResponse) {
       success: false,
       code: "ORDER_ROUTE_FAILED",
       message,
+      error: message,
+      details: { method, action },
     });
   } finally {
     console.info("[api/orders] Completed request", {

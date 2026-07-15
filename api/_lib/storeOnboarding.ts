@@ -16,9 +16,39 @@ const DEFAULT_COLORS = {
   accentColor: "#7A2E2E",
 };
 
+type OnboardingDecisionDetails = {
+  uid: string;
+  requestedSlug: string;
+  selectedStoreId: string;
+  previousStoreId: string;
+  sellerExists: boolean;
+  existingStoreFound: boolean;
+  existingStoreOwnedBySeller: boolean;
+  creatingSlug: boolean;
+  creatingStore: boolean;
+  updatingSeller: boolean;
+  branch: "create_new_store" | "update_existing_store";
+};
+
 function sendJson(res: any, statusCode: number, body: unknown) {
   res.setHeader("Cache-Control", "no-store");
   res.status(statusCode).json(body);
+}
+
+function onboardingLog(
+  level: "info" | "warn" | "error",
+  event: string,
+  details: Record<string, unknown> = {}
+) {
+  const payload = {
+    event,
+    component: "store-onboarding",
+    ...details,
+  };
+
+  if (level === "error") console.error(event, payload);
+  else if (level === "warn") console.warn(event, payload);
+  else console.info(event, payload);
 }
 
 function getBearerToken(req: any) {
@@ -38,6 +68,22 @@ function slugifyStoreName(name: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function toText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function buildSlugCandidates(baseSlug: string) {
+  const candidates = [baseSlug];
+
+  for (let index = 2; index <= 20; index += 1) {
+    candidates.push(`${baseSlug}-${index}`);
+  }
+
+  candidates.push(`${baseSlug}-${randomBytes(3).toString("hex")}`);
+
+  return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 function normalizeIndianMobileInput(value: string): {
@@ -146,9 +192,15 @@ export default async function handler(req: any, res: any) {
     return sendJson(res, 401, { success: false, error: "Please sign in first." });
   }
 
+  let uidForLog = "";
+  let requestedSlugForLog = "";
+  let selectedStoreId = "";
+  let decisionDetails: OnboardingDecisionDetails | null = null;
+
   try {
     const decodedToken = await auth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
+    uidForLog = uid;
     const body = (await readJson(req)) as {
       phone?: unknown;
       storeName?: unknown;
@@ -180,34 +232,118 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const sellerRef = db.collection("sellers").doc(uid);
-    const sellerSnap = await sellerRef.get();
-    const seller = sellerSnap.exists ? sellerSnap.data() || {} : {};
-    const existingStoreId =
-      typeof seller.storeId === "string" && seller.storeId.trim()
-        ? seller.storeId.trim()
-        : "";
-    const storeId = existingStoreId || slugifyStoreName(storeName);
+    const requestedSlug = slugifyStoreName(storeName);
+    requestedSlugForLog = requestedSlug;
 
-    if (!storeId) {
+    if (!requestedSlug) {
       return sendJson(res, 400, {
         success: false,
         error: "Store name must include at least one letter or number.",
       });
     }
 
-    const slugRef = db.collection("storeSlugs").doc(storeId);
-    const storeRef = db.collection("stores").doc(storeId);
+    const sellerRef = db.collection("sellers").doc(uid);
     const walletRef = db.collection("wallets").doc(uid);
     const instagram = normalizeInstagramProfile(instagramProfile);
     const now = FieldValue.serverTimestamp();
 
     await db.runTransaction(async (transaction) => {
-      const [slugSnap, storeSnap, walletSnap] = await Promise.all([
-        transaction.get(slugRef),
-        transaction.get(storeRef),
+      const [sellerSnap, walletSnap] = await Promise.all([
+        transaction.get(sellerRef),
         transaction.get(walletRef),
       ]);
+      const seller = sellerSnap.exists ? sellerSnap.data() || {} : {};
+      const previousStoreId = toText(seller.storeId);
+      const existingStoreRef = previousStoreId
+        ? db.collection("stores").doc(previousStoreId)
+        : null;
+      const existingStoreSnap = existingStoreRef
+        ? await transaction.get(existingStoreRef)
+        : null;
+      const existingStore = existingStoreSnap?.exists ? existingStoreSnap.data() || {} : {};
+      const existingStoreOwnedBySeller =
+        existingStoreSnap?.exists === true && existingStore.sellerId === uid;
+
+      onboardingLog("info", "Store onboarding seller state loaded.", {
+        uid,
+        requestedSlug,
+        sellerExists: sellerSnap.exists,
+        previousStoreId,
+        existingStoreFound: existingStoreSnap?.exists === true,
+        existingStoreOwnedBySeller,
+        onboardingStatus: toText(seller.onboardingStatus),
+        onboardingStep: toText(seller.onboardingStep),
+      });
+
+      let storeId = "";
+      let slugSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+      let storeSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+      let branch: OnboardingDecisionDetails["branch"] = "create_new_store";
+
+      if (existingStoreOwnedBySeller && previousStoreId) {
+        storeId = previousStoreId;
+        branch = "update_existing_store";
+        const slugRef = db.collection("storeSlugs").doc(storeId);
+        const storeRef = db.collection("stores").doc(storeId);
+
+        [slugSnap, storeSnap] = await Promise.all([
+          transaction.get(slugRef),
+          transaction.get(storeRef),
+        ]);
+
+        onboardingLog("info", "Store onboarding chose existing owned store.", {
+          uid,
+          requestedSlug,
+          storeId,
+          slugExists: slugSnap.exists,
+        });
+      } else {
+        const candidates = buildSlugCandidates(requestedSlug);
+        const candidateSlugRefs = candidates.map((slug) => db.collection("storeSlugs").doc(slug));
+        const candidateStoreRefs = candidates.map((slug) => db.collection("stores").doc(slug));
+        const candidateSlugSnaps = await Promise.all(
+          candidateSlugRefs.map((ref) => transaction.get(ref))
+        );
+        const candidateStoreSnaps = await Promise.all(
+          candidateStoreRefs.map((ref) => transaction.get(ref))
+        );
+        const availableIndex = candidates.findIndex((candidate, index) => {
+          const candidateSlugSnap = candidateSlugSnaps[index];
+          const candidateStoreSnap = candidateStoreSnaps[index];
+          const reservation = candidateSlugSnap.exists ? candidateSlugSnap.data() || {} : {};
+          const candidateStore = candidateStoreSnap.exists ? candidateStoreSnap.data() || {} : {};
+          const slugAvailable = !candidateSlugSnap.exists || reservation.sellerId === uid;
+          const storeAvailable = !candidateStoreSnap.exists || candidateStore.sellerId === uid;
+
+          return Boolean(candidate) && slugAvailable && storeAvailable;
+        });
+
+        if (availableIndex < 0) {
+          onboardingLog("warn", "Store onboarding could not find an available slug.", {
+            uid,
+            requestedSlug,
+            candidates,
+          });
+          throw new Error("This store link is already taken.");
+        }
+
+        storeId = candidates[availableIndex];
+        slugSnap = candidateSlugSnaps[availableIndex];
+        storeSnap = candidateStoreSnaps[availableIndex];
+
+        onboardingLog("info", "Store onboarding chose new store slug.", {
+          uid,
+          requestedSlug,
+          selectedStoreId: storeId,
+          previousStoreId,
+          ignoredPreviousStoreId: previousStoreId && !existingStoreOwnedBySeller,
+          candidateIndex: availableIndex,
+        });
+      }
+
+      selectedStoreId = storeId;
+      const slugRef = db.collection("storeSlugs").doc(storeId);
+      const storeRef = db.collection("stores").doc(storeId);
 
       if (slugSnap.exists) {
         const reservation = slugSnap.data() || {};
@@ -218,6 +354,24 @@ export default async function handler(req: any, res: any) {
       }
 
       const currentStore = storeSnap.exists ? storeSnap.data() || {} : {};
+      const creatingSlug = !slugSnap.exists;
+      const creatingStore = !storeSnap.exists;
+      decisionDetails = {
+        uid,
+        requestedSlug,
+        selectedStoreId: storeId,
+        previousStoreId,
+        sellerExists: sellerSnap.exists,
+        existingStoreFound: existingStoreSnap?.exists === true,
+        existingStoreOwnedBySeller,
+        creatingSlug,
+        creatingStore,
+        updatingSeller: sellerSnap.exists,
+        branch,
+      };
+      onboardingLog("info", "Store onboarding transaction decision finalized.", {
+        ...decisionDetails,
+      });
       const bio = "Fresh drops, limited pieces.";
       const currentPaymentReturnToken =
         typeof currentStore.paymentReturnToken === "string"
@@ -325,18 +479,32 @@ export default async function handler(req: any, res: any) {
 
     return sendJson(res, 200, {
       success: true,
-      storeId,
+      storeId: selectedStoreId,
       nextRoute: "/onboarding/product",
+      details: decisionDetails,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save your store.";
     const status = message === "This store link is already taken." ? 409 : 500;
 
-    console.error("Store onboarding API failed:", error);
+    onboardingLog("error", "Store onboarding API failed.", {
+      uid: uidForLog,
+      requestedSlug: requestedSlugForLog,
+      selectedStoreId,
+      details: decisionDetails,
+      message,
+      error: error instanceof Error ? error.stack || error.message : error,
+    });
 
     return sendJson(res, status, {
       success: false,
       error: message,
+      message,
+      code: status === 409 ? "store_slug_taken" : "store_onboarding_failed",
+      details: decisionDetails || {
+        requestedSlug: requestedSlugForLog,
+        selectedStoreId,
+      },
     });
   }
 }
