@@ -24,7 +24,11 @@ export default function PaymentReturnPage() {
 
     async function handleReturn() {
       try {
-        const orderToken = searchParams.get("orderToken") || "";
+        const orderToken =
+          searchParams.get("orderToken") ||
+          searchParams.get("paypertap_order_token") ||
+          searchParams.get("ppt_order_token") ||
+          "";
 
         if (!orderToken) {
           throw new Error("This payment return link is missing the order tracking token.");

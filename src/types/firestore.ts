@@ -225,6 +225,7 @@ export type CheckoutSession = {
   paymentMode?: "cod" | "partial_advance";
   paymentProvider?: "razorpay";
   paymentLink?: string;
+  paymentRedirectUrl?: string;
   paymentReturnUrl?: string;
   paymentTrackingToken?: string;
   paymentReturnedAt?: unknown;

@@ -78,6 +78,12 @@ type WalletData = {
   status: WalletStatus;
 };
 
+type SellerData = {
+  sellerId?: string;
+  storeId?: string;
+  email?: string;
+};
+
 type WalletChargeResult = {
   balanceAfter: number;
   freeOrdersRemainingAfter: number;
@@ -95,15 +101,33 @@ type CanonicalVariant = {
 };
 
 class OrderEngineError extends Error {
+  code: string;
   debugReason?: string;
   statusCode: number;
 
-  constructor(message: string, statusCode = 400, debugReason?: string) {
+  constructor(message: string, statusCode = 400, code = "order_error", debugReason?: string) {
     super(message);
     this.name = "OrderEngineError";
-    this.debugReason = debugReason;
+    this.code = code;
+    this.debugReason = debugReason || code;
     this.statusCode = statusCode;
   }
+}
+
+function orderLog(
+  level: "info" | "warn" | "error",
+  event: string,
+  details: Record<string, unknown> = {}
+) {
+  const payload = {
+    event,
+    component: "order-engine",
+    ...details,
+  };
+
+  if (level === "error") console.error(event, payload);
+  else if (level === "warn") console.warn(event, payload);
+  else console.info(event, payload);
 }
 
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
@@ -219,19 +243,31 @@ function validateBuyerInput(input: OrderInput) {
     !input.buyerCity ||
     !input.buyerPincode
   ) {
-    throw new OrderEngineError("Order Creation Failed", 400, "missing_required_order_input");
+    throw new OrderEngineError(
+      "Please complete all required order details.",
+      400,
+      "missing_required_order_input"
+    );
   }
 
   if (!/^[6-9]\d{9}$/.test(input.buyerPhone)) {
-    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_phone");
+    throw new OrderEngineError(
+      "Please enter a valid 10-digit WhatsApp mobile number.",
+      400,
+      "invalid_buyer_phone"
+    );
   }
 
   if (!/^\d{6}$/.test(input.buyerPincode)) {
-    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_pincode");
+    throw new OrderEngineError("Please enter a valid 6-digit pincode.", 400, "invalid_buyer_pincode");
   }
 
   if (input.buyerAddress.length < 12 || input.buyerAddress.length > 160) {
-    throw new OrderEngineError("Order Creation Failed", 400, "invalid_buyer_address_length");
+    throw new OrderEngineError(
+      "Delivery address must be between 12 and 160 characters.",
+      400,
+      "invalid_buyer_address_length"
+    );
   }
 }
 
@@ -286,7 +322,11 @@ function getValidatedSelectedVariant(
     (typeof selectedVariant.inventoryQuantity === "number" &&
       selectedVariant.inventoryQuantity <= 0)
   ) {
-    throw new OrderEngineError("Product Unavailable");
+    throw new OrderEngineError(
+      "Selected variant is no longer available.",
+      409,
+      "invalid_or_unavailable_variant"
+    );
   }
 
   return {
@@ -354,7 +394,11 @@ function calculateWalletCharge(wallet: WalletData): WalletChargeResult {
     };
   }
 
-  throw new OrderEngineError("Wallet Empty");
+  throw new OrderEngineError(
+    "Seller wallet exhausted. Please contact the seller.",
+    402,
+    "seller_wallet_exhausted"
+  );
 }
 
 function shouldAcceptOrders(walletCharge: WalletChargeResult) {
@@ -378,11 +422,24 @@ function buildPaymentReturnUrl(
 
   if (!trimmedSellerReturnToken || !trimmedPaymentTrackingToken) return "";
 
+  const configuredOrigin = process.env.PAYPERTAP_PUBLIC_ORIGIN || process.env.PUBLIC_SITE_URL || "";
   const originHeader = req.headers?.origin;
   const hostHeader = req.headers?.host;
+  const forwardedHostHeader = req.headers?.["x-forwarded-host"];
+  const forwardedProtoHeader = req.headers?.["x-forwarded-proto"];
+  const forwardedHost = Array.isArray(forwardedHostHeader)
+    ? forwardedHostHeader[0]
+    : forwardedHostHeader;
+  const forwardedProto = Array.isArray(forwardedProtoHeader)
+    ? forwardedProtoHeader[0]
+    : forwardedProtoHeader;
   const origin = Array.isArray(originHeader)
     ? originHeader[0]
-    : originHeader ||
+    : configuredOrigin ||
+      originHeader ||
+      (forwardedHost
+        ? `${forwardedProto || "https"}://${forwardedHost}`
+        : "") ||
       (Array.isArray(hostHeader)
         ? `https://${hostHeader[0]}`
         : hostHeader
@@ -392,6 +449,19 @@ function buildPaymentReturnUrl(
   if (!origin) return "";
 
   return `${origin}/payment-return/${trimmedSellerReturnToken}?orderToken=${trimmedPaymentTrackingToken}`;
+}
+
+function buildPaymentRedirectUrl(paymentLink: string, paymentReturnUrl: string) {
+  if (!paymentLink || !paymentReturnUrl) return paymentLink;
+
+  try {
+    const redirectUrl = new URL(paymentLink);
+    redirectUrl.searchParams.set("paypertap_return_url", paymentReturnUrl);
+    redirectUrl.searchParams.set("paypertap_order_token", new URL(paymentReturnUrl).searchParams.get("orderToken") || "");
+    return redirectUrl.toString();
+  } catch {
+    return paymentLink;
+  }
 }
 
 function normalizePaymentMode(store: StoreData) {
@@ -417,7 +487,11 @@ function assertStoreAcceptingOrders(store: StoreData, wallet: WalletData) {
   const walletUsable = walletHasFunds(wallet);
 
   if (store.acceptingOrders === false && !(store.pauseReason === "wallet_empty" && walletUsable)) {
-    throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+    throw new OrderEngineError(
+      "Store is currently not accepting orders.",
+      409,
+      "store_not_accepting_orders"
+    );
   }
 }
 
@@ -435,6 +509,7 @@ export async function createChargeableOrder({
   const storeRef = db.collection("stores").doc(input.storeId);
   const productRef = db.collection("products").doc(input.productId);
   const walletRef = db.collection("wallets").doc(input.sellerId);
+  const sellerRef = db.collection("sellers").doc(input.sellerId);
   const orderRef = db.collection("orders").doc();
   const walletTransactionRef = db.collection("walletTransactions").doc();
   const orderId = orderRef.id;
@@ -443,65 +518,82 @@ export async function createChargeableOrder({
   let responsePaymentLink = "";
   let responsePaymentMode: "cod" | "partial_advance" = "cod";
   let responsePaymentReturnUrl = "";
+  let responsePaymentRedirectUrl = "";
   let rejection: OrderEngineError | null = null;
   let walletStatusAfter: WalletStatus | "" = "";
   let walletRejectedEmpty = false;
 
+  orderLog("info", "Order transaction starting.", {
+    orderId,
+    sellerId: input.sellerId,
+    storeId: input.storeId,
+    productId: input.productId,
+  });
+
   await db.runTransaction(async (transaction) => {
-    const [storeSnap, productSnap, walletSnap] = await Promise.all([
+    const [storeSnap, productSnap, walletSnap, sellerSnap] = await Promise.all([
       transaction.get(storeRef),
       transaction.get(productRef),
       transaction.get(walletRef),
+      transaction.get(sellerRef),
     ]);
 
     if (!storeSnap.exists) {
-      console.warn("Order engine store missing.", { storeId: input.storeId });
-      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+      orderLog("warn", "Order validation failed: store missing.", { storeId: input.storeId });
+      throw new OrderEngineError("Store is currently unavailable.", 404, "store_not_found");
     }
 
     if (!productSnap.exists) {
-      console.warn("Order engine product missing.", { productId: input.productId });
-      throw new OrderEngineError("Product Unavailable");
+      orderLog("warn", "Order validation failed: product missing.", { productId: input.productId });
+      throw new OrderEngineError("Product is out of stock.", 404, "product_not_found");
+    }
+
+    if (!sellerSnap.exists) {
+      orderLog("warn", "Order validation failed: seller missing.", { sellerId: input.sellerId });
+      throw new OrderEngineError("Seller account is unavailable.", 404, "seller_not_found");
     }
 
     const store = storeSnap.data() as StoreData;
     const product = productSnap.data() as ProductData;
+    const seller = sellerSnap.data() as SellerData;
     const wallet = walletSnap.exists
       ? (walletSnap.data() as WalletData)
       : createInitialWallet(input.sellerId);
 
     if (!store.isPublished) {
-      console.warn("Order engine rejected unpublished store.", { storeId: input.storeId });
-      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+      orderLog("warn", "Order validation failed: unpublished store.", { storeId: input.storeId });
+      throw new OrderEngineError("Store is currently unavailable.", 409, "store_unpublished");
     }
 
     assertStoreAcceptingOrders(store, wallet);
 
     if (
+      seller.storeId !== input.storeId ||
       store.sellerId !== input.sellerId ||
       product.sellerId !== input.sellerId ||
       product.storeId !== input.storeId
     ) {
-      console.warn("Order engine seller/product mismatch.", {
+      orderLog("warn", "Order validation failed: seller/store/product mismatch.", {
         sellerId: input.sellerId,
         storeId: input.storeId,
         productId: input.productId,
       });
-      throw new OrderEngineError("Product Unavailable");
+      throw new OrderEngineError("Product is no longer available.", 409, "seller_store_product_mismatch");
     }
 
     if (product.status !== "open" || getAvailableQuantity(product) <= 0) {
-      console.warn("Order engine rejected unavailable product.", {
+      orderLog("warn", "Order validation failed: product unavailable.", {
         productId: input.productId,
         status: product.status,
+        availableQuantity: getAvailableQuantity(product),
       });
-      throw new OrderEngineError("Product Unavailable");
+      throw new OrderEngineError("Product is out of stock.", 409, "product_out_of_stock");
     }
 
     const now = FieldValue.serverTimestamp();
 
     if (!walletHasFunds(wallet)) {
-      console.warn("Order engine paused store because wallet is empty.", {
+      orderLog("warn", "Order validation failed: wallet exhausted; pausing store.", {
         sellerId: input.sellerId,
         storeId: input.storeId,
       });
@@ -518,7 +610,11 @@ export async function createChargeableOrder({
         });
       }
 
-      rejection = new OrderEngineError("Wallet Empty");
+      rejection = new OrderEngineError(
+        "Seller wallet exhausted. Please contact the seller.",
+        402,
+        "seller_wallet_exhausted"
+      );
       walletRejectedEmpty = true;
       return;
     }
@@ -528,7 +624,7 @@ export async function createChargeableOrder({
     try {
       walletCharge = calculateWalletCharge(wallet);
     } catch (error) {
-      console.warn("Order engine wallet failure.", {
+      orderLog("warn", "Order validation failed: wallet charge calculation failed.", {
         sellerId: input.sellerId,
         error: error instanceof Error ? error.message : "Unknown wallet error",
       });
@@ -537,6 +633,31 @@ export async function createChargeableOrder({
 
     const productPrice = toInt(product.price);
     const paymentMode = normalizePaymentMode(store);
+
+    if (productPrice <= 0) {
+      orderLog("warn", "Order validation failed: invalid product price.", {
+        productId: input.productId,
+        productPrice,
+      });
+      throw new OrderEngineError("Product price is invalid.", 409, "invalid_product_price");
+    }
+
+    if (
+      paymentMode === "partial_advance" &&
+      store.paymentProvider &&
+      store.paymentProvider !== "razorpay"
+    ) {
+      orderLog("warn", "Order validation failed: unsupported payment provider.", {
+        storeId: input.storeId,
+        paymentProvider: store.paymentProvider,
+      });
+      throw new OrderEngineError(
+        "Invalid payment configuration.",
+        409,
+        "unsupported_payment_provider"
+      );
+    }
+
     const paymentAmount =
       paymentMode === "partial_advance" ? getPaymentAmount(store, productPrice) : 0;
     const sellerAmountDue = Math.max(productPrice - paymentAmount, 0);
@@ -549,26 +670,42 @@ export async function createChargeableOrder({
       sellerReturnToken,
       paymentTrackingToken
     );
+    const paymentRedirectUrl =
+      paymentMode === "partial_advance"
+        ? buildPaymentRedirectUrl(paymentLink, paymentReturnUrl)
+        : "";
 
     if (paymentMode === "partial_advance" && !paymentLink) {
-      console.warn("Order engine rejected partial advance store without payment link.", {
+      orderLog("warn", "Order validation failed: partial advance missing payment link.", {
         storeId: input.storeId,
       });
-      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+      throw new OrderEngineError(
+        "Payment settings incomplete.",
+        409,
+        "payment_link_missing"
+      );
     }
 
     if (paymentMode === "partial_advance" && !sellerReturnToken) {
-      console.warn("Order engine rejected partial advance store without return token.", {
+      orderLog("warn", "Order validation failed: partial advance missing return token.", {
         storeId: input.storeId,
       });
-      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+      throw new OrderEngineError(
+        "Payment settings incomplete.",
+        409,
+        "payment_return_token_missing"
+      );
     }
 
     if (paymentMode === "partial_advance" && !paymentReturnUrl) {
-      console.warn("Order engine rejected partial advance store without return URL.", {
+      orderLog("warn", "Order validation failed: partial advance return URL unavailable.", {
         storeId: input.storeId,
       });
-      throw new OrderEngineError("Store Temporarily Not Accepting Orders");
+      throw new OrderEngineError(
+        "Payment return URL could not be generated.",
+        500,
+        "payment_return_url_missing"
+      );
     }
 
     const selectedVariant = getValidatedSelectedVariant(input, product);
@@ -596,6 +733,7 @@ export async function createChargeableOrder({
       paymentProvider: "razorpay",
       paymentLink,
       paymentReturnUrl,
+      ...(paymentRedirectUrl ? { paymentRedirectUrl } : {}),
       ...(paymentTrackingToken ? { paymentTrackingToken } : {}),
       walletStatusSnapshot: walletSnapshot,
       walletCharge: walletCharge.walletCharge,
@@ -644,6 +782,15 @@ export async function createChargeableOrder({
     };
 
     try {
+      orderLog("info", "Order transaction writes prepared.", {
+        orderId,
+        sellerId: input.sellerId,
+        storeId: input.storeId,
+        productId: input.productId,
+        paymentMode,
+        walletType: walletCharge.transactionType,
+        walletCharge: walletCharge.walletCharge,
+      });
       const walletPayload = {
         sellerId: input.sellerId,
         balance: walletCharge.balanceAfter,
@@ -678,15 +825,15 @@ export async function createChargeableOrder({
         updatedAt: now,
       });
     } catch (error) {
-      console.error("Order engine transaction write setup failed.", {
+      orderLog("error", "Order transaction write setup failed.", {
         sellerId: input.sellerId,
         orderId,
         error,
       });
-      throw new OrderEngineError("Wallet Transaction Failed");
+      throw new OrderEngineError("Firestore transaction failed.", 500, "transaction_write_setup_failed");
     }
 
-    console.info(
+    orderLog("info",
       walletCharge.transactionType === "free_order"
         ? "Order engine used free introductory order."
         : "Order engine charged seller wallet.",
@@ -703,6 +850,7 @@ export async function createChargeableOrder({
     responsePaymentMode = paymentMode;
     responsePaymentLink = paymentLink;
     responsePaymentReturnUrl = paymentReturnUrl;
+    responsePaymentRedirectUrl = paymentRedirectUrl;
     walletStatusAfter = walletCharge.walletStatusAfter;
     responseOrder = {
       ...orderPayload,
@@ -724,11 +872,11 @@ export async function createChargeableOrder({
   }
 
   if (!responseOrder) {
-    console.error("Order engine transaction completed without response order.", {
+    orderLog("error", "Order transaction completed without response order.", {
       sellerId: input.sellerId,
       orderId,
     });
-    throw new OrderEngineError("Order Creation Failed");
+    throw new OrderEngineError("Firestore transaction failed.", 500, "transaction_no_response_order");
   }
 
   if (walletStatusAfter === "low_balance") {
@@ -753,6 +901,7 @@ export async function createChargeableOrder({
     paymentMode: responsePaymentMode,
     paymentLink: responsePaymentLink,
     paymentReturnUrl: responsePaymentReturnUrl,
+    paymentRedirectUrl: responsePaymentRedirectUrl,
   };
 }
 
@@ -779,7 +928,7 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
   if (!body) {
     sendJson(res, 400, {
       success: false,
-      error: "Order Creation Failed",
+      error: "Request body could not be read.",
       ...(isOrderDebugEnabled()
         ? { debug: { reason: "invalid_or_unparseable_request_body" } }
         : {}),
@@ -801,11 +950,12 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
     const orderError =
       error instanceof OrderEngineError
         ? error
-        : new OrderEngineError("Order Creation Failed");
+        : new OrderEngineError("Firestore transaction failed.", 500, "unhandled_order_exception");
     const debugDetails = getErrorDebugDetails(error);
 
     console.error("Order engine failed.", {
       publicError: orderError.message,
+      code: orderError.code,
       debugReason: orderError.debugReason,
       input: input ? getSafeOrderDebugInput(input) : null,
       underlying: debugDetails,
@@ -813,6 +963,7 @@ export async function createOrderHandler(req: any, res: JsonResponse) {
     sendJson(res, orderError.statusCode, {
       success: false,
       error: orderError.message,
+      code: orderError.code,
       ...(isOrderDebugEnabled()
         ? {
             debug: {

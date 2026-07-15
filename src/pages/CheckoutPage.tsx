@@ -270,14 +270,13 @@ export default function CheckoutPage() {
           : {}),
       });
 
-      sessionStorage.setItem(
-        `paypertap:checkout:${result.orderId}`,
-        JSON.stringify(result.order)
-      );
-
       if (result.paymentMode === "partial_advance") {
+        if (!result.paymentRedirectUrl) {
+          throw new Error("Payment settings incomplete.");
+        }
+
         setOrderStatus("Order created. Redirecting to payment link...");
-        window.location.assign(result.paymentLink);
+        window.location.assign(result.paymentRedirectUrl);
         return;
       }
 

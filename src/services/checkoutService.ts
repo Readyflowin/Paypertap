@@ -1,7 +1,5 @@
 import {
   collection,
-  doc,
-  getDoc,
   getDocs,
   query,
   where,
@@ -36,6 +34,7 @@ export type CreateOrderResult = {
   order: CreateChargeableOrderResult["order"];
   paymentMode: CreateChargeableOrderResult["paymentMode"];
   paymentLink: CreateChargeableOrderResult["paymentLink"];
+  paymentRedirectUrl: CreateChargeableOrderResult["paymentRedirectUrl"];
   paymentReturnUrl: CreateChargeableOrderResult["paymentReturnUrl"];
 };
 
@@ -63,17 +62,26 @@ export async function repairMissingOrderReservation(
 export async function getOrderById(
   orderId: string
 ): Promise<CheckoutSession | null> {
-  const orderSnap = await getDoc(doc(db, "orders", orderId));
+  const response = await fetch("/api/public-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId }),
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        success?: boolean;
+        order?: CheckoutSession;
+        error?: string;
+      }
+    | null;
 
-  if (orderSnap.exists()) {
-    return {
-      ...(orderSnap.data() as CheckoutSession),
-      checkoutId: String(orderSnap.data().checkoutId || orderSnap.id),
-      orderId: String(orderSnap.data().orderId || orderSnap.id),
-    };
+  if (response.status === 404) return null;
+
+  if (!response.ok || !payload?.success || !payload.order) {
+    throw new Error(payload?.error || "Order details could not be loaded.");
   }
 
-  return null;
+  return payload.order;
 }
 
 export async function markOrderEmailEventSent(

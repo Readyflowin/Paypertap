@@ -66,6 +66,7 @@ export type CreateChargeableOrderResult = {
   order: CheckoutSession;
   paymentMode: StorePaymentMode;
   paymentLink: string;
+  paymentRedirectUrl: string;
   paymentReturnUrl: string;
 };
 
@@ -327,6 +328,7 @@ type CreateChargeableOrderApiResponse = {
   order?: CheckoutSession;
   paymentMode?: StorePaymentMode;
   paymentLink?: string;
+  paymentRedirectUrl?: string;
   paymentReturnUrl?: string;
 };
 
@@ -356,7 +358,7 @@ export async function createChargeableOrder(
       console.error("Order creation API debug:", payload.debug);
     }
 
-    throw new Error(payload?.error || "Order Creation Failed");
+    throw new Error(payload?.error || "Order service did not return a valid response.");
   }
 
   return {
@@ -364,6 +366,12 @@ export async function createChargeableOrder(
     order: payload.order,
     paymentMode: payload.paymentMode || payload.order.paymentMode || "cod",
     paymentLink: payload.paymentLink || payload.order.paymentLink || "",
+    paymentRedirectUrl:
+      payload.paymentRedirectUrl ||
+      payload.order.paymentRedirectUrl ||
+      payload.paymentLink ||
+      payload.order.paymentLink ||
+      "",
     paymentReturnUrl: payload.paymentReturnUrl || payload.order.paymentReturnUrl || "",
   };
 }

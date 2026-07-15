@@ -54,12 +54,9 @@ export default function OrderSuccessPage() {
           "checkout" in location.state
             ? (location.state as { checkout?: CheckoutSession }).checkout
             : null;
-        const storedCheckout = sessionStorage.getItem(`paypertap:checkout:${checkoutId}`);
         const checkout =
           navigationCheckout ||
-          (storedCheckout
-            ? (JSON.parse(storedCheckout) as CheckoutSession)
-            : await getOrderById(checkoutId));
+          await getOrderById(checkoutId);
 
         if (!checkout) {
           throw new Error("order details are not available.");
