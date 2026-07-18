@@ -21,7 +21,7 @@ export function OrderFilters({
   status: "all" | OrderLifecycleStatus;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="ppt-dashboard-filter-grid">
       <SelectControl
         label="Status"
         value={status}
@@ -63,14 +63,12 @@ function SelectControl({
   value: string;
 }) {
   return (
-    <label className="grid min-w-0 gap-1">
-      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </span>
+    <label className="ppt-dashboard-filter-control">
+      <span>{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none transition focus:border-gray-950"
+        className="border bg-white text-sm outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

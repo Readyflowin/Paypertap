@@ -347,15 +347,18 @@ service cloud.firestore {
           "rechargeId",
           "sellerId",
           "amount",
-          "token",
+          "requestedAmount",
           "status",
           "paymentProvider",
-          "paymentLink",
-          "returnUrl",
           "referenceId",
+          "razorpayOrderId",
+          "razorpayOrderStatus",
+          "razorpayPaymentId",
+          "razorpayPaymentStatus",
           "walletTransactionId",
           "balanceBefore",
           "balanceAfter",
+          "completedAt",
           "creditedAt",
           "emailEvents",
           "createdAt",
@@ -363,16 +366,19 @@ service cloud.firestore {
         ])
         && data.rechargeId == rechargeId
         && data.sellerId is string
-        && isIntInRange(data.amount, 100, 25000)
-        && isValidPaymentReturnToken(data.token)
+        && isIntInRange(data.amount, 1, 25000)
+        && (!("requestedAmount" in data) || isIntInRange(data.requestedAmount, 1, 25000))
         && isValidWalletRechargeStatus(data.status)
         && data.paymentProvider == "razorpay"
-        && isOptionalString(data.paymentLink, 3000)
-        && isOptionalString(data.returnUrl, 3000)
         && isOptionalString(data.referenceId, 200)
+        && isOptionalString(data.razorpayOrderId, 200)
+        && isOptionalString(data.razorpayOrderStatus, 100)
+        && isOptionalString(data.razorpayPaymentId, 200)
+        && isOptionalString(data.razorpayPaymentStatus, 100)
         && (!("walletTransactionId" in data) || isOptionalString(data.walletTransactionId, 200))
         && (!("balanceBefore" in data) || isIntInRange(data.balanceBefore, 0, 100000000))
         && (!("balanceAfter" in data) || isIntInRange(data.balanceAfter, 0, 100000000))
+        && (!("completedAt" in data) || data.completedAt is timestamp)
         && (!("creditedAt" in data) || data.creditedAt is timestamp)
         && (
           !("emailEvents" in data)

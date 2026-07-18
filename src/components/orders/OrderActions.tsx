@@ -3,6 +3,7 @@ import { normalizeOrderStatus } from "./orderUtils";
 
 export type OrderActionId =
   | "verify_payment"
+  | "verify_and_accept_order"
   | "reject_payment"
   | "accept_order"
   | "cancel_order"
@@ -16,30 +17,48 @@ type OrderActionsProps = {
 
 export function OrderActions({ onAction, order, savingAction }: OrderActionsProps) {
   const status = normalizeOrderStatus(order.status);
+  const isPartialAdvance = order.paymentMode === "partial_advance";
 
   if (status === "pending_payment") {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-        Waiting for Customer Payment
+      <div className="grid gap-2">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold leading-5 text-emerald-800">
+          Please verify the payment manually once in your Razorpay account.
+        </div>
+        {isPartialAdvance ? (
+          <ActionButton
+            label="Verify & Accept"
+            loadingLabel="Confirming..."
+            loading={savingAction === "verify_and_accept_order"}
+            onClick={() => onAction("verify_and_accept_order")}
+          />
+        ) : null}
+        <ActionButton
+          label="Cancel Order"
+          loadingLabel="Cancelling..."
+          tone="danger"
+          loading={savingAction === "cancel_order"}
+          onClick={() => onAction("cancel_order")}
+        />
       </div>
     );
   }
 
   if (status === "payment_returned") {
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         <ActionButton
-          label="Payment Verified"
-          loadingLabel="Updating..."
-          loading={savingAction === "verify_payment"}
-          onClick={() => onAction("verify_payment")}
+          label="Verify & Accept"
+          loadingLabel="Confirming..."
+          loading={savingAction === "verify_and_accept_order"}
+          onClick={() => onAction("verify_and_accept_order")}
         />
         <ActionButton
-          label="Reject Payment"
+          label="Cancel Order"
           loadingLabel="Cancelling..."
           tone="danger"
-          loading={savingAction === "reject_payment"}
-          onClick={() => onAction("reject_payment")}
+          loading={savingAction === "cancel_order"}
+          onClick={() => onAction("cancel_order")}
         />
       </div>
     );
@@ -47,10 +66,10 @@ export function OrderActions({ onAction, order, savingAction }: OrderActionsProp
 
   if (status === "pending_confirmation") {
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         <ActionButton
-          label="Accept Order"
-          loadingLabel="Accepting..."
+          label="Verify & Accept"
+          loadingLabel="Confirming..."
           loading={savingAction === "accept_order"}
           onClick={() => onAction("accept_order")}
         />
@@ -86,7 +105,7 @@ export function OrderActions({ onAction, order, savingAction }: OrderActionsProp
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-500">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-500">
       Read only
     </div>
   );
@@ -112,8 +131,8 @@ function ActionButton({
       onClick={onClick}
       className={
         tone === "danger"
-          ? "rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:opacity-50"
-          : "rounded-xl bg-gray-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
+          ? "min-h-10 rounded-xl border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:opacity-50"
+          : "min-h-10 rounded-xl bg-gray-950 px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
       }
     >
       {loading ? loadingLabel : label}

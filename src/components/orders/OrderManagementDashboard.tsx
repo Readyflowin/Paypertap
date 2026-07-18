@@ -81,22 +81,22 @@ export function OrderManagementDashboard({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Manage Orders</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-gray-950">
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-gray-500">Manage Orders</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-950">
               Orders
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-              Track customer orders, payment return status, fulfilment progress, notes, and WhatsApp follow-up from one place.
+              Track customer orders, manual verification, fulfilment progress, notes, and WhatsApp follow-up from one place.
             </p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <OrderCounter label="Total Orders" value={counters.total} />
-          <OrderCounter label="Pending Payment" value={counters.pending_payment} />
+          <OrderCounter label="Order Successful" value={counters.pending_payment} />
           <OrderCounter label="Pending Confirmation" value={counters.pending_confirmation} />
           <OrderCounter label="Processing" value={counters.processing} />
           <OrderCounter label="Completed" value={counters.completed} />
@@ -104,7 +104,7 @@ export function OrderManagementDashboard({
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.85fr)]">
+      <div className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_minmax(460px,0.85fr)]">
         <OrderSearch value={search} onChange={setSearch} />
         <OrderFilters
           payment={paymentFilter}
@@ -131,7 +131,7 @@ export function OrderManagementDashboard({
               title={statusFilter === "pending_payment" ? "You're all caught up." : "No matching orders"}
               description={
                 statusFilter === "pending_payment"
-                  ? "No pending payments need attention right now."
+                  ? "No manual payment checks need attention right now."
                   : "Try another search, status, payment method, or sort."
               }
               icon={<PackageCheck size={24} aria-hidden="true" />}
@@ -153,11 +153,11 @@ export function OrderManagementDashboard({
 
 function OrderCounter({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
-      <span className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+      <span className="block text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500">
         {label}
       </span>
-      <strong className="mt-2 block text-2xl font-semibold tracking-tight text-gray-950">
+      <strong className="mt-2 block text-2xl font-bold tracking-tight text-gray-950">
         {value}
       </strong>
     </div>

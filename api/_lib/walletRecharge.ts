@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 
 import { loadLocalEnv } from "../_env.js";
@@ -47,33 +47,65 @@ type WalletRechargeData = {
   rechargeId?: string;
   sellerId?: string;
   amount?: number;
-  token?: string;
+  requestedAmount?: number;
   status?: RechargeStatus;
   paymentProvider?: "razorpay";
-  paymentLink?: string;
-  returnUrl?: string;
   referenceId?: string;
+  razorpayOrderId?: string;
+  razorpayOrderStatus?: string;
+  razorpayPaymentId?: string;
+  razorpayPaymentStatus?: string;
   walletTransactionId?: string;
   balanceBefore?: number;
   balanceAfter?: number;
+  completedAt?: unknown;
   creditedAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 };
 
 type SellerData = {
+  email?: string;
+  name?: string;
+  phone?: string;
   storeId?: string;
 };
 
 class WalletRechargeError extends Error {
+  code: string;
+  details?: Record<string, unknown>;
   statusCode: number;
 
-  constructor(message: string, statusCode = 400) {
+  constructor(
+    message: string,
+    statusCode = 400,
+    code = "wallet_recharge_error",
+    details?: Record<string, unknown>
+  ) {
     super(message);
     this.name = "WalletRechargeError";
+    this.code = code;
+    this.details = details;
     this.statusCode = statusCode;
   }
 }
+
+type RazorpayOrder = {
+  id?: string;
+  amount?: number;
+  amount_paid?: number;
+  currency?: string;
+  receipt?: string;
+  status?: string;
+};
+
+type RazorpayPayment = {
+  amount?: number;
+  currency?: string;
+  id?: string;
+  order_id?: string;
+  status?: string;
+};
 
 function sendJson(res: JsonResponse, statusCode: number, body: unknown) {
   res.setHeader?.("Cache-Control", "no-store");
@@ -155,78 +187,119 @@ async function assertAuthenticatedAdmin(req: { headers?: Record<string, unknown>
   }
 }
 
-function getAppUrl(req?: { headers?: Record<string, unknown> }) {
-  const configured =
-    process.env.PAYPERTAP_APP_URL ||
-    process.env.VITE_APP_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL ||
-    "";
-  const host = toText(req?.headers?.["x-forwarded-host"] || req?.headers?.host);
-  const protocol = toText(req?.headers?.["x-forwarded-proto"]) || "https";
-  const base = configured || (host ? `${protocol}://${host}` : "https://www.paypertap.in");
-  const withProtocol = /^https?:\/\//i.test(base) ? base : `https://${base}`;
+function getRazorpayCredentials() {
+  const keyId = toText(process.env.RAZORPAY_KEY_ID);
+  const keySecret = toText(process.env.RAZORPAY_KEY_SECRET);
 
-  return withProtocol.replace(/\/+$/g, "");
+  if (!keyId || !keySecret) {
+    throw new WalletRechargeError(
+      "Missing Razorpay credentials.",
+      500,
+      "missing_razorpay_credentials",
+      {
+        hasKeyId: Boolean(keyId),
+        hasKeySecret: Boolean(keySecret),
+      }
+    );
+  }
+
+  return { keyId, keySecret };
 }
 
-function getConfiguredRechargePaymentLink() {
-  return (
-    toText(process.env.PAYPERTAP_WALLET_RECHARGE_PAYMENT_LINK) ||
-    toText(process.env.VITE_PAYPERTAP_WALLET_RECHARGE_PAYMENT_LINK)
-  );
+function getRazorpayAuthHeader() {
+  const { keyId, keySecret } = getRazorpayCredentials();
+  const credentials = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+
+  return `Basic ${credentials}`;
 }
 
-function buildRechargePaymentLink({
+async function razorpayRequest<T>({
+  body,
+  method,
+  path,
+}: {
+  body?: Record<string, unknown>;
+  method: "GET" | "POST";
+  path: string;
+}): Promise<T> {
+  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: getRazorpayAuthHeader(),
+      "Content-Type": "application/json",
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | (Record<string, unknown> & { error?: { description?: string; reason?: string } })
+    | null;
+
+  if (!response.ok) {
+    throw new WalletRechargeError(
+      payload?.error?.description || "Razorpay request failed.",
+      502,
+      "razorpay_request_failed",
+      {
+        method,
+        path,
+        statusCode: response.status,
+        reason: payload?.error?.reason || "",
+      }
+    );
+  }
+
+  return payload as T;
+}
+
+async function createRazorpayRechargeOrder({
   amount,
   rechargeId,
   referenceId,
-  returnUrl,
-  token,
+  sellerId,
 }: {
   amount: number;
   rechargeId: string;
   referenceId: string;
-  returnUrl: string;
-  token: string;
+  sellerId: string;
 }) {
-  const configuredLink = getConfiguredRechargePaymentLink();
+  const response = await razorpayRequest<RazorpayOrder>({
+    method: "POST",
+    path: "/orders",
+    body: {
+      amount: amount * 100,
+      currency: "INR",
+      receipt: referenceId,
+      notes: {
+        sellerId,
+        rechargeId,
+        referenceId,
+      },
+    },
+  });
 
-  if (!configuredLink) {
-    throw new WalletRechargeError("Wallet recharge payment link is not configured.", 500);
+  const razorpayOrderId = toText(response.id);
+
+  if (
+    !razorpayOrderId ||
+    Number(response.amount || 0) !== amount * 100 ||
+    toText(response.currency).toUpperCase() !== "INR"
+  ) {
+    throw new WalletRechargeError(
+      "Unable to create Razorpay order.",
+      502,
+      "razorpay_order_invalid_response",
+      {
+        hasOrderId: Boolean(razorpayOrderId),
+        amount: response.amount || 0,
+        currency: response.currency || "",
+      }
+    );
   }
 
-  const replacements: Record<string, string> = {
-    AMOUNT: String(amount),
-    AMOUNT_PAISE: String(amount * 100),
-    RECHARGE_ID: rechargeId,
-    REFERENCE: referenceId,
-    RETURN_URL: returnUrl,
-    TOKEN: token,
+  return {
+    razorpayOrderId,
+    razorpayOrderStatus: toText(response.status) || "created",
   };
-  let link = configuredLink;
-
-  for (const [key, value] of Object.entries(replacements)) {
-    link = link.replaceAll(`{${key}}`, encodeURIComponent(value));
-  }
-
-  try {
-    const url = new URL(link);
-
-    if (!configuredLink.includes("{RETURN_URL}")) {
-      url.searchParams.set("return_url", returnUrl);
-    }
-    if (!configuredLink.includes("{AMOUNT}")) {
-      url.searchParams.set("amount", String(amount));
-    }
-    if (!configuredLink.includes("{REFERENCE}")) {
-      url.searchParams.set("reference_id", referenceId);
-    }
-
-    return url.toString();
-  } catch {
-    throw new WalletRechargeError("Wallet recharge payment link is invalid.", 500);
-  }
 }
 
 function assertRechargeAmount(amountInput: unknown) {
@@ -245,8 +318,139 @@ function assertRechargeAmount(amountInput: unknown) {
   return amount;
 }
 
-function createToken() {
-  return randomBytes(32).toString("hex");
+async function fetchRazorpayOrder(razorpayOrderId: string) {
+  return await razorpayRequest<RazorpayOrder>({
+    method: "GET",
+    path: `/orders/${encodeURIComponent(razorpayOrderId)}`,
+  });
+}
+
+async function fetchRazorpayPayment(paymentId: string) {
+  return await razorpayRequest<RazorpayPayment>({
+    method: "GET",
+    path: `/payments/${encodeURIComponent(paymentId)}`,
+  });
+}
+
+function verifyRazorpaySignature({
+  razorpayOrderId,
+  razorpayPaymentId,
+  razorpaySignature,
+}: {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}) {
+  const { keySecret } = getRazorpayCredentials();
+  const expectedSignature = createHmac("sha256", keySecret)
+    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+    .digest("hex");
+  const expected = Buffer.from(expectedSignature, "hex");
+  const received = Buffer.from(razorpaySignature, "hex");
+
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      409,
+      "invalid_razorpay_signature"
+    );
+  }
+}
+
+async function verifyWalletRechargePayment({
+  referenceId,
+  rechargeAmount,
+  rechargeId,
+  razorpayOrderId,
+  razorpayPaymentId,
+  razorpaySignature,
+}: {
+  referenceId: string;
+  rechargeAmount: number;
+  rechargeId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}) {
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      409,
+      "missing_razorpay_payment_fields",
+      { rechargeId }
+    );
+  }
+
+  verifyRazorpaySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature });
+
+  const order = await fetchRazorpayOrder(razorpayOrderId);
+  const payment = await fetchRazorpayPayment(razorpayPaymentId);
+  const amountPaise = rechargeAmount * 100;
+
+  if (
+    toText(order.id) !== razorpayOrderId ||
+    Number(order.amount || 0) !== amountPaise ||
+    toText(order.currency).toUpperCase() !== "INR" ||
+    toText(order.receipt) !== referenceId
+  ) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      409,
+      "razorpay_order_mismatch",
+      {
+        rechargeId,
+        razorpayOrderId,
+        orderAmount: order.amount || 0,
+        orderCurrency: order.currency || "",
+        orderReceipt: order.receipt || "",
+      }
+    );
+  }
+
+  if (Number(order.amount_paid || 0) < amountPaise) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      409,
+      "razorpay_order_not_paid",
+      {
+        rechargeId,
+        razorpayOrderId,
+        amountPaise,
+        amountPaid: order.amount_paid || 0,
+        orderStatus: order.status || "",
+      }
+    );
+  }
+
+  const paymentStatus = toText(payment.status).toLowerCase();
+
+  if (
+    toText(payment.id) !== razorpayPaymentId ||
+    toText(payment.order_id) !== razorpayOrderId ||
+    paymentStatus !== "captured" ||
+    Number(payment.amount || 0) !== amountPaise ||
+    toText(payment.currency).toUpperCase() !== "INR"
+  ) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      409,
+      "payment_mismatch",
+      {
+        rechargeId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        paymentStatus: payment.status || "",
+        paymentAmount: payment.amount || 0,
+        paymentCurrency: payment.currency || "",
+      }
+    );
+  }
+
+  return {
+    orderStatus: toText(order.status),
+    paymentId: razorpayPaymentId,
+    paymentStatus: toText(payment.status),
+  };
 }
 
 function walletHasFunds(wallet: Pick<WalletData, "balance" | "freeOrdersRemaining">) {
@@ -282,13 +486,26 @@ async function getSellerStoreId(db: Firestore, sellerId: string) {
   return toText(seller.storeId);
 }
 
-export async function createWalletRecharge({
+async function getExistingSeller(db: Firestore, sellerId: string) {
+  const sellerSnap = await db.collection("sellers").doc(sellerId).get();
+
+  if (!sellerSnap.exists) {
+    throw new WalletRechargeError(
+      "Seller account is unavailable.",
+      404,
+      "seller_not_found",
+      { sellerId }
+    );
+  }
+
+  return sellerSnap.data() as SellerData;
+}
+
+export async function createWalletRechargeOrder({
   amount,
-  req,
   sellerId,
 }: {
   amount: number;
-  req?: { headers?: Record<string, unknown> };
   sellerId: string;
 }) {
   const db = getAdminDbIfConfigured();
@@ -304,17 +521,15 @@ export async function createWalletRecharge({
   }
 
   const rechargeAmount = assertRechargeAmount(amount);
+  await getExistingSeller(db, cleanSellerId);
   const rechargeRef = db.collection("walletRecharges").doc();
   const rechargeId = rechargeRef.id;
-  const token = createToken();
   const referenceId = `PPT-WALLET-${rechargeId.slice(0, 8).toUpperCase()}`;
-  const returnUrl = `${getAppUrl(req)}/wallet/recharge-return/${token}`;
-  const paymentLink = buildRechargePaymentLink({
+  const { razorpayOrderId, razorpayOrderStatus } = await createRazorpayRechargeOrder({
     amount: rechargeAmount,
     rechargeId,
     referenceId,
-    returnUrl,
-    token,
+    sellerId: cleanSellerId,
   });
   const now = FieldValue.serverTimestamp();
 
@@ -322,12 +537,12 @@ export async function createWalletRecharge({
     rechargeId,
     sellerId: cleanSellerId,
     amount: rechargeAmount,
-    token,
+    requestedAmount: rechargeAmount,
     status: "pending",
     paymentProvider: "razorpay",
-    paymentLink,
-    returnUrl,
     referenceId,
+    razorpayOrderId,
+    razorpayOrderStatus,
     createdAt: now,
     updatedAt: now,
   });
@@ -336,43 +551,106 @@ export async function createWalletRecharge({
     sellerId: cleanSellerId,
     rechargeId,
     amount: rechargeAmount,
+    razorpayOrderId,
   });
+
+  const { keyId } = getRazorpayCredentials();
 
   return {
     amount: rechargeAmount,
-    paymentLink,
+    currency: "INR",
+    keyId,
+    razorpayOrderId,
     rechargeId,
     referenceId,
-    returnUrl,
-    token,
   };
 }
 
-export async function creditWalletRecharge({ token }: { token: string }) {
+export async function verifyAndCreditWalletRecharge({
+  rechargeId,
+  razorpayOrderId,
+  razorpayPaymentId,
+  razorpaySignature,
+  sellerId,
+}: {
+  rechargeId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+  sellerId: string;
+}) {
   const db = getAdminDbIfConfigured();
 
   if (!db) {
-    throw new WalletRechargeError("Wallet recharge return is temporarily unavailable.", 500);
+    throw new WalletRechargeError("Wallet recharge verification is temporarily unavailable.", 500);
   }
 
-  const cleanToken = token.trim();
+  const cleanRechargeId = rechargeId.trim();
+  const cleanSellerId = sellerId.trim();
+  const cleanOrderId = razorpayOrderId.trim();
+  const cleanPaymentId = razorpayPaymentId.trim();
+  const cleanSignature = razorpaySignature.trim();
 
-  if (!cleanToken || cleanToken.length < 32) {
-    throw new WalletRechargeError("Invalid wallet recharge return link.");
+  if (!cleanRechargeId || !cleanSellerId || !cleanOrderId || !cleanPaymentId || !cleanSignature) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      400,
+      "missing_payment_verification_input"
+    );
   }
 
-  const rechargeSnap = await db
-    .collection("walletRecharges")
-    .where("token", "==", cleanToken)
-    .limit(1)
-    .get();
+  const rechargeDoc = await db.collection("walletRecharges").doc(cleanRechargeId).get();
 
-  if (rechargeSnap.empty) {
-    throw new WalletRechargeError("Invalid wallet recharge return link.");
+  if (!rechargeDoc.exists) {
+    throw new WalletRechargeError(
+      "Payment verification failed.",
+      404,
+      "recharge_not_found",
+      { rechargeId: cleanRechargeId }
+    );
   }
 
-  const rechargeDoc = rechargeSnap.docs[0];
-  const rechargeId = rechargeDoc.id;
+  const rechargeBeforeTransaction = rechargeDoc.data() as WalletRechargeData;
+  let verification:
+    | {
+        orderStatus: string;
+        paymentId: string;
+        paymentStatus: string;
+      }
+    | null = null;
+
+  if (
+    rechargeBeforeTransaction.status !== "credited" ||
+    !toText(rechargeBeforeTransaction.walletTransactionId)
+  ) {
+    if (
+      toText(rechargeBeforeTransaction.sellerId) !== cleanSellerId ||
+      toText(rechargeBeforeTransaction.razorpayOrderId) !== cleanOrderId
+    ) {
+      throw new WalletRechargeError(
+        "Payment verification failed.",
+        409,
+        "recharge_order_mismatch",
+        {
+          rechargeId: cleanRechargeId,
+          hasSellerMatch: toText(rechargeBeforeTransaction.sellerId) === cleanSellerId,
+          hasOrderMatch: toText(rechargeBeforeTransaction.razorpayOrderId) === cleanOrderId,
+        }
+      );
+    }
+
+    verification = await verifyWalletRechargePayment({
+      razorpayOrderId: cleanOrderId,
+      razorpayPaymentId: cleanPaymentId,
+      razorpaySignature: cleanSignature,
+      referenceId: toText(rechargeBeforeTransaction.referenceId) || `PPT-WALLET-${cleanRechargeId}`,
+      rechargeAmount: assertRechargeAmount(
+        rechargeBeforeTransaction.requestedAmount || rechargeBeforeTransaction.amount
+      ),
+      rechargeId: cleanRechargeId,
+    });
+  }
+
   let result:
     | {
         alreadyCredited: boolean;
@@ -387,21 +665,29 @@ export async function creditWalletRecharge({ token }: { token: string }) {
     | null = null;
 
   await db.runTransaction(async (transaction) => {
-    const rechargeRef = db.collection("walletRecharges").doc(rechargeId);
+    const rechargeRef = db.collection("walletRecharges").doc(cleanRechargeId);
     const currentRechargeSnap = await transaction.get(rechargeRef);
 
     if (!currentRechargeSnap.exists) {
-      throw new WalletRechargeError("Invalid wallet recharge return link.");
+      throw new WalletRechargeError("Payment verification failed.", 404, "recharge_not_found");
     }
 
     const recharge = currentRechargeSnap.data() as WalletRechargeData;
     const sellerId = toText(recharge.sellerId);
-    const amount = assertRechargeAmount(recharge.amount);
-    const referenceId = toText(recharge.referenceId) || `PPT-WALLET-${rechargeId}`;
+    const amount = assertRechargeAmount(recharge.requestedAmount || recharge.amount);
+    const referenceId = toText(recharge.referenceId) || `PPT-WALLET-${cleanRechargeId}`;
     const existingTransactionId = toText(recharge.walletTransactionId);
 
-    if (!sellerId) {
-      throw new WalletRechargeError("Invalid wallet recharge return link.");
+    if (
+      !sellerId ||
+      sellerId !== cleanSellerId ||
+      toText(recharge.razorpayOrderId) !== cleanOrderId
+    ) {
+      throw new WalletRechargeError(
+        "Payment verification failed.",
+        409,
+        "recharge_order_mismatch"
+      );
     }
 
     if (recharge.status === "credited" && existingTransactionId) {
@@ -438,7 +724,7 @@ export async function creditWalletRecharge({ token }: { token: string }) {
       emailEvents: currentWallet.emailEvents || {},
       updatedAt: now,
     };
-    const walletTransactionRef = db.collection("walletTransactions").doc(`recharge_${rechargeId}`);
+    const walletTransactionRef = db.collection("walletTransactions").doc(`recharge_${cleanRechargeId}`);
     const walletTransactionId = walletTransactionRef.id;
 
     if (walletSnap.exists) {
@@ -465,8 +751,13 @@ export async function creditWalletRecharge({ token }: { token: string }) {
       status: "credited",
       balanceBefore,
       balanceAfter,
+      razorpayOrderId: cleanOrderId,
+      razorpayOrderStatus: verification?.orderStatus || "",
+      razorpayPaymentId: verification?.paymentId || "",
+      razorpayPaymentStatus: verification?.paymentStatus || "",
       walletTransactionId,
       creditedAt: now,
+      completedAt: now,
       updatedAt: now,
     });
 
@@ -502,7 +793,7 @@ export async function creditWalletRecharge({ token }: { token: string }) {
   if (!result.alreadyCredited) {
     await sendWalletRechargeSuccessfulEmailSafely({
       db,
-      rechargeId,
+      rechargeId: cleanRechargeId,
       sellerId: result.sellerId,
     });
 
@@ -515,9 +806,9 @@ export async function creditWalletRecharge({ token }: { token: string }) {
     }
   }
 
-  console.info("Wallet recharge return processed.", {
+  console.info("Wallet recharge payment verified.", {
     sellerId: result.sellerId,
-    rechargeId,
+    rechargeId: cleanRechargeId,
     amount: result.amount,
     alreadyCredited: result.alreadyCredited,
     balanceAfter: result.balanceAfter,
@@ -525,7 +816,7 @@ export async function creditWalletRecharge({ token }: { token: string }) {
 
   return {
     ...result,
-    rechargeId,
+    rechargeId: cleanRechargeId,
   };
 }
 
@@ -682,15 +973,19 @@ export async function adminWalletAdjustmentHandler(req: any, res: JsonResponse) 
 
     console.warn("Admin wallet adjustment failed.", {
       error: error instanceof Error ? error.message : "Unknown wallet adjustment error",
+      code: walletRechargeError.code,
     });
     sendJson(res, walletRechargeError.statusCode, {
       success: false,
+      code: walletRechargeError.code,
       error: walletRechargeError.message,
+      message: walletRechargeError.message,
+      ...(walletRechargeError.details ? { details: walletRechargeError.details } : {}),
     });
   }
 }
 
-export async function walletRechargeHandler(req: any, res: JsonResponse) {
+export async function walletRechargeCreateOrderHandler(req: any, res: JsonResponse) {
   if (req.method !== "POST") {
     sendJson(res, 405, { success: false, error: "Method not allowed." });
     return;
@@ -702,9 +997,8 @@ export async function walletRechargeHandler(req: any, res: JsonResponse) {
 
   try {
     const sellerId = await getAuthenticatedSellerId(req);
-    const result = await createWalletRecharge({
+    const result = await createWalletRechargeOrder({
       amount: assertRechargeAmount(body?.amount),
-      req,
       sellerId,
     });
 
@@ -720,15 +1014,19 @@ export async function walletRechargeHandler(req: any, res: JsonResponse) {
 
     console.warn("Wallet recharge failed.", {
       error: error instanceof Error ? error.message : "Unknown wallet recharge error",
+      code: walletRechargeError.code,
     });
     sendJson(res, walletRechargeError.statusCode, {
       success: false,
+      code: walletRechargeError.code,
       error: walletRechargeError.message,
+      message: walletRechargeError.message,
+      ...(walletRechargeError.details ? { details: walletRechargeError.details } : {}),
     });
   }
 }
 
-export async function walletRechargeReturnHandler(req: any, res: JsonResponse) {
+export async function walletRechargeVerifyPaymentHandler(req: any, res: JsonResponse) {
   if (req.method !== "POST") {
     sendJson(res, 405, { success: false, error: "Method not allowed." });
     return;
@@ -739,7 +1037,14 @@ export async function walletRechargeReturnHandler(req: any, res: JsonResponse) {
   const body = getRequestBody(req) as Record<string, unknown> | null;
 
   try {
-    const result = await creditWalletRecharge({ token: toText(body?.token) });
+    const sellerId = await getAuthenticatedSellerId(req);
+    const result = await verifyAndCreditWalletRecharge({
+      rechargeId: toText(body?.rechargeId),
+      razorpayOrderId: toText(body?.razorpayOrderId),
+      razorpayPaymentId: toText(body?.razorpayPaymentId),
+      razorpaySignature: toText(body?.razorpaySignature),
+      sellerId,
+    });
 
     sendJson(res, 200, {
       success: true,
@@ -749,14 +1054,18 @@ export async function walletRechargeReturnHandler(req: any, res: JsonResponse) {
     const walletRechargeError =
       error instanceof WalletRechargeError
         ? error
-        : new WalletRechargeError("Wallet recharge return could not be processed.");
+        : new WalletRechargeError("Wallet recharge payment could not be verified.");
 
-    console.warn("Wallet recharge return failed.", {
-      error: error instanceof Error ? error.message : "Unknown wallet recharge return error",
+    console.warn("Wallet recharge verification failed.", {
+      error: error instanceof Error ? error.message : "Unknown wallet recharge verification error",
+      code: walletRechargeError.code,
     });
     sendJson(res, walletRechargeError.statusCode, {
       success: false,
+      code: walletRechargeError.code,
       error: walletRechargeError.message,
+      message: walletRechargeError.message,
+      ...(walletRechargeError.details ? { details: walletRechargeError.details } : {}),
     });
   }
 }

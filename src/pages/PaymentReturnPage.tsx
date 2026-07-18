@@ -3,11 +3,15 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 import { PptButton, PptEmptyState, PptTapLoader } from "@/components/ui";
-import { processPaymentReturn } from "@/services/paymentReturnService";
+import {
+  processPaymentReturn,
+  resolvePaymentReturnStore,
+} from "@/services/paymentReturnService";
 
 type ReturnState = {
   error: string;
   loading: boolean;
+  storeSlug: string;
 };
 
 export default function PaymentReturnPage() {
@@ -17,6 +21,7 @@ export default function PaymentReturnPage() {
   const [state, setState] = useState<ReturnState>({
     error: "",
     loading: true,
+    storeSlug: "",
   });
 
   useEffect(() => {
@@ -31,7 +36,12 @@ export default function PaymentReturnPage() {
           "";
 
         if (!orderToken) {
-          throw new Error("This payment return link is missing the order tracking token.");
+          const result = await resolvePaymentReturnStore(token);
+
+          if (!cancelled) {
+            navigate(`/${result.storeSlug}`, { replace: true });
+          }
+          return;
         }
 
         const result = await processPaymentReturn(token, orderToken);
@@ -45,6 +55,15 @@ export default function PaymentReturnPage() {
       } catch (error) {
         console.warn("Payment return page failed:", error);
 
+        const fallback = token
+          ? await resolvePaymentReturnStore(token).catch(() => null)
+          : null;
+
+        if (fallback?.storeSlug && !cancelled) {
+          navigate(`/${fallback.storeSlug}`, { replace: true });
+          return;
+        }
+
         if (!cancelled) {
           setState({
             error:
@@ -52,6 +71,7 @@ export default function PaymentReturnPage() {
                 ? error.message
                 : "Payment return could not be processed.",
             loading: false,
+            storeSlug: fallback?.storeSlug || "",
           });
         }
       }
@@ -87,9 +107,9 @@ export default function PaymentReturnPage() {
             variant="primary"
             rounded="pill"
             icon={<CheckCircle2 size={16} aria-hidden="true" />}
-            onClick={() => navigate("/")}
+            onClick={() => navigate(state.storeSlug ? `/${state.storeSlug}` : "/")}
           >
-            Go to PayPerTap
+            {state.storeSlug ? "Go to store" : "Go to PayPerTap"}
           </PptButton>
         }
         className="max-w-sm"

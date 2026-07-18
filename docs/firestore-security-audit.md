@@ -62,17 +62,17 @@ Important note: the attached rules snapshot still contains legacy `booking`, `ch
 | `src/services/walletService.ts` | `recordWalletTransaction` | `walletTransactions` | `addDoc` | none should use it | Client | Legacy/helper only | NO in rewritten rules; this must remain unused |
 | `src/services/walletService.ts` | `getWalletTransactions` | `walletTransactions` | `query where sellerId ==` | owner | Client | Wallet activity | YES |
 | `src/services/walletService.ts` | `updateWallet` | `wallets/{sellerId}` | `updateDoc` | none should use it | Client | Helper only | NO in rewritten rules; server owns mutation |
-| `src/services/walletService.ts` | `startWalletRecharge` | server API | fetch with ID token | signed-in seller | Client/API | Create recharge session | Rules bypassed by Admin SDK |
-| `src/services/walletService.ts` | `processWalletRechargeReturn` | server API | unauthenticated token POST | token holder | Client/API | Credit recharge return | Rules bypassed by Admin SDK |
+| `src/services/walletService.ts` | `startWalletRecharge` | server API | fetch with ID token | signed-in seller | Client/API | Create Razorpay Checkout order | Rules bypassed by Admin SDK |
+| `src/services/walletService.ts` | `verifyWalletRechargePayment` | server API | fetch with ID token | signed-in seller + Razorpay signature | Client/API | Verify Checkout payment and credit recharge | Rules bypassed by Admin SDK |
 | `src/services/themeService.ts` | `getThemeById` | `themes/{themeId}` | `getDoc` | public | Client | Load theme metadata | YES |
 | `api/_lib/createOrder.ts` | `createChargeableOrder` | `stores/{id}`, `products/{id}`, `wallets/{sellerId}` | transaction `get` | server Admin | Server | Validate store/product/wallet | Bypasses rules |
 | `api/_lib/createOrder.ts` | `createChargeableOrder` | `wallets`, `walletTransactions`, `orders`, `products`, `stores` | transaction `set/update` | server Admin | Server | Atomic wallet charge + order + reservation | Bypasses rules |
 | `api/_lib/paymentReturn.ts` | `handlePaymentReturn` | `stores` | `query where paymentReturnToken == limit 1` | token holder | Server | Resolve return token | Bypasses rules |
 | `api/_lib/paymentReturn.ts` | `handlePaymentReturn` | `orders/{orderId}` | transaction `get/update` | token + pendingOrderId | Server | Mark `payment_returned` | Bypasses rules |
-| `api/_lib/walletRecharge.ts` | `createWalletRecharge` | `walletRecharges/{autoId}` | `set` | verified Firebase ID token | Server | Start wallet recharge | Bypasses rules |
-| `api/_lib/walletRecharge.ts` | `creditWalletRecharge` | `walletRecharges` | `query where token == limit 1` | token holder | Server | Find recharge session | Bypasses rules |
-| `api/_lib/walletRecharge.ts` | `creditWalletRecharge` | `walletRecharges`, `wallets`, `walletTransactions` | transaction `get/set/update` | token holder | Server | Credit wallet once | Bypasses rules |
-| `api/_lib/walletRecharge.ts` | `creditWalletRecharge` | `sellers/{sellerId}`, `stores/{storeId}` | `get`, `set merge` | server | Server | Auto-resume store | Bypasses rules |
+| `api/_lib/walletRecharge.ts` | `createWalletRechargeOrder` | `walletRecharges/{autoId}` | `set` | verified Firebase ID token | Server | Create Razorpay Order recharge session | Bypasses rules |
+| `api/_lib/walletRecharge.ts` | `verifyAndCreditWalletRecharge` | `walletRecharges/{rechargeId}`, Razorpay Orders/Payments APIs | `get` + server verification | seller + valid Razorpay signature | Server | Verify paid order before credit | Bypasses rules |
+| `api/_lib/walletRecharge.ts` | `verifyAndCreditWalletRecharge` | `walletRecharges`, `wallets`, `walletTransactions` | transaction `get/set/update` | seller + valid Razorpay signature | Server | Credit wallet once | Bypasses rules |
+| `api/_lib/walletRecharge.ts` | `verifyAndCreditWalletRecharge` | `sellers/{sellerId}`, `stores/{storeId}` | `get`, `set merge` | server | Server | Auto-resume store | Bypasses rules |
 | `api/_lib/walletRecharge.ts` | `applyAdminWalletAdjustment` | `wallets`, `walletTransactions`, `sellers`, `stores` | transaction + `get/set/update` | admin custom claim | Server | Bonus/adjustment/refund | Bypasses rules |
 | `api/_lib/emailNotifications.ts` | `sendAdminSellerOnboardedEmailIfNeeded` | `sellers`, `stores` | `get`, store `set merge` | server | Server | Admin onboarding email audit | Bypasses rules |
 | `api/_lib/emailNotifications.ts` | `sendWalletRechargeSuccessfulEmailIfNeeded` | `walletRecharges`, `sellers`, `stores` | `get`, recharge `set merge` | server | Server | Recharge email once | Bypasses rules |
@@ -108,7 +108,7 @@ Important note: the attached rules snapshot still contains legacy `booking`, `ch
 
 ## 5. Security Vulnerabilities
 
-- Critical, code not rules: `/api/wallet-recharge-return` credits wallet based only on return token. A seller can start a recharge, skip payment, call the return endpoint, and receive wallet balance. Fix requires Razorpay verification/webhook or a signed server-side payment confirmation.
+- Resolved, code not rules: wallet recharge now uses Razorpay Checkout Orders and credits wallet only after server-side signature, order, payment, amount, currency, and idempotency checks.
 - High, rules: public product reservation update allowed inventory denial-of-service. Fixed.
 - High, rules: owner-created wallet transactions allowed fake transaction history. Fixed.
 - Medium, code/rules design: public store documents expose `paymentReturnToken`. Payment return is not payment verification, but the token should still move to private server-only store config.
@@ -208,6 +208,6 @@ Local validation status:
 
 ## 14. Risk Assessment
 
-After the rules rewrite, the largest remaining risk is not Firestore rules; it is wallet recharge accounting. A return-token-only wallet credit flow is not production-safe for a paid wallet. The next highest risk is public order spam draining seller wallets through `/api/create-order`; add abuse prevention before launch.
+After the rules rewrite, the largest remaining risk is not Firestore rules; wallet recharge now uses Razorpay Checkout order creation plus server-side signature/order/payment verification before crediting. The next highest risk is public order spam draining seller wallets through `/api/create-order`; add abuse prevention before launch.
 
-Rules risk is substantially lower after the rewrite: direct wallet tampering, fake wallet history, public inventory reservation, hidden field injection, and stale booking rules are addressed. Final deployment should wait until rules compile under Firebase tooling and the wallet recharge verification gap is closed.
+Rules risk is substantially lower after the rewrite: direct wallet tampering, fake wallet history, public inventory reservation, hidden field injection, and stale booking rules are addressed. Final deployment should wait until rules compile under Firebase tooling and the Razorpay Checkout recharge flow is verified end to end.

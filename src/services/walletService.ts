@@ -82,6 +82,7 @@ export const INITIAL_FREE_ORDERS = FREE_ORDER_COUNT;
 export const WALLET_ORDER_CHARGE_AMOUNT = ORDER_CHARGE;
 export const WALLET_LOW_BALANCE_THRESHOLD = LOW_BALANCE_THRESHOLD;
 export {
+  type CreateChargeableOrderResult,
   WALLET_RECHARGE_AMOUNTS,
   WALLET_RECHARGE_MAX_AMOUNT,
   WALLET_RECHARGE_MIN_AMOUNT,
@@ -91,14 +92,21 @@ const WALLET_TRANSACTION_COLLECTION = "walletTransactions";
 
 export type WalletRechargeStartResult = {
   amount: number;
-  paymentLink: string;
+  currency: "INR";
   rechargeId: string;
+  razorpayOrderId: string;
+  keyId: string;
   referenceId: string;
-  returnUrl: string;
-  token: string;
 };
 
-export type WalletRechargeReturnResult = {
+export type WalletRechargeVerificationInput = {
+  rechargeId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+};
+
+export type WalletRechargeVerificationResult = {
   alreadyCredited: boolean;
   amount: number;
   balanceAfter: number;
@@ -132,7 +140,7 @@ function assertRechargeAmount(amount: number): number {
     normalizedAmount < WALLET_RECHARGE_MIN_AMOUNT ||
     normalizedAmount > WALLET_RECHARGE_MAX_AMOUNT
   ) {
-    throw new Error("Recharge amount must be between ₹100 and ₹25,000.");
+    throw new Error(`Recharge amount must be between Rs. ${WALLET_RECHARGE_MIN_AMOUNT.toLocaleString("en-IN")} and Rs. ${WALLET_RECHARGE_MAX_AMOUNT.toLocaleString("en-IN")}.`);
   }
 
   return normalizedAmount;
@@ -222,7 +230,7 @@ export async function startWalletRecharge(
   amount: number
 ): Promise<WalletRechargeStartResult> {
   const rechargeAmount = assertRechargeAmount(amount);
-  const response = await fetch("/api/wallet?action=recharge", {
+  const response = await fetch("/api/wallet?action=create-order", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -231,39 +239,53 @@ export async function startWalletRecharge(
     body: JSON.stringify({ amount: rechargeAmount }),
   });
   const payload = (await response.json().catch(() => null)) as
-    | (Partial<WalletRechargeStartResult> & { success?: boolean; error?: string })
+    | (Partial<WalletRechargeStartResult> & {
+        code?: string;
+        error?: string;
+        message?: string;
+        success?: boolean;
+      })
     | null;
 
   if (
     !response.ok ||
     !payload?.success ||
-    !payload.paymentLink ||
+    !payload.razorpayOrderId ||
+    !payload.keyId ||
     !payload.rechargeId ||
-    !payload.token
+    !payload.currency
   ) {
-    throw new Error(payload?.error || "Wallet recharge could not be started.");
+    throw new Error(payload?.message || payload?.error || "Wallet recharge could not be started.");
   }
 
   return {
     amount: Number(payload.amount || rechargeAmount),
-    paymentLink: payload.paymentLink,
+    currency: payload.currency,
+    keyId: payload.keyId,
+    razorpayOrderId: payload.razorpayOrderId,
     rechargeId: payload.rechargeId,
     referenceId: payload.referenceId || payload.rechargeId,
-    returnUrl: payload.returnUrl || "",
-    token: payload.token,
   };
 }
 
-export async function processWalletRechargeReturn(
-  token: string
-): Promise<WalletRechargeReturnResult> {
-  const response = await fetch("/api/wallet?action=recharge-return", {
+export async function verifyWalletRechargePayment(
+  input: WalletRechargeVerificationInput
+): Promise<WalletRechargeVerificationResult> {
+  const response = await fetch("/api/wallet?action=verify-payment", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(await getAuthHeader()),
+    },
+    body: JSON.stringify(input),
   });
   const payload = (await response.json().catch(() => null)) as
-    | (Partial<WalletRechargeReturnResult> & { success?: boolean; error?: string })
+    | (Partial<WalletRechargeVerificationResult> & {
+        code?: string;
+        error?: string;
+        message?: string;
+        success?: boolean;
+      })
     | null;
 
   if (
@@ -273,7 +295,9 @@ export async function processWalletRechargeReturn(
     !payload.sellerId ||
     !payload.walletTransactionId
   ) {
-    throw new Error(payload?.error || "Wallet recharge return could not be processed.");
+    throw new Error(
+      payload?.message || payload?.error || "Wallet recharge payment could not be verified."
+    );
   }
 
   return {

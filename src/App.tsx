@@ -17,7 +17,6 @@ const PaymentReturnPage = lazy(() => import("./pages/PaymentReturnPage"));
 const OrderSuccessPage = lazy(() => import("./pages/OrderSuccessPage"));
 const StoreOnboardingPage = lazy(() => import("./pages/StoreOnboardingPage"));
 const StorePolicyPage = lazy(() => import("./pages/StorePolicyPage"));
-const WalletRechargeReturnPage = lazy(() => import("./pages/WalletRechargeReturnPage"));
 
 const enableIntegrationTests =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_INTEGRATION_TESTS === "true";
@@ -136,14 +135,6 @@ export default function App() {
             element={
               <NoIndexAppRoute>
                 <PaymentReturnPage />
-              </NoIndexAppRoute>
-            }
-          />
-          <Route
-            path="/wallet/recharge-return/:token"
-            element={
-              <NoIndexAppRoute>
-                <WalletRechargeReturnPage />
               </NoIndexAppRoute>
             }
           />

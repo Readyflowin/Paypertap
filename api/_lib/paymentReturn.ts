@@ -13,6 +13,12 @@ type PaymentReturnBody = {
   token?: unknown;
 };
 
+type PaymentReturnStoreResult = {
+  storeId: string;
+  storeSlug: string;
+  storeName: string;
+};
+
 class PaymentReturnError extends Error {
   code: string;
   statusCode: number;
@@ -68,6 +74,61 @@ function getSafeOrder(orderData: Record<string, unknown>, orderId: string) {
     checkoutId: String(orderData.checkoutId || orderId),
     orderId: String(orderData.orderId || orderId),
     paymentReturnDetected: orderData.paymentReturnDetected === true,
+  };
+}
+
+export async function resolvePaymentReturnStore({
+  token,
+}: {
+  token: string;
+}): Promise<PaymentReturnStoreResult> {
+  const db = getAdminDbIfConfigured();
+
+  if (!db) {
+    throw new PaymentReturnError(
+      "Payment return is temporarily unavailable.",
+      500,
+      "firebase_admin_unavailable"
+    );
+  }
+
+  const cleanToken = token.trim();
+
+  if (!cleanToken || cleanToken.length < 32) {
+    throw new PaymentReturnError("Invalid payment return link.", 400, "invalid_seller_return_token");
+  }
+
+  paymentReturnLog("info", "Payment return store lookup starting.", {
+    sellerReturnTokenLength: cleanToken.length,
+  });
+
+  const storesSnap = await db
+    .collection("stores")
+    .where("paymentReturnToken", "==", cleanToken)
+    .limit(2)
+    .get();
+
+  if (storesSnap.empty || storesSnap.size !== 1) {
+    paymentReturnLog("warn", "Payment return store lookup failed.", {
+      matchCount: storesSnap.size,
+    });
+    throw new PaymentReturnError("Store not found.", 404, "seller_return_token_not_found");
+  }
+
+  const storeDoc = storesSnap.docs[0];
+  const store = storeDoc.data() || {};
+  const storeSlug = String(store.storeSlug || storeDoc.id).trim() || storeDoc.id;
+  const storeName = String(store.storeName || store.name || "").trim();
+
+  paymentReturnLog("info", "Payment return store lookup completed.", {
+    storeId: storeDoc.id,
+    storeSlug,
+  });
+
+  return {
+    storeId: storeDoc.id,
+    storeSlug,
+    storeName,
   };
 }
 
@@ -229,6 +290,19 @@ export async function paymentReturnHandler(req: any, res: JsonResponse) {
       hasSellerToken: Boolean(token),
       hasOrderToken: Boolean(orderToken),
     });
+
+    if (!orderToken) {
+      const result = await resolvePaymentReturnStore({ token });
+
+      sendJson(res, 200, {
+        success: true,
+        fallback: true,
+        reason: "missing_order_token",
+        ...result,
+      });
+      return;
+    }
+
     const result = await handlePaymentReturn({ orderToken, token });
 
     sendJson(res, 200, {

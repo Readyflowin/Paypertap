@@ -16,8 +16,8 @@ export const ORDER_STATUS_OPTIONS: Array<{
   value: "all" | OrderLifecycleStatus;
 }> = [
   { label: "All statuses", value: "all" },
-  { label: "Pending payment", value: "pending_payment" },
-  { label: "Payment returned", value: "payment_returned" },
+  { label: "Order successful", value: "pending_payment" },
+  { label: "Order successful", value: "payment_returned" },
   { label: "Pending confirmation", value: "pending_confirmation" },
   { label: "Processing", value: "processing" },
   { label: "Completed", value: "completed" },
@@ -53,8 +53,8 @@ export function getOrderStatusLabel(status: CheckoutSession["status"]): string {
   const normalizedStatus = normalizeOrderStatus(status);
 
   return {
-    pending_payment: "Pending Payment",
-    payment_returned: "Payment Returned",
+    pending_payment: "Order Successful",
+    payment_returned: "Order Successful",
     pending_confirmation: "Pending Confirmation",
     processing: "Processing",
     completed: "Completed",
@@ -67,8 +67,8 @@ export function getOrderStatusTone(status: CheckoutSession["status"]) {
 
   if (normalizedStatus === "completed") return "success";
   if (normalizedStatus === "cancelled") return "neutral";
-  if (normalizedStatus === "payment_returned") return "warning";
-  if (normalizedStatus === "pending_payment") return "warning";
+  if (normalizedStatus === "payment_returned") return "success";
+  if (normalizedStatus === "pending_payment") return "success";
   if (normalizedStatus === "processing") return "primary";
 
   return "info";

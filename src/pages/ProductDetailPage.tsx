@@ -408,7 +408,11 @@ function ProductImageGallery({
             const nextIndex = Math.round(target.scrollLeft / Math.max(target.clientWidth, 1));
             setActiveIndex(Math.max(0, Math.min(nextIndex, galleryImages.length - 1)));
           }}
-          style={{ touchAction: "pan-y pinch-zoom" }}
+          style={{
+            touchAction: "pan-x pan-y pinch-zoom",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorX: "contain",
+          }}
         >
           {galleryImages.map((imageUrl, index) => (
             <div
@@ -431,6 +435,7 @@ function ProductImageGallery({
                     decoding="async"
                     fetchPriority={index === 0 ? "high" : "auto"}
                     loading={index === 0 ? "eager" : "lazy"}
+                    draggable={false}
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
                   />
                 </button>

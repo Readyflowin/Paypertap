@@ -53,7 +53,8 @@ Emails:
 App and wallet recharge:
 
 - `PAYPERTAP_APP_URL` or `VITE_APP_URL`
-- `PAYPERTAP_WALLET_RECHARGE_PAYMENT_LINK` or `VITE_PAYPERTAP_WALLET_RECHARGE_PAYMENT_LINK`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
 - `PAYPERTAP_ENABLE_TEST_ENDPOINTS=true` only for guarded test endpoints
 - `VITE_ENABLE_INTEGRATION_TESTS=true` only for local integration-test UI exposure
 

@@ -13,14 +13,14 @@ export function getOrderTimelineEvents(order: CheckoutSession): TimelineEvent[] 
 
   if (order.paymentReturnedAt || normalizeOrderStatus(order.status) === "payment_returned") {
     events.push({
-      label: "Customer Returned From Payment",
+      label: "Payment Return Opened",
       time: order.paymentReturnedAt,
     });
   }
 
   if (order.sellerPaymentConfirmedAt || order.sellerConfirmationAt) {
     events.push({
-      label: "Seller Verified Payment",
+      label: "Payment Verified Manually",
       time: order.sellerPaymentConfirmedAt || order.sellerConfirmationAt,
     });
   }

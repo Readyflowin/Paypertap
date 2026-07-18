@@ -108,6 +108,7 @@ import {
   INITIAL_FREE_ORDERS,
   reconcileWalletFromActivity,
   startWalletRecharge,
+  verifyWalletRechargePayment,
   WALLET_LOW_BALANCE_THRESHOLD,
   WALLET_ORDER_CHARGE_AMOUNT,
   WALLET_RECHARGE_AMOUNTS,
@@ -164,6 +165,47 @@ const sidebarItems = [
 ] as const;
 
 type DashboardTab = (typeof sidebarItems)[number];
+
+type RazorpayCheckoutResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutFailure = {
+  error?: {
+    description?: string;
+    reason?: string;
+  };
+};
+
+type RazorpayCheckoutOptions = {
+  amount: number;
+  currency: string;
+  handler: (response: RazorpayCheckoutResponse) => void;
+  key: string;
+  modal?: {
+    ondismiss?: () => void;
+  };
+  name: string;
+  order_id: string;
+  theme?: {
+    color?: string;
+  };
+};
+
+type RazorpayCheckoutInstance = {
+  close?: () => void;
+  on: (event: "payment.failed", handler: (response: RazorpayCheckoutFailure) => void) => void;
+  open: () => void;
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayCheckoutInstance;
+  }
+}
+
 const DEFAULT_HERO_TITLE = "Curated drops, one piece at a time.";
 const DEFAULT_HERO_SUBTITLE =
   "Browse available pieces and reserve before the chat moves to WhatsApp.";
@@ -435,20 +477,24 @@ function getCheckoutStatusTone(status: CheckoutSession["status"]): PptTone {
 
 function getStatusLabel(status: CheckoutSession["status"]): string {
   if (!status) return "Choose action";
-  if (status === "pending_payment") return "Pending payment";
+  if (status === "pending_payment") return "Order Successful";
   if (status === "pending_confirmation") return "Pending confirmation";
-  if (status === "awaiting_payment") return "Awaiting payment";
-  if (status === "payment_returned") return "Payment Returned";
+  if (status === "awaiting_payment") return "Order Successful";
+  if (status === "payment_returned") return "Order Successful";
   if (status === "confirmed") return "Confirmed";
   if (status === "processing") return "Processing";
   if (status === "completed") return "Completed";
   if (status === "released") return "Released";
   if (status === "cancelled") return "Cancelled";
-  return status.replace(/_/g, " ");
+  return String(status).replace(/_/g, " ");
 }
 
 function getSellerAmountDueFromOrder(order: CheckoutSession): number {
   return Math.max(0, Number(order.sellerAmountDue || 0));
+}
+
+function getPlacedOrderRevenueFromOrder(order: CheckoutSession): number {
+  return Math.max(0, Number(order.productPrice || 0));
 }
 
 function isActiveOrderLead(status: CheckoutSession["status"]): boolean {
@@ -1027,6 +1073,7 @@ export default function DashboardPage() {
 
             {activeTab === "Wallet" ? (
               <WalletWorkspace
+                onWalletChanged={refreshProductsAndOrders}
                 wallet={wallet}
                 walletError={walletError}
                 walletTransactions={walletTransactions}
@@ -1090,8 +1137,9 @@ function OverviewTab({
     ].includes(Order.status)
   ).length;
   const completedOrders = Orders.filter((Order) => Order.status === "completed");
-  const sellerRevenue = completedOrders.reduce(
-    (total, order) => total + getSellerAmountDueFromOrder(order),
+  const revenueOrders = Orders.filter((Order) => !["cancelled", "released"].includes(Order.status));
+  const sellerRevenue = revenueOrders.reduce(
+    (total, order) => total + getPlacedOrderRevenueFromOrder(order),
     0
   );
   const recentOrders = [...Orders]
@@ -1151,7 +1199,7 @@ function OverviewTab({
           icon={<CreditCard size={16} aria-hidden="true" />}
           label="Revenue"
           value={formatINR(sellerRevenue)}
-          helper="from completed orders"
+          helper="from placed orders"
           tone="success"
         />
         <CompactStatCard
@@ -1426,12 +1474,83 @@ async function reconcileWalletIfActivityIsAhead(
   }
 }
 
+function loadRazorpayCheckoutScript(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+
+  const existingScript = document.getElementById("razorpay-checkout-js") as
+    | HTMLScriptElement
+    | null;
+
+  if (existingScript) {
+    return new Promise((resolve, reject) => {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener(
+        "error",
+        () => reject(new Error("Could not load Razorpay Checkout.")),
+        { once: true }
+      );
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Could not load Razorpay Checkout."));
+    document.body.appendChild(script);
+  });
+}
+
+function openRazorpayCheckout(
+  options: RazorpayCheckoutOptions
+): Promise<RazorpayCheckoutResponse | null> {
+  return new Promise((resolve, reject) => {
+    if (!window.Razorpay) {
+      reject(new Error("Razorpay Checkout is unavailable."));
+      return;
+    }
+
+    let completed = false;
+    const checkout = new window.Razorpay({
+      ...options,
+      handler: (response) => {
+        completed = true;
+        resolve(response);
+      },
+      modal: {
+        ...options.modal,
+        ondismiss: () => {
+          options.modal?.ondismiss?.();
+          if (!completed) resolve(null);
+        },
+      },
+    });
+
+    checkout.on("payment.failed", (response) => {
+      completed = true;
+      checkout.close?.();
+      reject(
+        new Error(
+          response.error?.description ||
+            response.error?.reason ||
+            "Payment failed. Please try again."
+        )
+      );
+    });
+    checkout.open();
+  });
+}
+
 function WalletDashboardSection({
   error,
+  onWalletChanged,
   transactions,
   wallet,
 }: {
   error: string;
+  onWalletChanged: () => Promise<void>;
   transactions: WalletTransactionRecord[];
   wallet: SellerWallet | null;
 }) {
@@ -1443,6 +1562,7 @@ function WalletDashboardSection({
   const [customRechargeAmount, setCustomRechargeAmount] = useState("");
   const [rechargeError, setRechargeError] = useState("");
   const [rechargeLoading, setRechargeLoading] = useState(false);
+  const [rechargeSuccess, setRechargeSuccess] = useState("");
 
   if (!wallet) {
     return (
@@ -1502,6 +1622,7 @@ function WalletDashboardSection({
     try {
       setRechargeLoading(true);
       setRechargeError("");
+      setRechargeSuccess("");
 
       if (
         rechargeAmount < WALLET_RECHARGE_MIN_AMOUNT ||
@@ -1512,8 +1633,42 @@ function WalletDashboardSection({
         );
       }
 
+      await loadRazorpayCheckoutScript();
       const recharge = await startWalletRecharge(rechargeAmount);
-      window.location.assign(recharge.paymentLink);
+      const payment = await openRazorpayCheckout({
+        amount: recharge.amount * 100,
+        currency: recharge.currency,
+        key: recharge.keyId,
+        name: "PayPerTap Wallet",
+        order_id: recharge.razorpayOrderId,
+        theme: {
+          color: "#5B35F5",
+        },
+        handler: () => {
+          // The actual handler is wrapped by openRazorpayCheckout.
+        },
+      });
+
+      if (!payment) {
+        return;
+      }
+
+      const result = await verifyWalletRechargePayment({
+        rechargeId: recharge.rechargeId,
+        razorpayOrderId: payment.razorpay_order_id,
+        razorpayPaymentId: payment.razorpay_payment_id,
+        razorpaySignature: payment.razorpay_signature,
+      });
+
+      setRechargeSuccess(
+        result.alreadyCredited
+          ? "This recharge was already credited earlier."
+          : `Wallet recharged with ${formatINR(result.amount)}.`
+      );
+      setRechargeOpen(false);
+      await onWalletChanged().catch((refreshError) => {
+        console.warn("Wallet refresh after recharge failed:", refreshError);
+      });
     } catch (err) {
       setRechargeError(
         err instanceof Error ? err.message : "Wallet recharge could not be started."
@@ -1525,6 +1680,12 @@ function WalletDashboardSection({
 
   return (
     <div className="ppt-dashboard-wallet-stack">
+      {rechargeSuccess ? (
+        <PptNotice tone="success" title="Wallet recharged">
+          {rechargeSuccess}
+        </PptNotice>
+      ) : null}
+
       {walletNotice && dismissedWalletNotice !== walletNotice.key ? (
         <div className="relative">
           <PptNotice tone={walletNotice.tone} title={walletNotice.title}>
@@ -1701,6 +1862,7 @@ function WalletDashboardSection({
                     onClick={() => {
                       setSelectedRechargeAmount(amount);
                       setRechargeError("");
+                      setRechargeSuccess("");
                     }}
                   >
                     {formatINR(amount)}
@@ -1718,6 +1880,7 @@ function WalletDashboardSection({
                       event.target.value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "")
                     );
                     setRechargeError("");
+                    setRechargeSuccess("");
                   }}
                   placeholder={`${WALLET_RECHARGE_MIN_AMOUNT}`}
                   type="number"
@@ -4080,21 +4243,21 @@ function ProductRow({
           </button>
         </div>
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-          <span className="max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+          <span className="inline-flex max-w-full items-center justify-center truncate rounded-full border border-gray-200 bg-gray-50 px-2.5 text-xs font-semibold leading-none text-gray-700">
             {collectionLabel}
           </span>
           {needsImageReupload ? (
-            <span className="max-w-full rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+            <span className="inline-flex max-w-full items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-2.5 text-xs font-semibold leading-none text-amber-800">
               This image needs to be re-uploaded.
             </span>
           ) : null}
           {productImageCount > 1 ? (
-            <span className="max-w-full rounded-full border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-600">
+            <span className="inline-flex max-w-full items-center justify-center rounded-full border border-gray-200 bg-white px-2.5 text-xs font-semibold leading-none text-gray-600">
               {productImageCount} images
             </span>
           ) : null}
           {productHasVariants(product) ? (
-            <span className="max-w-full rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+            <span className="inline-flex max-w-full items-center justify-center rounded-full border border-indigo-100 bg-indigo-50 px-2.5 text-xs font-semibold leading-none text-indigo-700">
               {getVariantSummary(product)}
             </span>
           ) : null}
@@ -4408,10 +4571,12 @@ function MarketingWorkspace({
 }
 
 function WalletWorkspace({
+  onWalletChanged,
   wallet,
   walletError,
   walletTransactions,
 }: {
+  onWalletChanged: () => Promise<void>;
   wallet: SellerWallet | null;
   walletError: string;
   walletTransactions: WalletTransactionRecord[];
@@ -4425,6 +4590,7 @@ function WalletWorkspace({
       />
       <WalletDashboardSection
         error={walletError}
+        onWalletChanged={onWalletChanged}
         transactions={walletTransactions}
         wallet={wallet}
       />
@@ -5216,9 +5382,15 @@ function Theme1HeroPreviewCard({
       </div>
       <div className="flex items-center justify-between border-b border-[#DDD4C7] px-3 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#111111] text-xs font-semibold text-[#F6F1E8]">
+          <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-[#DDD4C7] bg-[#F6F1E8] p-1 text-xs font-semibold text-[#111111]">
             {logoUrl ? (
-              <img src={logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+              <img
+                src={logoUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full rounded-full object-contain"
+              />
             ) : (
               initials || "PT"
             )}
@@ -5574,7 +5746,7 @@ function EmptyState({
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
       {message}
     </div>
   );
@@ -5610,8 +5782,8 @@ function Field({
   value: string;
 }) {
   return (
-    <label className="text-sm font-medium text-gray-800">
-      {label}
+    <label className="grid gap-2 text-sm font-medium text-gray-800">
+      <span>{label}</span>
       <input
         ref={inputRef}
         autoComplete={type === "number" ? "off" : undefined}
@@ -5631,14 +5803,14 @@ function Field({
               : event.target.value
           )
         }
-        className={`mt-2 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-gray-950 ${
+        className={`w-full rounded-xl border px-4 py-2 text-sm outline-none focus:border-gray-950 ${
           error ? "border-red-300 bg-red-50/40" : "border-gray-300"
         }`}
       />
       {error ? (
-        <span className="mt-1 block text-xs font-medium text-red-700">{error}</span>
+        <small className="block text-xs font-semibold normal-case tracking-normal text-red-700">{error}</small>
       ) : helper ? (
-        <span className="mt-1 block text-xs leading-5 text-gray-500">{helper}</span>
+        <small className="block text-xs font-medium normal-case leading-5 tracking-normal text-gray-500">{helper}</small>
       ) : null}
     </label>
   );
@@ -5655,16 +5827,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-1 break-words font-semibold text-gray-900">{value}</p>
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+      <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-gray-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-bold text-gray-950">{value}</p>
     </div>
   );
 }
 
 function StatusBadge({ label }: { label: string }) {
   return (
-    <span className="w-fit rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium capitalize text-gray-600">
+    <span className="inline-flex min-h-6 w-fit items-center justify-center rounded-full border border-gray-200 bg-gray-50 px-2.5 text-xs font-semibold capitalize leading-none text-gray-600">
       {label}
     </span>
   );

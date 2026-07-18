@@ -563,9 +563,12 @@
         }
 
         .pds-field > span {
-          font-size: 13px;
-          font-weight: 430;
-          color: var(--pds-text);
+          color: #4b5563;
+          font-size: 12px;
+          font-weight: 650;
+          letter-spacing: .04em;
+          line-height: 1.2;
+          text-transform: uppercase;
         }
 
         .pds-input-wrap,
@@ -577,7 +580,7 @@
 
         .pds-input-icon {
           position: absolute;
-          left: 14px;
+          left: 16px;
           display: inline-flex;
           align-items: center;
           color: var(--pds-muted);
@@ -588,35 +591,35 @@
         .pds-field textarea,
         .pds-select-wrap select {
           width: 100%;
-          border: 1px solid #dde0e8;
-          border-radius: 16px;
+          border: 1px solid #e1e4eb;
+          border-radius: 14px;
           background: white;
           color: var(--pds-text);
           font: inherit;
           font-size: 14px;
-          font-weight: 350;
+          font-weight: 430;
           outline: none;
-          transition: border-color .16s ease, box-shadow .16s ease;
+          transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
         }
 
         .pds-field input {
-          min-height: 48px;
-          padding: 0 14px;
+          min-height: 46px;
+          padding: 0 16px;
         }
 
         .pds-input-icon + input {
-          padding-left: 42px;
+          padding-left: 46px;
         }
 
         .pds-field textarea {
-          padding: 13px 14px;
+          padding: 12px 16px;
           resize: vertical;
         }
 
         .pds-select-wrap select {
-          min-height: 48px;
+          min-height: 46px;
           appearance: none;
-          padding: 0 42px 0 14px;
+          padding: 0 44px 0 16px;
         }
 
         .pds-select-wrap svg {
@@ -629,8 +632,8 @@
         .pds-field input:focus,
         .pds-field textarea:focus,
         .pds-select-wrap select:focus {
-          border-color: #a391ff;
-          box-shadow: 0 0 0 4px rgba(91,53,245,.1);
+          border-color: rgba(17,17,17,.72);
+          box-shadow: 0 0 0 4px rgba(17,17,17,.06);
         }
 
         .pds-field.has-error input {
@@ -649,18 +652,19 @@
         }
 
         .pds-badge {
-          min-height: 25px;
+          min-height: 24px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 5px;
+          gap: 6px;
           width: fit-content;
-          padding: 0 9px;
+          padding: 0 10px;
           border: 1px solid transparent;
           border-radius: 999px;
-          font-size: 12px;
+          font-size: 11px;
           line-height: 1;
-          font-weight: 430;
+          font-weight: 650;
+          letter-spacing: .01em;
           white-space: nowrap;
           box-sizing: border-box;
         }
@@ -673,10 +677,6 @@
           line-height: 1;
           color: inherit;
           height: 100%;
-        }
-
-        .pds-badge-text {
-          transform: translateY(0.5px);
         }
 
         .pds-badge-primary,
@@ -1901,38 +1901,49 @@
         }
 
         .ppt-dashboard-wallet-table-wrap {
-          margin-top: 12px;
+          margin-top: 16px;
           overflow-x: auto;
-          border: 1px solid var(--pds-border);
-          border-radius: 16px;
-          background: rgba(255,255,255,.78);
+          border: 1px solid rgba(18,18,18,.08);
+          border-radius: 14px;
+          background: rgba(255,255,255,.9);
         }
 
         .ppt-dashboard-wallet-table {
           width: 100%;
           min-width: 760px;
           border-collapse: collapse;
-          font-size: 12px;
+          font-size: 13px;
         }
 
         .ppt-dashboard-wallet-table th,
         .ppt-dashboard-wallet-table td {
-          padding: 11px 12px;
-          border-bottom: 1px solid var(--pds-border);
+          padding: 14px 16px;
+          border-bottom: 1px solid rgba(18,18,18,.07);
           text-align: left;
-          vertical-align: top;
+          vertical-align: middle;
           white-space: nowrap;
         }
 
         .ppt-dashboard-wallet-table th {
-          color: var(--pds-muted);
-          background: rgba(247,247,250,.86);
-          font-weight: 520;
+          color: #667085;
+          background: #fafafa;
+          font-size: 11px;
+          font-weight: 750;
+          letter-spacing: .06em;
+          text-transform: uppercase;
         }
 
         .ppt-dashboard-wallet-table td {
-          color: var(--pds-text);
-          font-weight: 390;
+          color: #111827;
+          font-weight: 430;
+        }
+
+        .ppt-dashboard-wallet-table tbody tr {
+          transition: background .16s ease;
+        }
+
+        .ppt-dashboard-wallet-table tbody tr:hover {
+          background: #fafafa;
         }
 
         .ppt-dashboard-wallet-table td:nth-child(6) {
@@ -3203,6 +3214,262 @@
           line-height: 1.5;
         }
 
+        .ppt-admin-workspace {
+          --ppt-admin-card-radius: 18px;
+          --ppt-admin-control-radius: 12px;
+          --ppt-admin-border: rgba(18,18,18,.09);
+          --ppt-admin-border-strong: rgba(18,18,18,.16);
+          --ppt-admin-card-shadow: 0 1px 2px rgba(15,23,42,.035), 0 16px 38px rgba(15,23,42,.055);
+          --ppt-admin-focus: 0 0 0 4px rgba(17,17,17,.055);
+        }
+
+        .ppt-admin-workspace .pds-panel,
+        .ppt-admin-workspace .ppt-dashboard-compact-stat,
+        .ppt-admin-workspace .ppt-dashboard-next-action,
+        .ppt-admin-workspace .ppt-dashboard-quick-card,
+        .ppt-admin-workspace .ppt-dashboard-activity-card,
+        .ppt-admin-workspace .ppt-dashboard-wallet-card,
+        .ppt-admin-workspace .ppt-dashboard-wallet-help,
+        .ppt-admin-workspace .ppt-dashboard-wallet-activity,
+        .ppt-admin-workspace .ppt-dashboard-home-hero,
+        .ppt-admin-workspace .ppt-dashboard-snapshot-card,
+        .ppt-admin-workspace .ppt-dashboard-workspace-head,
+        .ppt-admin-workspace .rounded-2xl.border.border-gray-200.bg-white {
+          border-color: var(--ppt-admin-border);
+          border-radius: var(--ppt-admin-card-radius);
+          background: rgba(255,255,255,.94);
+          box-shadow: var(--ppt-admin-card-shadow);
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-snapshot-metrics > div,
+        .ppt-admin-workspace .ppt-dashboard-readiness > div,
+        .ppt-admin-workspace .rounded-2xl.border.border-gray-100.bg-gray-50,
+        .ppt-admin-workspace .rounded-xl.border.border-gray-100.bg-gray-50 {
+          border-color: rgba(18,18,18,.07);
+          border-radius: 14px;
+          background: #fafafa;
+        }
+
+        .ppt-admin-workspace .pds-button {
+          gap: 10px;
+          min-height: 42px;
+          padding-inline: 16px;
+          border-radius: var(--ppt-admin-control-radius);
+          font-size: 13px;
+          font-weight: 650;
+          letter-spacing: 0;
+          white-space: nowrap;
+        }
+
+        .ppt-admin-workspace .pds-button-label {
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        .ppt-admin-workspace .pds-button-icon,
+        .ppt-admin-workspace .pds-button-icon svg {
+          color: inherit;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .ppt-admin-workspace .pds-button-primary {
+          color: #ffffff !important;
+          background: linear-gradient(135deg, #6842f5, #43249f);
+          box-shadow: 0 16px 34px rgba(91,53,245,.2);
+        }
+
+        .ppt-admin-workspace .pds-button-primary .pds-button-label,
+        .ppt-admin-workspace .pds-button-primary .pds-button-icon {
+          color: #ffffff !important;
+        }
+
+        .ppt-admin-workspace .pds-button-sm {
+          min-height: 36px;
+          padding-inline: 12px;
+          font-size: 12px;
+        }
+
+        .ppt-admin-workspace .pds-button-lg {
+          min-height: 46px;
+        }
+
+        .ppt-admin-workspace .pds-badge,
+        .ppt-admin-workspace .inline-flex.rounded-full,
+        .ppt-admin-workspace span.rounded-full {
+          display: inline-flex;
+          min-height: 24px;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          border-width: 1px;
+          border-radius: 999px;
+          padding: 0 10px;
+          font-size: 11px;
+          font-weight: 650;
+          line-height: 1;
+          letter-spacing: .01em;
+          vertical-align: middle;
+        }
+
+        .ppt-admin-workspace label:not(.sr-only) {
+          color: #4b5563;
+          font-size: 12px;
+          font-weight: 650;
+          letter-spacing: .04em;
+          line-height: 1.25;
+        }
+
+        .ppt-admin-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        .ppt-admin-workspace select,
+        .ppt-admin-workspace textarea {
+          min-height: 46px;
+          border-color: #e1e4eb;
+          border-radius: var(--ppt-admin-control-radius);
+          background: #ffffff;
+          padding-inline: 16px;
+          color: #111827;
+          font-size: 14px;
+          font-weight: 430;
+          line-height: 1.4;
+          transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+        }
+
+        .ppt-admin-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="file"])::placeholder,
+        .ppt-admin-workspace textarea::placeholder {
+          color: #9aa3b2;
+          font-weight: 420;
+        }
+
+        .ppt-admin-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+        .ppt-admin-workspace select:focus,
+        .ppt-admin-workspace textarea:focus {
+          border-color: rgba(17,17,17,.72);
+          box-shadow: var(--ppt-admin-focus);
+        }
+
+        .ppt-admin-workspace input[type="file"] {
+          border-color: #d7dce5;
+          border-radius: var(--ppt-admin-control-radius);
+          background: #ffffff;
+          padding: 10px 12px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-search {
+          position: relative;
+          min-width: 0;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-search svg {
+          left: 16px;
+          color: #98a2b3;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-search input {
+          width: 100%;
+          min-height: 46px;
+          padding-left: 46px;
+          padding-right: 16px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-filter-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0,1fr));
+          gap: 12px;
+          align-items: end;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-filter-control {
+          display: grid;
+          min-width: 0;
+          gap: 8px;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-filter-control span {
+          color: #667085;
+          font-size: 11px;
+          font-weight: 750;
+          letter-spacing: .06em;
+          line-height: 1;
+          text-transform: uppercase;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-filter-control select {
+          width: 100%;
+          appearance: auto;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-card-title {
+          margin: 0;
+          color: #111111;
+          font-size: 18px;
+          line-height: 1.2;
+          font-weight: 700;
+          letter-spacing: -.01em;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-card-copy {
+          margin: 6px 0 0;
+          color: #667085;
+          font-size: 13px;
+          line-height: 1.55;
+          font-weight: 430;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-table th {
+          padding: 12px 16px;
+          color: #667085;
+          font-size: 11px;
+          font-weight: 750;
+          letter-spacing: .06em;
+          text-align: left;
+          text-transform: uppercase;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-table td {
+          padding: 14px 16px;
+          border-top: 1px solid rgba(18,18,18,.07);
+          color: #111827;
+          font-size: 13px;
+          vertical-align: middle;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-table tbody tr {
+          transition: background .16s ease;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-table tbody tr:hover {
+          background: #fafafa;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-row {
+          grid-template-columns: 44px minmax(0,1fr) auto auto;
+          gap: 12px;
+          padding: 14px 0;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-row-link {
+          min-height: 36px;
+          padding: 0 12px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 650;
+        }
+
+        .ppt-admin-workspace .ppt-dashboard-product-thumb,
+        .ppt-admin-workspace .ppt-dashboard-row-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+        }
+
         @media (max-width: 1180px) {
           .ppt-admin-workspace .ppt-dashboard-shell {
             grid-template-columns: 220px minmax(0, 1fr);
@@ -3259,6 +3526,14 @@
           .ppt-dashboard-snapshot-metrics,
           .ppt-dashboard-readiness {
             grid-template-columns: 1fr;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-filter-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .ppt-admin-workspace .ppt-dashboard-row {
+            grid-template-columns: 40px minmax(0,1fr);
           }
 
           .ppt-admin-workspace .ppt-dashboard-mobile-nav {

@@ -1,7 +1,7 @@
 import {
   adminWalletAdjustmentHandler,
-  walletRechargeHandler,
-  walletRechargeReturnHandler,
+  walletRechargeCreateOrderHandler,
+  walletRechargeVerifyPaymentHandler,
 } from "./_lib/walletRecharge.js";
 import { walletReconcileHandler } from "./_lib/walletReconcile.js";
 
@@ -43,12 +43,12 @@ export default async function walletRouter(req: ApiRequest, res: ApiResponse) {
   console.info("[api/wallet] Incoming request", { method, action });
 
   try {
-    if (method === "POST" && action === "recharge") {
-      return await walletRechargeHandler(req, res);
+    if (method === "POST" && action === "create-order") {
+      return await walletRechargeCreateOrderHandler(req, res);
     }
 
-    if (method === "POST" && action === "recharge-return") {
-      return await walletRechargeReturnHandler(req, res);
+    if (method === "POST" && action === "verify-payment") {
+      return await walletRechargeVerifyPaymentHandler(req, res);
     }
 
     if (method === "POST" && action === "reconcile") {

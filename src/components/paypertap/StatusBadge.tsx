@@ -26,9 +26,9 @@ const productStatuses: Record<string, StatusMeta> = {
 };
 
 const orderStatuses: Record<string, StatusMeta> = {
-  pending_payment: { label: "Pending payment", variant: "warning" },
-  awaiting_payment: { label: "Pending payment", variant: "warning" },
-  payment_returned: { label: "Payment returned", variant: "warning" },
+  pending_payment: { label: "Order Successful", variant: "success" },
+  awaiting_payment: { label: "Order Successful", variant: "success" },
+  payment_returned: { label: "Order Successful", variant: "success" },
   pending_confirmation: { label: "Pending confirmation", variant: "info" },
   confirmed: { label: "Confirmed", variant: "info" },
   processing: { label: "Processing", variant: "success" },

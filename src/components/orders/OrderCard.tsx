@@ -55,6 +55,16 @@ export function OrderCard({
       return;
     }
 
+    if (actionId === "verify_and_accept_order") {
+      void runAction(actionId, async () => {
+        const orderId = getOrderId(order);
+
+        await markOrderPaymentVerified(orderId);
+        await acceptOrder(orderId);
+      });
+      return;
+    }
+
     if (actionId === "reject_payment" || actionId === "cancel_order") {
       void runAction(actionId, () => cancelOrder(getOrderId(order)));
       return;
@@ -71,16 +81,16 @@ export function OrderCard({
   }
 
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+    <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <OrderStatusBadge status={order.status} />
-            <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-semibold text-gray-700">
+            <span className="inline-flex min-h-6 items-center justify-center rounded-full border border-gray-200 bg-gray-50 px-2.5 text-xs font-semibold leading-none text-gray-700">
               {getOrderPaymentLabel(order)}
             </span>
           </div>
-          <h3 className="mt-3 break-words text-lg font-semibold text-gray-950">
+          <h3 className="mt-4 break-words text-lg font-bold text-gray-950">
             {order.buyerName || "Customer"}
           </h3>
           <p className="mt-1 text-sm font-medium text-gray-600">{order.buyerPhone}</p>
@@ -96,7 +106,7 @@ export function OrderCard({
           </div>
           {orderStatus === "payment_returned" ? (
             <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              Please verify payment manually.
+              Please verify the payment manually once in your Razorpay account.
             </p>
           ) : null}
           {error ? (
@@ -116,7 +126,7 @@ export function OrderCard({
             href={buildOrderWhatsAppUrl(order, "confirmation")}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-900 transition hover:border-gray-950"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 transition hover:border-gray-950 hover:bg-gray-50"
           >
             <PptBrandIcon type="whatsapp" size={15} />
             <span>WhatsApp</span>
@@ -124,7 +134,7 @@ export function OrderCard({
           <button
             type="button"
             onClick={() => setDetailsOpen(true)}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-900 transition hover:border-gray-950"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 transition hover:border-gray-950 hover:bg-gray-50"
           >
             <MessageCircle size={15} aria-hidden="true" />
             <span>Order Details</span>

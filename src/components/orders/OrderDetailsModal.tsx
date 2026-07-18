@@ -71,7 +71,7 @@ export function OrderDetailsModal({
             </h2>
             <div className="mt-2 flex flex-wrap gap-2">
               <OrderStatusBadge status={order.status} />
-              <span className="rounded-full border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-700">
+              <span className="inline-flex min-h-6 items-center justify-center rounded-full border border-gray-200 px-2.5 text-xs font-semibold leading-none text-gray-700">
                 {getOrderPaymentLabel(order)}
               </span>
             </div>

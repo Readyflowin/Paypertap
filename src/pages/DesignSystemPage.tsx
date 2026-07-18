@@ -58,7 +58,7 @@ const badgeSamples: Array<[string, PptTone, React.ReactNode]> = [
   ["Hot", "hot", null],
   ["Reserved", "reserved", null],
   ["Sold", "sold", null],
-  ["Payment returned", "warning", null],
+  ["Order Sucesfull", "success", null],
   ["Processing", "info", null],
   ["Failed", "danger", null],
   ["Draft", "neutral", null],

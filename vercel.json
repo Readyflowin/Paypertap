@@ -116,15 +116,6 @@
           "value": "noindex, nofollow"
         }
       ]
-    },
-    {
-      "source": "/wallet/recharge-return/:token",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
     }
   ],
   "rewrites": [

@@ -35,6 +35,7 @@ type OrderData = {
   buyerAddress?: string;
   buyerCity?: string;
   buyerPincode?: string;
+  paymentMode?: string;
   status?: string;
   reservationApplied?: boolean;
   reservedQuantity?: number;
@@ -182,7 +183,12 @@ async function updatePaymentVerified(db: Firestore, orderId: string, sellerId: s
     assertOrderOwner(order, sellerId);
     assertImmutableOrderFields(order);
 
-    if (order.status !== "payment_returned") {
+    const orderStatus = String(order.status || "");
+    const isManualPartialAdvanceVerification =
+      ["awaiting_payment", "pending_payment"].includes(orderStatus) &&
+      order.paymentMode === "partial_advance";
+
+    if (orderStatus !== "payment_returned" && !isManualPartialAdvanceVerification) {
       throw new OrderActionError("Payment cannot be verified for this order state.");
     }
 
